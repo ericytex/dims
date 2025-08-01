@@ -57,7 +57,7 @@ export default function LoginPage() {
           <div className="text-center">
             <div className="mx-auto w-20 h-20 mb-4">
               <img 
-                src="https://upload.wikimedia.org/wikipedia/commons/thumb/4/4e/Coat_of_arms_of_Uganda.svg/200px-Coat_of_arms_of_Uganda.svg.png" 
+                src="https://moscow.mofa.go.ug/sites/havana.dd/files/Project%20Management%20Plan-SMS%20Gateway.pdf.png" 
                 alt="Uganda Coat of Arms" 
                 className="w-full h-full object-contain"
               />
@@ -166,6 +166,15 @@ export default function LoginPage() {
           <p className="text-xs text-gray-500 mt-4 text-center">
             Click on any account to auto-fill the login form
           </p>
+          
+          {/* Footer */}
+          <div className="mt-8 text-center">
+            <img 
+              src="https://moscow.mofa.go.ug/sites/havana.dd/files/footer.png" 
+              alt="Uganda Government Footer" 
+              className="mx-auto max-w-full h-auto"
+            />
+          </div>
         </div>
       </div>
     </div>
