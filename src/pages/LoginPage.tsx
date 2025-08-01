@@ -57,9 +57,9 @@ export default function LoginPage() {
           <div className="text-center">
             <div className="mx-auto w-20 h-20 mb-4">
               <img 
-                src="https://images.pexels.com/photos/12935073/pexels-photo-12935073.jpeg?auto=compress&cs=tinysrgb&w=80&h=80&fit=crop" 
+                src="https://upload.wikimedia.org/wikipedia/commons/thumb/4/4e/Coat_of_arms_of_Uganda.svg/200px-Coat_of_arms_of_Uganda.svg.png" 
                 alt="Uganda Coat of Arms" 
-                className="w-full h-full rounded-full object-cover border-2 border-uganda-yellow"
+                className="w-full h-full object-contain"
               />
             </div>
             <h2 className="text-3xl font-bold text-uganda-black">
