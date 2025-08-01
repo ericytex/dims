@@ -24,56 +24,56 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 // Mock users for demonstration
 const mockUsers: Record<string, { password: string; user: User }> = {
-  'admin@nms.go.ug': {
+  'admin@dims.go.ug': {
     password: 'admin123',
     user: {
       id: '1',
       name: 'DIMS Administrator',
-      email: 'admin@nms.go.ug',
+      email: 'admin@dims.go.ug',
       phone: '+256700000001',
       role: 'admin'
     }
   },
-  'regional@nms.go.ug': {
+  'regional@dims.go.ug': {
     password: 'regional123',
     user: {
       id: '2',
       name: 'Regional Supervisor',
-      email: 'regional@nms.go.ug',
+      email: 'regional@dims.go.ug',
       phone: '+256700000002',
       role: 'regional_supervisor',
       region: 'Central Region'
     }
   },
-  'district@nms.go.ug': {
+  'district@dims.go.ug': {
     password: 'district123',
     user: {
       id: '3',
       name: 'District Health Officer',
-      email: 'district@nms.go.ug',
+      email: 'district@dims.go.ug',
       phone: '+256700000003',
       role: 'district_health_officer',
       district: 'Kampala District'
     }
   },
-  'facility@nms.go.ug': {
+  'facility@dims.go.ug': {
     password: 'facility123',
     user: {
       id: '4',
       name: 'Facility Manager',
-      email: 'facility@nms.go.ug',
+      email: 'facility@dims.go.ug',
       phone: '+256700000004',
       role: 'facility_manager',
       facilityId: '1',
       facilityName: 'Mulago National Referral Hospital'
     }
   },
-  'vhw@nms.go.ug': {
+  'vhw@dims.go.ug': {
     password: 'vhw123',
     user: {
       id: '5',
       name: 'Village Health Worker',
-      email: 'vhw@nms.go.ug',
+      email: 'vhw@dims.go.ug',
       phone: '+256700000005',
       role: 'village_health_worker',
       facilityId: '2',

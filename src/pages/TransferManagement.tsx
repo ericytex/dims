@@ -577,8 +577,12 @@ export default function TransferManagement() {
                   )}
                 </div>
               ) : (
-                <div className="text-center py-8 text-gray-500">
-                  Transfer request form would be implemented here
+                <div className="space-y-4">
+                  <h4 className="text-lg font-semibold text-uganda-black">Request Transfer</h4>
+                  <p className="text-gray-600">
+                    Transfer request functionality will be available in the next update.
+                    This will allow facilities to request inventory transfers from other locations.
+                  </p>
                 </div>
               )}
             </div>

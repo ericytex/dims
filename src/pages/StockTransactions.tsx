@@ -449,7 +449,15 @@ export default function StockTransactions() {
                 Add {addTransactionType === 'stock_in' ? 'Stock In' : 'Stock Out'} Transaction
               </h3>
               <div className="text-center py-8 text-gray-500">
-                Transaction form would be implemented here
+                <div className="space-y-4">
+                  <h4 className="text-lg font-semibold text-uganda-black">
+                    {addTransactionType === 'stock_in' ? 'Record Stock In' : 'Record Stock Out'}
+                  </h4>
+                  <p className="text-gray-600">
+                    This feature will be available in the next update. 
+                    For now, transactions are automatically recorded when inventory items are updated.
+                  </p>
+                </div>
               </div>
               <div className="flex space-x-3 mt-6">
                 <button

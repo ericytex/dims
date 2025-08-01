@@ -31,7 +31,7 @@ export default function UserManagement() {
     {
       id: '1',
       name: 'DIMS Administrator',
-      email: 'admin@nms.go.ug',
+      email: 'admin@dims.go.ug',
       phone: '+256700000001',
       role: 'admin',
       status: 'active',
@@ -40,7 +40,7 @@ export default function UserManagement() {
     {
       id: '2',
       name: 'Regional Supervisor',
-      email: 'regional@nms.go.ug',
+      email: 'regional@dims.go.ug',
       phone: '+256700000002',
       role: 'regional_supervisor',
       region: 'Central Region',
@@ -50,7 +50,7 @@ export default function UserManagement() {
     {
       id: '3',
       name: 'Dr. Sarah Nakato',
-      email: 'sarah.nakato@nms.go.ug',
+      email: 'sarah.nakato@dims.go.ug',
       phone: '+256700000003',
       role: 'district_health_officer',
       district: 'Kampala District',
@@ -60,7 +60,7 @@ export default function UserManagement() {
     {
       id: '4',
       name: 'John Mukasa',
-      email: 'john.mukasa@nms.go.ug',
+      email: 'john.mukasa@dims.go.ug',
       phone: '+256700000004',
       role: 'facility_manager',
       facilityName: 'Mulago National Referral Hospital',
@@ -70,7 +70,7 @@ export default function UserManagement() {
     {
       id: '5',
       name: 'Mary Nambi',
-      email: 'mary.nambi@nms.go.ug',
+      email: 'mary.nambi@dims.go.ug',
       phone: '+256700000005',
       role: 'village_health_worker',
       facilityName: 'Kawempe Health Center IV',
@@ -84,6 +84,16 @@ export default function UserManagement() {
   const [showModal, setShowModal] = useState(false);
   const [modalType, setModalType] = useState<'add' | 'edit' | 'view'>('add');
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    role: 'facility_manager' as const,
+    facilityName: '',
+    region: '',
+    district: '',
+    status: 'active' as const
+  });
   const { addNotification } = useNotification();
 
   const roles = [
@@ -105,12 +115,32 @@ export default function UserManagement() {
   const handleAddUser = () => {
     setModalType('add');
     setSelectedUser(null);
+    setFormData({
+      name: '',
+      email: '',
+      phone: '',
+      role: 'facility_manager',
+      facilityName: '',
+      region: '',
+      district: '',
+      status: 'active'
+    });
     setShowModal(true);
   };
 
   const handleEditUser = (user: User) => {
     setModalType('edit');
     setSelectedUser(user);
+    setFormData({
+      name: user.name,
+      email: user.email,
+      phone: user.phone,
+      role: user.role as any,
+      facilityName: user.facilityName || '',
+      region: user.region || '',
+      district: user.district || '',
+      status: user.status
+    });
     setShowModal(true);
   };
 
@@ -129,6 +159,48 @@ export default function UserManagement() {
         message: `${user.name} has been successfully deleted.`
       });
     }
+  };
+
+  const handleSaveUser = () => {
+    if (!formData.name || !formData.email || !formData.phone) {
+      addNotification({
+        type: 'error',
+        title: 'Validation Error',
+        message: 'Please fill in all required fields.'
+      });
+      return;
+    }
+
+    const newUser: User = {
+      id: modalType === 'add' ? (users.length + 1).toString() : selectedUser!.id,
+      name: formData.name,
+      email: formData.email,
+      phone: formData.phone,
+      role: formData.role,
+      facilityName: formData.facilityName || undefined,
+      region: formData.region || undefined,
+      district: formData.district || undefined,
+      status: formData.status,
+      lastLogin: modalType === 'add' ? undefined : selectedUser!.lastLogin
+    };
+
+    if (modalType === 'add') {
+      setUsers([...users, newUser]);
+      addNotification({
+        type: 'success',
+        title: 'User Added',
+        message: `${formData.name} has been successfully added.`
+      });
+    } else {
+      setUsers(users.map(user => user.id === selectedUser!.id ? newUser : user));
+      addNotification({
+        type: 'success',
+        title: 'User Updated',
+        message: `${formData.name} has been successfully updated.`
+      });
+    }
+
+    setShowModal(false);
   };
 
   const getRoleColor = (role: string) => {
@@ -355,8 +427,142 @@ export default function UserManagement() {
                   </div>
                 </div>
               ) : (
-                <div className="text-center py-8 text-gray-500">
-                  User form would be implemented here
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Full Name *
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.name}
+                        onChange={(e) => setFormData({...formData, name: e.target.value})}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
+                        placeholder="Enter full name"
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Email Address *
+                      </label>
+                      <input
+                        type="email"
+                        value={formData.email}
+                        onChange={(e) => setFormData({...formData, email: e.target.value})}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
+                        placeholder="user@dims.go.ug"
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Phone Number *
+                      </label>
+                      <input
+                        type="tel"
+                        value={formData.phone}
+                        onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
+                        placeholder="+256700000000"
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Role *
+                      </label>
+                      <select
+                        value={formData.role}
+                        onChange={(e) => setFormData({...formData, role: e.target.value as any})}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
+                      >
+                        <option value="admin">Administrator</option>
+                        <option value="regional_supervisor">Regional Supervisor</option>
+                        <option value="district_health_officer">District Health Officer</option>
+                        <option value="facility_manager">Facility Manager</option>
+                        <option value="village_health_worker">Village Health Worker</option>
+                      </select>
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Status
+                      </label>
+                      <select
+                        value={formData.status}
+                        onChange={(e) => setFormData({...formData, status: e.target.value as any})}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
+                      >
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
+                      </select>
+                    </div>
+                    
+                    {(formData.role === 'facility_manager' || formData.role === 'village_health_worker') && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Facility Name
+                        </label>
+                        <input
+                          type="text"
+                          value={formData.facilityName}
+                          onChange={(e) => setFormData({...formData, facilityName: e.target.value})}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
+                          placeholder="Enter facility name"
+                        />
+                      </div>
+                    )}
+                    
+                    {formData.role === 'regional_supervisor' && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Region
+                        </label>
+                        <select
+                          value={formData.region}
+                          onChange={(e) => setFormData({...formData, region: e.target.value})}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
+                        >
+                          <option value="">Select Region</option>
+                          <option value="Central">Central</option>
+                          <option value="Eastern">Eastern</option>
+                          <option value="Northern">Northern</option>
+                          <option value="Western">Western</option>
+                        </select>
+                      </div>
+                    )}
+                    
+                    {formData.role === 'district_health_officer' && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          District
+                        </label>
+                        <input
+                          type="text"
+                          value={formData.district}
+                          onChange={(e) => setFormData({...formData, district: e.target.value})}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
+                          placeholder="Enter district name"
+                        />
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div className="flex space-x-3 pt-4">
+                    <button
+                      onClick={() => setShowModal(false)}
+                      className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleSaveUser}
+                      className="flex-1 px-4 py-2 bg-uganda-yellow text-uganda-black font-medium rounded-lg hover:bg-yellow-500 transition-colors"
+                    >
+                      {modalType === 'add' ? 'Add User' : 'Update User'}
+                    </button>
+                  </div>
                 </div>
               )}
             </div>

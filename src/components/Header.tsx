@@ -24,9 +24,6 @@ export default function Header({ onMenuClick }: HeaderProps) {
             <h1 className="text-xl font-semibold text-uganda-black">
               Decentralized Inventory Management System
             </h1>
-            <p className="text-sm text-gray-600">
-              National Medical Stores - Uganda
-            </p>
           </div>
         </div>
 

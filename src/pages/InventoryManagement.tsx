@@ -118,6 +118,20 @@ export default function InventoryManagement() {
   const [showModal, setShowModal] = useState(false);
   const [modalType, setModalType] = useState<'add' | 'edit' | 'view'>('add');
   const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null);
+  const [formData, setFormData] = useState({
+    name: '',
+    category: 'Medicines',
+    unit: 'Tablets',
+    currentStock: 0,
+    reorderLevel: 0,
+    expiryDate: '',
+    batchNumber: '',
+    facility: 'Mulago Hospital',
+    facilityId: '1',
+    cost: 0,
+    supplier: '',
+    notes: ''
+  });
   const { addNotification } = useNotification();
 
   const categories = [
@@ -148,12 +162,40 @@ export default function InventoryManagement() {
   const handleAddItem = () => {
     setModalType('add');
     setSelectedItem(null);
+    setFormData({
+      name: '',
+      category: 'Medicines',
+      unit: 'Tablets',
+      currentStock: 0,
+      reorderLevel: 0,
+      expiryDate: '',
+      batchNumber: '',
+      facility: 'Mulago Hospital',
+      facilityId: '1',
+      cost: 0,
+      supplier: '',
+      notes: ''
+    });
     setShowModal(true);
   };
 
   const handleEditItem = (item: InventoryItem) => {
     setModalType('edit');
     setSelectedItem(item);
+    setFormData({
+      name: item.name,
+      category: item.category,
+      unit: item.unit,
+      currentStock: item.currentStock,
+      reorderLevel: item.reorderLevel,
+      expiryDate: item.expiryDate || '',
+      batchNumber: item.batchNumber || '',
+      facility: item.facility,
+      facilityId: item.facilityId,
+      cost: item.cost,
+      supplier: item.supplier,
+      notes: ''
+    });
     setShowModal(true);
   };
 
@@ -161,6 +203,53 @@ export default function InventoryManagement() {
     setModalType('view');
     setSelectedItem(item);
     setShowModal(true);
+  };
+
+  const handleSaveItem = () => {
+    if (!formData.name || !formData.supplier || formData.currentStock < 0 || formData.cost < 0) {
+      addNotification({
+        type: 'error',
+        title: 'Validation Error',
+        message: 'Please fill in all required fields with valid values.'
+      });
+      return;
+    }
+
+    const newItem: InventoryItem = {
+      id: modalType === 'add' ? (items.length + 1).toString() : selectedItem!.id,
+      name: formData.name,
+      category: formData.category,
+      unit: formData.unit,
+      currentStock: formData.currentStock,
+      reorderLevel: formData.reorderLevel,
+      expiryDate: formData.expiryDate || undefined,
+      batchNumber: formData.batchNumber || undefined,
+      facility: formData.facility,
+      facilityId: formData.facilityId,
+      cost: formData.cost,
+      supplier: formData.supplier,
+      lastUpdated: new Date().toISOString().split('T')[0],
+      status: formData.currentStock === 0 ? 'out_of_stock' : 
+              formData.currentStock <= formData.reorderLevel ? 'low_stock' : 'in_stock'
+    };
+
+    if (modalType === 'add') {
+      setItems([...items, newItem]);
+      addNotification({
+        type: 'success',
+        title: 'Item Added',
+        message: `${formData.name} has been successfully added to inventory.`
+      });
+    } else {
+      setItems(items.map(item => item.id === selectedItem!.id ? newItem : item));
+      addNotification({
+        type: 'success',
+        title: 'Item Updated',
+        message: `${formData.name} has been successfully updated.`
+      });
+    }
+
+    setShowModal(false);
   };
 
   const getStatusColor = (status: string) => {
@@ -569,8 +658,159 @@ export default function InventoryManagement() {
                   </div>
                 </div>
               ) : (
-                <div className="text-center py-8 text-gray-500">
-                  Item form would be implemented here
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Item Name *
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.name}
+                        onChange={(e) => setFormData({...formData, name: e.target.value})}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
+                        placeholder="Enter item name"
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Category
+                      </label>
+                      <select
+                        value={formData.category}
+                        onChange={(e) => setFormData({...formData, category: e.target.value})}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
+                      >
+                        <option value="Medicines">Medicines</option>
+                        <option value="Consumables">Consumables</option>
+                        <option value="Equipment">Equipment</option>
+                        <option value="Supplies">Supplies</option>
+                      </select>
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Unit
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.unit}
+                        onChange={(e) => setFormData({...formData, unit: e.target.value})}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
+                        placeholder="e.g., Tablets, Boxes, Pieces"
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Current Stock *
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={formData.currentStock}
+                        onChange={(e) => setFormData({...formData, currentStock: parseInt(e.target.value) || 0})}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Reorder Level
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={formData.reorderLevel}
+                        onChange={(e) => setFormData({...formData, reorderLevel: parseInt(e.target.value) || 0})}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Unit Cost ($) *
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={formData.cost}
+                        onChange={(e) => setFormData({...formData, cost: parseFloat(e.target.value) || 0})}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Supplier *
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.supplier}
+                        onChange={(e) => setFormData({...formData, supplier: e.target.value})}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
+                        placeholder="Enter supplier name"
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Batch Number
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.batchNumber}
+                        onChange={(e) => setFormData({...formData, batchNumber: e.target.value})}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
+                        placeholder="Optional batch number"
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Expiry Date
+                      </label>
+                      <input
+                        type="date"
+                        value={formData.expiryDate}
+                        onChange={(e) => setFormData({...formData, expiryDate: e.target.value})}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Facility
+                      </label>
+                      <select
+                        value={formData.facility}
+                        onChange={(e) => setFormData({...formData, facility: e.target.value, facilityId: e.target.selectedIndex.toString()})}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
+                      >
+                        <option value="Mulago Hospital">Mulago Hospital</option>
+                        <option value="Kawempe HC IV">Kawempe HC IV</option>
+                        <option value="Kiruddu Hospital">Kiruddu Hospital</option>
+                        <option value="Nsambya HC III">Nsambya HC III</option>
+                      </select>
+                    </div>
+                  </div>
+                  
+                  <div className="flex space-x-3 pt-4">
+                    <button
+                      onClick={() => setShowModal(false)}
+                      className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleSaveItem}
+                      className="flex-1 px-4 py-2 bg-uganda-yellow text-uganda-black font-medium rounded-lg hover:bg-yellow-500 transition-colors"
+                    >
+                      {modalType === 'add' ? 'Add Item' : 'Update Item'}
+                    </button>
+                  </div>
                 </div>
               )}
             </div>

@@ -42,11 +42,11 @@ export default function LoginPage() {
   };
 
   const demoAccounts = [
-    { email: 'admin@nms.go.ug', role: 'Administrator', password: 'admin123' },
-    { email: 'regional@nms.go.ug', role: 'Regional Supervisor', password: 'regional123' },
-    { email: 'district@nms.go.ug', role: 'District Health Officer', password: 'district123' },
-    { email: 'facility@nms.go.ug', role: 'Facility Manager', password: 'facility123' },
-    { email: 'vhw@nms.go.ug', role: 'Village Health Worker', password: 'vhw123' }
+    { email: 'admin@dims.go.ug', role: 'Administrator', password: 'admin123' },
+    { email: 'regional@dims.go.ug', role: 'Regional Supervisor', password: 'regional123' },
+    { email: 'district@dims.go.ug', role: 'District Health Officer', password: 'district123' },
+    { email: 'facility@dims.go.ug', role: 'Facility Manager', password: 'facility123' },
+    { email: 'vhw@dims.go.ug', role: 'Village Health Worker', password: 'vhw123' }
   ];
 
   return (
@@ -55,8 +55,12 @@ export default function LoginPage() {
       <div className="flex-1 flex items-center justify-center px-4 sm:px-6 lg:px-8 bg-white">
         <div className="max-w-md w-full space-y-8">
           <div className="text-center">
-            <div className="mx-auto w-16 h-16 bg-uganda-yellow rounded-full flex items-center justify-center mb-4">
-              <ShieldCheck className="w-8 h-8 text-uganda-black" />
+            <div className="mx-auto w-20 h-20 mb-4">
+              <img 
+                src="https://images.pexels.com/photos/12935073/pexels-photo-12935073.jpeg?auto=compress&cs=tinysrgb&w=80&h=80&fit=crop" 
+                alt="Uganda Coat of Arms" 
+                className="w-full h-full rounded-full object-cover border-2 border-uganda-yellow"
+              />
             </div>
             <h2 className="text-3xl font-bold text-uganda-black">
               Welcome to DIMS
@@ -64,8 +68,8 @@ export default function LoginPage() {
             <p className="mt-2 text-gray-600">
               Decentralized Inventory Management System
             </p>
-            <p className="text-sm text-gray-500">
-              National Medical Stores - Uganda
+            <p className="text-sm text-uganda-red font-medium">
+              Republic of Uganda
             </p>
           </div>
 

@@ -81,12 +81,14 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
           {/* Header */}
           <div className="flex items-center justify-between p-4 border-b border-gray-200">
             <div className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-uganda-yellow rounded-lg flex items-center justify-center">
-                <ShieldCheck className="w-5 h-5 text-uganda-black" />
-              </div>
+              <img 
+                src="https://images.pexels.com/photos/12935073/pexels-photo-12935073.jpeg?auto=compress&cs=tinysrgb&w=64&h=64&fit=crop" 
+                alt="Uganda Coat of Arms" 
+                className="w-8 h-8 rounded-lg object-cover"
+              />
               <div>
                 <h1 className="text-lg font-bold text-uganda-black">DIMS</h1>
-                <p className="text-xs text-gray-600">NMS Uganda</p>
+                <p className="text-xs text-gray-600">Uganda</p>
               </div>
             </div>
             <button

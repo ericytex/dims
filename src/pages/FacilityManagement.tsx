@@ -44,7 +44,7 @@ export default function FacilityManagement() {
       gpsCoordinates: { latitude: 0.3354, longitude: 32.5851 },
       manager: 'Dr. John Mukasa',
       phone: '+256700000001',
-      email: 'manager@mulago.go.ug',
+      email: 'manager@dims.go.ug',
       status: 'active',
       totalItems: 1247,
       users: 25
@@ -59,7 +59,7 @@ export default function FacilityManagement() {
       gpsCoordinates: { latitude: 0.3676, longitude: 32.5851 },
       manager: 'Mary Nambi',
       phone: '+256700000002',
-      email: 'manager@kawempe.go.ug',
+      email: 'manager@dims.go.ug',
       status: 'active',
       totalItems: 432,
       users: 8
@@ -74,7 +74,7 @@ export default function FacilityManagement() {
       gpsCoordinates: { latitude: 0.2743, longitude: 32.5851 },
       manager: 'Dr. Sarah Nakato',
       phone: '+256700000003',
-      email: 'manager@kiruddu.go.ug',
+      email: 'manager@dims.go.ug',
       status: 'active',
       totalItems: 892,
       users: 18
@@ -88,7 +88,7 @@ export default function FacilityManagement() {
       location: 'Makindye Division, Kampala',
       manager: 'James Ssebunya',
       phone: '+256700000004',
-      email: 'manager@nsambya.go.ug',
+      email: 'manager@dims.go.ug',
       status: 'inactive',
       totalItems: 256,
       users: 5
@@ -101,6 +101,17 @@ export default function FacilityManagement() {
   const [showModal, setShowModal] = useState(false);
   const [modalType, setModalType] = useState<'add' | 'edit' | 'view'>('add');
   const [selectedFacility, setSelectedFacility] = useState<Facility | null>(null);
+  const [formData, setFormData] = useState({
+    name: '',
+    type: 'health_center_iii' as const,
+    region: 'Central',
+    district: '',
+    location: '',
+    manager: '',
+    phone: '',
+    email: '',
+    status: 'active' as const
+  });
   const { addNotification } = useNotification();
 
   const facilityTypes = [
@@ -131,12 +142,34 @@ export default function FacilityManagement() {
   const handleAddFacility = () => {
     setModalType('add');
     setSelectedFacility(null);
+    setFormData({
+      name: '',
+      type: 'health_center_iii',
+      region: 'Central',
+      district: '',
+      location: '',
+      manager: '',
+      phone: '',
+      email: '',
+      status: 'active'
+    });
     setShowModal(true);
   };
 
   const handleEditFacility = (facility: Facility) => {
     setModalType('edit');
     setSelectedFacility(facility);
+    setFormData({
+      name: facility.name,
+      type: facility.type,
+      region: facility.region,
+      district: facility.district,
+      location: facility.location,
+      manager: facility.manager,
+      phone: facility.phone,
+      email: facility.email,
+      status: facility.status
+    });
     setShowModal(true);
   };
 
@@ -144,6 +177,50 @@ export default function FacilityManagement() {
     setModalType('view');
     setSelectedFacility(facility);
     setShowModal(true);
+  };
+
+  const handleSaveFacility = () => {
+    if (!formData.name || !formData.district || !formData.location || !formData.manager || !formData.phone || !formData.email) {
+      addNotification({
+        type: 'error',
+        title: 'Validation Error',
+        message: 'Please fill in all required fields.'
+      });
+      return;
+    }
+
+    const newFacility: Facility = {
+      id: modalType === 'add' ? (facilities.length + 1).toString() : selectedFacility!.id,
+      name: formData.name,
+      type: formData.type,
+      region: formData.region,
+      district: formData.district,
+      location: formData.location,
+      manager: formData.manager,
+      phone: formData.phone,
+      email: formData.email,
+      status: formData.status,
+      totalItems: modalType === 'add' ? 0 : selectedFacility!.totalItems,
+      users: modalType === 'add' ? 0 : selectedFacility!.users
+    };
+
+    if (modalType === 'add') {
+      setFacilities([...facilities, newFacility]);
+      addNotification({
+        type: 'success',
+        title: 'Facility Added',
+        message: `${formData.name} has been successfully added.`
+      });
+    } else {
+      setFacilities(facilities.map(facility => facility.id === selectedFacility!.id ? newFacility : facility));
+      addNotification({
+        type: 'success',
+        title: 'Facility Updated',
+        message: `${formData.name} has been successfully updated.`
+      });
+    }
+
+    setShowModal(false);
   };
 
   const getTypeColor = (type: string) => {
@@ -472,8 +549,148 @@ export default function FacilityManagement() {
                   </div>
                 </div>
               ) : (
-                <div className="text-center py-8 text-gray-500">
-                  Facility form would be implemented here
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Facility Name *
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.name}
+                        onChange={(e) => setFormData({...formData, name: e.target.value})}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
+                        placeholder="Enter facility name"
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Type *
+                      </label>
+                      <select
+                        value={formData.type}
+                        onChange={(e) => setFormData({...formData, type: e.target.value as any})}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
+                      >
+                        <option value="hospital">Hospital</option>
+                        <option value="health_center_iv">Health Center IV</option>
+                        <option value="health_center_iii">Health Center III</option>
+                        <option value="health_center_ii">Health Center II</option>
+                        <option value="clinic">Clinic</option>
+                      </select>
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Region *
+                      </label>
+                      <select
+                        value={formData.region}
+                        onChange={(e) => setFormData({...formData, region: e.target.value})}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
+                      >
+                        <option value="Central">Central</option>
+                        <option value="Eastern">Eastern</option>
+                        <option value="Northern">Northern</option>
+                        <option value="Western">Western</option>
+                      </select>
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        District *
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.district}
+                        onChange={(e) => setFormData({...formData, district: e.target.value})}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
+                        placeholder="Enter district"
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Location *
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.location}
+                        onChange={(e) => setFormData({...formData, location: e.target.value})}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
+                        placeholder="Enter full address"
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Manager Name *
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.manager}
+                        onChange={(e) => setFormData({...formData, manager: e.target.value})}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
+                        placeholder="Enter manager name"
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Phone Number *
+                      </label>
+                      <input
+                        type="tel"
+                        value={formData.phone}
+                        onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
+                        placeholder="+256700000000"
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Email Address *
+                      </label>
+                      <input
+                        type="email"
+                        value={formData.email}
+                        onChange={(e) => setFormData({...formData, email: e.target.value})}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
+                        placeholder="manager@facility.go.ug"
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Status
+                      </label>
+                      <select
+                        value={formData.status}
+                        onChange={(e) => setFormData({...formData, status: e.target.value as any})}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
+                      >
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
+                      </select>
+                    </div>
+                  </div>
+                  
+                  <div className="flex space-x-3 pt-4">
+                    <button
+                      onClick={() => setShowModal(false)}
+                      className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleSaveFacility}
+                      className="flex-1 px-4 py-2 bg-uganda-yellow text-uganda-black font-medium rounded-lg hover:bg-yellow-500 transition-colors"
+                    >
+                      {modalType === 'add' ? 'Add Facility' : 'Update Facility'}
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
