@@ -42,79 +42,79 @@ export default function TransferManagement() {
   const [transfers, setTransfers] = useState<Transfer[]>([
     {
       id: '1',
-      itemName: 'Paracetamol 500mg',
+      itemName: 'Laptop Computers',
       itemId: '1',
-      quantity: 500,
-      unit: 'Tablets',
-      fromFacility: 'Mulago Hospital',
+      quantity: 25,
+      unit: 'units',
+      fromFacility: 'Main Warehouse',
       fromFacilityId: '1',
-      toFacility: 'Kawempe HC IV',
+      toFacility: 'Regional Office',
       toFacilityId: '2',
-      requestedBy: 'Mary Nambi',
+      requestedBy: 'John Mukasa',
       requestDate: '2025-01-09',
       status: 'pending',
-      reason: 'Stock shortage',
+      reason: 'New office setup',
       priority: 'high',
-      notes: 'Urgent request due to high patient demand',
+      notes: 'Urgent request for new branch opening',
       trackingNumber: 'TRK-2025-001'
     },
     {
       id: '2',
-      itemName: 'Amoxicillin 250mg',
+      itemName: 'Office Chairs',
       itemId: '2',
-      quantity: 200,
-      unit: 'Capsules',
-      fromFacility: 'Kiruddu Hospital',
+      quantity: 50,
+      unit: 'units',
+      fromFacility: 'Distribution Center',
       fromFacilityId: '3',
-      toFacility: 'Nsambya HC III',
+      toFacility: 'Retail Store',
       toFacilityId: '4',
-      requestedBy: 'James Ssebunya',
+      requestedBy: 'Sarah Nakato',
       requestDate: '2025-01-08',
       status: 'approved',
-      approvedBy: 'Dr. Sarah Nakato',
+      approvedBy: 'James Ssebunya',
       approvalDate: '2025-01-09',
-      reason: 'Monthly allocation',
+      reason: 'Store expansion',
       priority: 'medium',
-      notes: 'Regular monthly transfer',
+      notes: 'Regular inventory transfer for new store section',
       trackingNumber: 'TRK-2025-002'
     },
     {
       id: '3',
-      itemName: 'Insulin Vials',
+      itemName: 'Printer Cartridges',
       itemId: '4',
-      quantity: 10,
-      unit: 'Vials',
-      fromFacility: 'Mulago Hospital',
+      quantity: 100,
+      unit: 'units',
+      fromFacility: 'Main Warehouse',
       fromFacilityId: '1',
-      toFacility: 'Kiruddu Hospital',
+      toFacility: 'Manufacturing Plant',
       toFacilityId: '3',
-      requestedBy: 'Dr. Sarah Nakato',
+      requestedBy: 'David Okello',
       requestDate: '2025-01-08',
       status: 'delivered',
-      approvedBy: 'John Mukasa',
+      approvedBy: 'Mary Nambi',
       approvalDate: '2025-01-08',
       deliveryDate: '2025-01-09',
-      reason: 'Emergency requirement',
+      reason: 'Production requirement',
       priority: 'urgent',
-      notes: 'Critical for diabetes patients',
+      notes: 'Critical for production line operations',
       trackingNumber: 'TRK-2025-003'
     },
     {
       id: '4',
-      itemName: 'Surgical Gloves (Medium)',
+      itemName: 'Network Cables',
       itemId: '5',
-      quantity: 50,
-      unit: 'Boxes',
-      fromFacility: 'Kawempe HC IV',
+      quantity: 200,
+      unit: 'meters',
+      fromFacility: 'Regional Office',
       fromFacilityId: '2',
-      toFacility: 'Nsambya HC III',
+      toFacility: 'Retail Store',
       toFacilityId: '4',
-      requestedBy: 'James Ssebunya',
+      requestedBy: 'Sarah Nakato',
       requestDate: '2025-01-07',
       status: 'rejected',
-      approvedBy: 'Mary Nambi',
+      approvedBy: 'John Mukasa',
       approvalDate: '2025-01-08',
-      reason: 'PPE shortage',
+      reason: 'IT infrastructure setup',
       priority: 'low',
       notes: 'Rejected - insufficient stock at source facility',
       trackingNumber: 'TRK-2025-004'
@@ -175,11 +175,7 @@ export default function TransferManagement() {
         ? { ...t, status: 'approved', approvedBy: 'Current User', approvalDate: '2025-01-09' }
         : t
     ));
-    addNotification({
-      type: 'success',
-      title: 'Transfer Approved',
-      message: `Transfer request for ${transfer.itemName} has been approved.`
-    });
+    addNotification(`Transfer request for ${transfer.itemName} has been approved.`);
   };
 
   const handleRejectTransfer = (transfer: Transfer) => {
@@ -188,11 +184,7 @@ export default function TransferManagement() {
         ? { ...t, status: 'rejected', approvedBy: 'Current User', approvalDate: '2025-01-09' }
         : t
     ));
-    addNotification({
-      type: 'warning',
-      title: 'Transfer Rejected',
-      message: `Transfer request for ${transfer.itemName} has been rejected.`
-    });
+    addNotification(`Transfer request for ${transfer.itemName} has been rejected.`, 'warning');
   };
 
   const getStatusColor = (status: string) => {

@@ -1,179 +1,187 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useNotification } from '../contexts/NotificationContext';
-import { ShieldCheck, Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff, Lock, Mail, ChevronDown, ChevronUp } from 'lucide-react';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [showDemoAccounts, setShowDemoAccounts] = useState(false);
   const { login } = useAuth();
   const { addNotification } = useNotification();
+  const navigate = useNavigate();
+
+  const demoUsers = [
+    { email: 'admin@ims.com', role: 'System Administrator', password: 'admin123' },
+    { email: 'regional@ims.com', role: 'Regional Manager', password: 'regional123' },
+    { email: 'district@ims.com', role: 'District Manager', password: 'district123' },
+    { email: 'facility@ims.com', role: 'Facility Manager', password: 'facility123' },
+    { email: 'worker@ims.com', role: 'Inventory Worker', password: 'worker123' }
+  ];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
+    
+    if (!email || !password) {
+      addNotification('Please enter both email and password', 'error');
+      return;
+    }
 
+    setIsLoading(true);
+    
     try {
       const success = await login(email, password);
       if (success) {
-        addNotification({
-          type: 'success',
-          title: 'Login Successful',
-          message: 'Welcome to DIMS!'
-        });
+        addNotification('Login successful', 'success');
+        navigate('/dashboard');
       } else {
-        addNotification({
-          type: 'error',
-          title: 'Login Failed',
-          message: 'Invalid email or password. Please try again.'
-        });
+        addNotification('Invalid email or password', 'error');
       }
     } catch (error) {
-      addNotification({
-        type: 'error',
-        title: 'Login Error',
-        message: 'An error occurred during login. Please try again.'
-      });
+      addNotification('Login failed. Please try again.', 'error');
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
-  const demoAccounts = [
-    { email: 'admin@dims.go.ug', role: 'Administrator', password: 'admin123' },
-    { email: 'regional@dims.go.ug', role: 'Regional Supervisor', password: 'regional123' },
-    { email: 'district@dims.go.ug', role: 'District Health Officer', password: 'district123' },
-    { email: 'facility@dims.go.ug', role: 'Facility Manager', password: 'facility123' },
-    { email: 'vhw@dims.go.ug', role: 'Village Health Worker', password: 'vhw123' }
-  ];
+  const handleDemoLogin = (demoUser: typeof demoUsers[0]) => {
+    setEmail(demoUser.email);
+    setPassword(demoUser.password);
+  };
+
+  const toggleDemoAccounts = () => {
+    setShowDemoAccounts(!showDemoAccounts);
+  };
 
   return (
-    <div className="min-h-screen flex">
-      {/* Left side - Login Form */}
-      <div className="flex-1 flex items-center justify-center px-4 sm:px-6 lg:px-8 bg-white">
-        <div className="max-w-md w-full space-y-8">
-          <div className="text-center">
-            <div className="mx-auto w-20 h-20 mb-4">
-              <img 
-                src="https://moscow.mofa.go.ug/sites/havana.dd/files/Project%20Management%20Plan-SMS%20Gateway.pdf.png" 
-                alt="Uganda Coat of Arms" 
-                className="w-full h-full object-contain"
-              />
-            </div>
-            <h2 className="text-3xl font-bold text-uganda-black">
-              Welcome to DIMS
-            </h2>
-            <p className="mt-2 text-gray-600">
-              Decentralized Inventory Management System
-            </p>
-            <p className="text-sm text-uganda-red font-medium">
-              Republic of Uganda
-            </p>
+    <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+      <div className="sm:mx-auto sm:w-full sm:max-w-md">
+        <div className="flex justify-center">
+          <div className="w-20 h-20 flex items-center justify-center">
+            <img 
+              src="https://static.wixstatic.com/media/1e6d1c_510e06d9798e43dba04f363ff29d730f~mv2.jpg/v1/fill/w_98,h_104,al_c,q_80,usm_0.66_1.00_0.01,enc_avif,quality_auto/Coat_of_arms_of_Uganda.jpg"
+              alt="Uganda Coat of Arms"
+              className="w-full h-full object-contain"
+            />
           </div>
+        </div>
+        <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+          Inventory Management System
+        </h2>
+        <p className="mt-2 text-center text-sm text-gray-600">
+          Republic of Uganda
+        </p>
+        <p className="mt-1 text-center text-sm text-gray-500">
+          Sign in to your account
+        </p>
+      </div>
 
-          <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-            <div className="space-y-4">
-              <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                  Email Address
-                </label>
+      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
+        <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
+          <form className="space-y-6" onSubmit={handleSubmit}>
+            <div>
+              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+                Email address
+              </label>
+              <div className="mt-1 relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <Mail className="h-5 w-5 text-gray-400" />
+                </div>
                 <input
                   id="email"
                   name="email"
                   type="email"
+                  autoComplete="email"
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-uganda-yellow focus:border-uganda-yellow"
+                  className="appearance-none block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-uganda-yellow focus:border-uganda-yellow sm:text-sm"
                   placeholder="Enter your email"
                 />
               </div>
+            </div>
 
-              <div>
-                <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                  Password
-                </label>
-                <div className="mt-1 relative">
-                  <input
-                    id="password"
-                    name="password"
-                    type={showPassword ? 'text' : 'password'}
-                    required
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="block w-full px-3 py-2 pr-10 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-uganda-yellow focus:border-uganda-yellow"
-                    placeholder="Enter your password"
-                  />
+            <div>
+              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+                Password
+              </label>
+              <div className="mt-1 relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <Lock className="h-5 w-5 text-gray-400" />
+                </div>
+                <input
+                  id="password"
+                  name="password"
+                  type={showPassword ? 'text' : 'password'}
+                  autoComplete="current-password"
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="appearance-none block w-full pl-10 pr-10 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-uganda-yellow focus:border-uganda-yellow sm:text-sm"
+                  placeholder="Enter your password"
+                />
+                <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                    className="text-gray-400 hover:text-gray-600"
                   >
                     {showPassword ? (
-                      <EyeOff className="w-5 h-5 text-gray-400" />
+                      <EyeOff className="h-5 w-5" />
                     ) : (
-                      <Eye className="w-5 h-5 text-gray-400" />
+                      <Eye className="h-5 w-5" />
                     )}
                   </button>
                 </div>
               </div>
             </div>
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-uganda-black bg-uganda-yellow hover:bg-yellow-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-uganda-yellow disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {loading ? 'Signing in...' : 'Sign In'}
-            </button>
-          </form>
-        </div>
-      </div>
-
-      {/* Right side - Demo Accounts */}
-      <div className="hidden lg:flex lg:flex-1 bg-gray-50 items-center justify-center px-8">
-        <div className="max-w-md w-full">
-          <h3 className="text-xl font-semibold text-uganda-black mb-6">
-            Demo Accounts
-          </h3>
-          <div className="space-y-4">
-            {demoAccounts.map((account, index) => (
-              <div
-                key={index}
-                className="bg-white p-4 rounded-lg shadow-sm border border-gray-200 cursor-pointer hover:border-uganda-yellow transition-colors"
-                onClick={() => {
-                  setEmail(account.email);
-                  setPassword(account.password);
-                }}
+            <div>
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-uganda-black bg-uganda-yellow hover:bg-yellow-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-uganda-yellow disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <div className="flex justify-between items-start">
-                  <div>
-                    <p className="font-medium text-uganda-black">{account.role}</p>
-                    <p className="text-sm text-gray-600">{account.email}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-xs text-gray-500">Password:</p>
-                    <p className="text-sm font-mono bg-gray-100 px-2 py-1 rounded">
-                      {account.password}
-                    </p>
-                  </div>
-                </div>
+                {isLoading ? 'Signing in...' : 'Sign in'}
+              </button>
+            </div>
+          </form>
+
+          <div className="mt-6">
+            <button
+              type="button"
+              onClick={toggleDemoAccounts}
+              className="w-full flex items-center justify-center space-x-2 text-sm text-gray-600 hover:text-gray-800 transition-colors"
+            >
+              <span>Demo Accounts</span>
+              {showDemoAccounts ? (
+                <ChevronUp className="h-4 w-4" />
+              ) : (
+                <ChevronDown className="h-4 w-4" />
+              )}
+            </button>
+
+            {showDemoAccounts && (
+              <div className="mt-4 space-y-3 animate-in slide-in-from-top-2 duration-200">
+                {demoUsers.map((user) => (
+                  <button
+                    key={user.email}
+                    type="button"
+                    onClick={() => handleDemoLogin(user)}
+                    className="w-full flex items-center justify-between px-3 py-2 border border-gray-300 rounded-md text-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-uganda-yellow transition-colors"
+                  >
+                    <div className="flex flex-col items-start">
+                      <span className="font-medium">{user.role}</span>
+                      <span className="text-xs text-gray-500">{user.email}</span>
+                    </div>
+                    <span className="text-xs text-gray-400">Click to fill</span>
+                  </button>
+                ))}
               </div>
-            ))}
-          </div>
-          <p className="text-xs text-gray-500 mt-4 text-center">
-            Click on any account to auto-fill the login form
-          </p>
-          
-          {/* Footer */}
-          <div className="mt-8 text-center">
-            <img 
-              src="https://moscow.mofa.go.ug/sites/havana.dd/files/footer.png" 
-              alt="Uganda Government Footer" 
-              className="mx-auto max-w-full h-auto"
-            />
+            )}
           </div>
         </div>
       </div>

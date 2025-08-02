@@ -42,7 +42,7 @@ function AppContent() {
           </ProtectedRoute>
         } />
         <Route path="/facilities" element={
-          <ProtectedRoute allowedRoles={['admin', 'regional_supervisor']}>
+          <ProtectedRoute allowedRoles={['admin', 'regional_manager']}>
             <Layout>
               <FacilityManagement />
             </Layout>

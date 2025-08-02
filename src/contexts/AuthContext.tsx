@@ -5,7 +5,7 @@ export interface User {
   name: string;
   email: string;
   phone: string;
-  role: 'admin' | 'regional_supervisor' | 'district_health_officer' | 'facility_manager' | 'village_health_worker';
+  role: 'admin' | 'regional_manager' | 'district_manager' | 'facility_manager' | 'inventory_worker';
   facilityId?: string;
   facilityName?: string;
   region?: string;
@@ -24,60 +24,60 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 // Mock users for demonstration
 const mockUsers: Record<string, { password: string; user: User }> = {
-  'admin@dims.go.ug': {
+  'admin@ims.com': {
     password: 'admin123',
     user: {
       id: '1',
-      name: 'DIMS Administrator',
-      email: 'admin@dims.go.ug',
+      name: 'System Administrator',
+      email: 'admin@ims.com',
       phone: '+256700000001',
       role: 'admin'
     }
   },
-  'regional@dims.go.ug': {
+  'regional@ims.com': {
     password: 'regional123',
     user: {
       id: '2',
-      name: 'Regional Supervisor',
-      email: 'regional@dims.go.ug',
+      name: 'Regional Manager',
+      email: 'regional@ims.com',
       phone: '+256700000002',
-      role: 'regional_supervisor',
+      role: 'regional_manager',
       region: 'Central Region'
     }
   },
-  'district@dims.go.ug': {
+  'district@ims.com': {
     password: 'district123',
     user: {
       id: '3',
-      name: 'District Health Officer',
-      email: 'district@dims.go.ug',
+      name: 'District Manager',
+      email: 'district@ims.com',
       phone: '+256700000003',
-      role: 'district_health_officer',
+      role: 'district_manager',
       district: 'Kampala District'
     }
   },
-  'facility@dims.go.ug': {
+  'facility@ims.com': {
     password: 'facility123',
     user: {
       id: '4',
       name: 'Facility Manager',
-      email: 'facility@dims.go.ug',
+      email: 'facility@ims.com',
       phone: '+256700000004',
       role: 'facility_manager',
       facilityId: '1',
-      facilityName: 'Mulago National Referral Hospital'
+      facilityName: 'Main Warehouse'
     }
   },
-  'vhw@dims.go.ug': {
-    password: 'vhw123',
+  'worker@ims.com': {
+    password: 'worker123',
     user: {
       id: '5',
-      name: 'Village Health Worker',
-      email: 'vhw@dims.go.ug',
+      name: 'Inventory Worker',
+      email: 'worker@ims.com',
       phone: '+256700000005',
-      role: 'village_health_worker',
+      role: 'inventory_worker',
       facilityId: '2',
-      facilityName: 'Kawempe Health Center IV'
+      facilityName: 'Distribution Center'
     }
   }
 };
@@ -87,39 +87,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
-    const storedUser = localStorage.getItem('dims_user');
+    const storedUser = localStorage.getItem('ims_user');
     if (storedUser) {
       try {
         const userData = JSON.parse(storedUser);
         setUser(userData);
         setIsAuthenticated(true);
       } catch (error) {
-        localStorage.removeItem('dims_user');
+        localStorage.removeItem('ims_user');
       }
     }
   }, []);
 
   const login = async (email: string, password: string): Promise<boolean> => {
-    const mockUser = mockUsers[email];
-    
-    if (mockUser && mockUser.password === password) {
-      setUser(mockUser.user);
+    const userData = mockUsers[email];
+    if (userData && userData.password === password) {
+      setUser(userData.user);
       setIsAuthenticated(true);
-      localStorage.setItem('dims_user', JSON.stringify(mockUser.user));
+      localStorage.setItem('ims_user', JSON.stringify(userData.user));
       return true;
     }
-    
     return false;
   };
 
   const logout = () => {
     setUser(null);
     setIsAuthenticated(false);
-    localStorage.removeItem('dims_user');
+    localStorage.removeItem('ims_user');
   };
 
   const hasRole = (roles: string[]): boolean => {
-    return user ? roles.includes(user.role) : false;
+    if (!user) return false;
+    return roles.includes(user.role);
   };
 
   return (

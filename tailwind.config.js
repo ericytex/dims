@@ -10,7 +10,16 @@ export default {
         'uganda-blue': '#0066CC',
       },
       fontFamily: {
-        sans: ['Open Sans', 'system-ui', 'sans-serif'],
+        sans: [
+          'SF Pro Display',
+          '-apple-system',
+          'BlinkMacSystemFont',
+          '"SF Pro Text"',
+          '"Helvetica Neue"',
+          'Helvetica',
+          'Arial',
+          'sans-serif'
+        ],
       },
     },
   },
