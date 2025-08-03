@@ -6,11 +6,6 @@
   "framework": "vite",
   "public": true,
   "alias": ["dmis-uganda.vercel.app"],
-  "functions": {
-    "app/api/**/*.js": {
-      "maxDuration": 30
-    }
-  },
   "build": {
     "env": {
       "SKIP_CACHE": "1"
