@@ -136,13 +136,13 @@ export default function Dashboard() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
+        <div className="flex items-center justify-between">
+          <div>
           <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
           <p className="text-gray-600">Welcome back, {user?.name}</p>
-        </div>
-        <div className="flex items-center space-x-2 text-sm text-gray-500">
-          <Calendar className="w-4 h-4" />
+          </div>
+          <div className="flex items-center space-x-2 text-sm text-gray-500">
+            <Calendar className="w-4 h-4" />
           <span>{new Date().toLocaleDateString()}</span>
         </div>
       </div>
@@ -191,12 +191,12 @@ export default function Dashboard() {
             <div className="space-y-4">
               {recentTransactions.map((transaction) => (
                 <div key={transaction.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                  <div className="flex items-center space-x-3">
-                    <div className={`w-2 h-2 rounded-full ${
-                      transaction.type === 'Stock In' ? 'bg-green-500' :
+                    <div className="flex items-center space-x-3">
+                      <div className={`w-2 h-2 rounded-full ${
+                        transaction.type === 'Stock In' ? 'bg-green-500' :
                       transaction.type === 'Stock Out' ? 'bg-red-500' : 'bg-blue-500'
-                    }`} />
-                    <div>
+                      }`} />
+                      <div>
                       <p className="font-medium text-gray-900">{transaction.item}</p>
                       <p className="text-sm text-gray-500">{transaction.facility}</p>
                     </div>

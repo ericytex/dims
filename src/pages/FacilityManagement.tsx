@@ -296,8 +296,8 @@ export default function FacilityManagement() {
                 <option key={region.value} value={region.value}>{region.label}</option>
               ))}
             </select>
-          </div>
-          
+      </div>
+
           <div className="flex items-end">
             <button
               onClick={() => {
@@ -317,7 +317,7 @@ export default function FacilityManagement() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredFacilities.map((facility) => (
           <div key={facility.id} className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-start justify-between mb-4">
+              <div className="flex items-start justify-between mb-4">
               <div className="flex items-center space-x-3">
                 {getFacilityTypeIcon(facility.type)}
                 <div>
@@ -411,48 +411,48 @@ export default function FacilityManagement() {
                       </label>
                       <p className="text-gray-900">{getFacilityTypeLabel(selectedFacility.type)}</p>
                     </div>
-                    
+
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         Region
                       </label>
-                      <p className="text-gray-900">{selectedFacility.region}</p>
-                    </div>
+                          <p className="text-gray-900">{selectedFacility.region}</p>
+                        </div>
                     
-                    <div>
+                        <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         District
                       </label>
-                      <p className="text-gray-900">{selectedFacility.district}</p>
-                    </div>
+                          <p className="text-gray-900">{selectedFacility.district}</p>
+                        </div>
                     
                     <div className="md:col-span-2">
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         Location
                       </label>
-                      <p className="text-gray-900">{selectedFacility.location}</p>
+                          <p className="text-gray-900">{selectedFacility.location}</p>
                     </div>
-                    
+
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         Manager
                       </label>
-                      <p className="text-gray-900">{selectedFacility.manager}</p>
-                    </div>
+                          <p className="text-gray-900">{selectedFacility.manager}</p>
+                        </div>
                     
-                    <div>
+                        <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         Phone
                       </label>
-                      <p className="text-gray-900">{selectedFacility.phone}</p>
-                    </div>
+                          <p className="text-gray-900">{selectedFacility.phone}</p>
+                        </div>
                     
                     <div className="md:col-span-2">
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         Email
                       </label>
-                      <p className="text-gray-900">{selectedFacility.email}</p>
-                    </div>
+                          <p className="text-gray-900">{selectedFacility.email}</p>
+                        </div>
                     
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -466,7 +466,7 @@ export default function FacilityManagement() {
                         {selectedFacility.status}
                       </span>
                     </div>
-                    
+
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         Total Items
@@ -605,24 +605,24 @@ export default function FacilityManagement() {
                   </div>
                 </div>
               )}
-            </div>
-            
+                  </div>
+                  
             {modalType !== 'view' && (
               <div className="flex items-center justify-end space-x-3 p-6 border-t border-gray-200">
-                <button
-                  onClick={() => setShowModal(false)}
+                    <button
+                      onClick={() => setShowModal(false)}
                   className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleSaveFacility}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleSaveFacility}
                   className="px-4 py-2 bg-uganda-yellow text-uganda-black rounded-lg hover:bg-yellow-400 transition-colors"
-                >
-                  {modalType === 'add' ? 'Add Facility' : 'Update Facility'}
-                </button>
-              </div>
-            )}
+                    >
+                      {modalType === 'add' ? 'Add Facility' : 'Update Facility'}
+                    </button>
+                </div>
+              )}
           </div>
         </div>
       )}

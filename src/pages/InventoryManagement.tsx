@@ -269,7 +269,7 @@ export default function InventoryManagement() {
     }
 
     if (modalType === 'add') {
-      const newItem: InventoryItem = {
+    const newItem: InventoryItem = {
         id: Date.now().toString(),
         ...formData,
         lastUpdated: new Date().toISOString().split('T')[0]
@@ -376,15 +376,15 @@ export default function InventoryManagement() {
           const Icon = stat.icon;
           return (
             <div key={stat.name} className="bg-white rounded-lg shadow p-6">
-              <div className="flex items-center">
+          <div className="flex items-center">
                 <div className={`p-2 rounded-lg ${stat.color}`}>
                   <Icon className="w-6 h-6 text-white" />
-                </div>
-                <div className="ml-4">
+            </div>
+            <div className="ml-4">
                   <p className="text-sm font-medium text-gray-600">{stat.name}</p>
                   <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
-                </div>
-              </div>
+            </div>
+          </div>
               <div className="mt-4 flex items-center">
                 {stat.changeType === 'increase' ? (
                   <TrendingUp className="w-4 h-4 text-green-500" />
@@ -397,7 +397,7 @@ export default function InventoryManagement() {
                   {stat.change}
                 </span>
                 <span className="ml-2 text-sm text-gray-500">from last month</span>
-              </div>
+        </div>
             </div>
           );
         })}
@@ -597,86 +597,86 @@ export default function InventoryManagement() {
             
             <div className="p-6">
               {modalType === 'view' && selectedItem ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
                     <p className="text-gray-900">{selectedItem.name}</p>
                   </div>
-                  <div>
+                        <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">SKU</label>
                     <p className="text-gray-900">{selectedItem.sku}</p>
-                  </div>
-                  <div>
+                        </div>
+                        <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
-                    <p className="text-gray-900">{selectedItem.category}</p>
-                  </div>
-                  <div>
+                          <p className="text-gray-900">{selectedItem.category}</p>
+                        </div>
+                        <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Unit</label>
-                    <p className="text-gray-900">{selectedItem.unit}</p>
-                  </div>
-                  <div>
+                          <p className="text-gray-900">{selectedItem.unit}</p>
+                        </div>
+                          <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Current Stock</label>
                     <p className="text-gray-900">{selectedItem.currentStock} {selectedItem.unit}</p>
-                  </div>
+                          </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Cost</label>
                     <p className="text-gray-900">UGX {selectedItem.cost.toLocaleString()}</p>
-                  </div>
+                      </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Supplier</label>
                     <p className="text-gray-900">{selectedItem.supplier}</p>
-                  </div>
-                  <div>
+                    </div>
+                    <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Facility</label>
                     <p className="text-gray-900">{selectedItem.facility}</p>
-                  </div>
-                  <div>
+                        </div>
+                        <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
                     <p className="text-gray-900">{selectedItem.location}</p>
-                  </div>
-                  <div>
+                        </div>
+                        <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
                     <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(selectedItem.status)}`}>
                       {selectedItem.status}
-                    </span>
-                  </div>
+                          </span>
+                        </div>
                   <div className="md:col-span-2">
                     <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
                     <p className="text-gray-900">{selectedItem.description}</p>
-                  </div>
-                  <div>
+                      </div>
+                    <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Min Stock</label>
                     <p className="text-gray-900">{selectedItem.minStock}</p>
-                  </div>
-                  <div>
+                        </div>
+                        <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Max Stock</label>
                     <p className="text-gray-900">{selectedItem.maxStock}</p>
-                  </div>
-                  {selectedItem.expiryDate && (
-                    <div>
+                        </div>
+                        {selectedItem.expiryDate && (
+                          <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Expiry Date</label>
-                      <p className="text-gray-900">{selectedItem.expiryDate}</p>
-                    </div>
-                  )}
-                  <div>
+                            <p className="text-gray-900">{selectedItem.expiryDate}</p>
+                          </div>
+                        )}
+                        <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Last Updated</label>
-                    <p className="text-gray-900">{selectedItem.lastUpdated}</p>
+                          <p className="text-gray-900">{selectedItem.lastUpdated}</p>
                   </div>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Item Name *
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.name}
-                      onChange={(e) => setFormData({...formData, name: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
-                      placeholder="Enter item name"
-                    />
-                  </div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Item Name *
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.name}
+                        onChange={(e) => setFormData({...formData, name: e.target.value})}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
+                        placeholder="Enter item name"
+                      />
+                    </div>
                   
                   <div className="md:col-span-2">
                     <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -690,16 +690,16 @@ export default function InventoryManagement() {
                       placeholder="Enter item description"
                     />
                   </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
                       Category *
-                    </label>
-                    <select
-                      value={formData.category}
-                      onChange={(e) => setFormData({...formData, category: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
-                    >
+                      </label>
+                      <select
+                        value={formData.category}
+                        onChange={(e) => setFormData({...formData, category: e.target.value})}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
+                      >
                       <option value="Electronics">Electronics</option>
                       <option value="Furniture">Furniture</option>
                       <option value="Office Supplies">Office Supplies</option>
@@ -709,15 +709,15 @@ export default function InventoryManagement() {
                       <option value="Tools">Tools</option>
                       <option value="Clothing">Clothing</option>
                       <option value="Food & Beverages">Food & Beverages</option>
-                    </select>
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      </select>
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
                       SKU *
-                    </label>
-                    <input
-                      type="text"
+                      </label>
+                      <input
+                        type="text"
                       value={formData.sku}
                       onChange={(e) => setFormData({...formData, sku: e.target.value})}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
@@ -730,9 +730,9 @@ export default function InventoryManagement() {
                       Unit
                     </label>
                     <select
-                      value={formData.unit}
-                      onChange={(e) => setFormData({...formData, unit: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
+                        value={formData.unit}
+                        onChange={(e) => setFormData({...formData, unit: e.target.value})}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
                     >
                       <option value="pieces">Pieces</option>
                       <option value="units">Units</option>
@@ -743,40 +743,40 @@ export default function InventoryManagement() {
                       <option value="liters">Liters</option>
                       <option value="kilograms">Kilograms</option>
                     </select>
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
                       Current Stock
-                    </label>
-                    <input
-                      type="number"
-                      value={formData.currentStock}
-                      onChange={(e) => setFormData({...formData, currentStock: parseInt(e.target.value) || 0})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
+                      </label>
+                      <input
+                        type="number"
+                        value={formData.currentStock}
+                        onChange={(e) => setFormData({...formData, currentStock: parseInt(e.target.value) || 0})}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
                       placeholder="0"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
                       Min Stock
-                    </label>
-                    <input
-                      type="number"
+                      </label>
+                      <input
+                        type="number"
                       value={formData.minStock}
                       onChange={(e) => setFormData({...formData, minStock: parseInt(e.target.value) || 0})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
                       placeholder="0"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
                       Max Stock
-                    </label>
-                    <input
-                      type="number"
+                      </label>
+                      <input
+                        type="number"
                       value={formData.maxStock}
                       onChange={(e) => setFormData({...formData, maxStock: parseInt(e.target.value) || 0})}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
@@ -790,28 +790,28 @@ export default function InventoryManagement() {
                     </label>
                     <input
                       type="number"
-                      value={formData.cost}
+                        value={formData.cost}
                       onChange={(e) => setFormData({...formData, cost: parseInt(e.target.value) || 0})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
                       placeholder="0"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Supplier *
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.supplier}
-                      onChange={(e) => setFormData({...formData, supplier: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
-                      placeholder="Enter supplier name"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Supplier *
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.supplier}
+                        onChange={(e) => setFormData({...formData, supplier: e.target.value})}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
+                        placeholder="Enter supplier name"
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
                       Facility
                     </label>
                     <select
@@ -829,62 +829,62 @@ export default function InventoryManagement() {
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Location *
-                    </label>
-                    <input
-                      type="text"
+                      </label>
+                      <input
+                        type="text"
                       value={formData.location}
                       onChange={(e) => setFormData({...formData, location: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
                       placeholder="Enter storage location"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Expiry Date
-                    </label>
-                    <input
-                      type="date"
-                      value={formData.expiryDate}
-                      onChange={(e) => setFormData({...formData, expiryDate: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Expiry Date
+                      </label>
+                      <input
+                        type="date"
+                        value={formData.expiryDate}
+                        onChange={(e) => setFormData({...formData, expiryDate: e.target.value})}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
                       Status
-                    </label>
-                    <select
+                      </label>
+                      <select
                       value={formData.status}
                       onChange={(e) => setFormData({...formData, status: e.target.value as any})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
-                    >
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
+                      >
                       <option value="active">Active</option>
                       <option value="inactive">Inactive</option>
                       <option value="discontinued">Discontinued</option>
-                    </select>
-                  </div>
+                      </select>
+                    </div>
                 </div>
               )}
-            </div>
-            
+                  </div>
+                  
             {modalType !== 'view' && (
               <div className="flex items-center justify-end space-x-3 p-6 border-t border-gray-200">
-                <button
-                  onClick={() => setShowModal(false)}
+                    <button
+                      onClick={() => setShowModal(false)}
                   className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleSaveItem}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleSaveItem}
                   className="px-4 py-2 bg-uganda-yellow text-uganda-black rounded-lg hover:bg-yellow-400 transition-colors"
-                >
-                  {modalType === 'add' ? 'Add Item' : 'Update Item'}
-                </button>
-              </div>
-            )}
+                    >
+                      {modalType === 'add' ? 'Add Item' : 'Update Item'}
+                    </button>
+                </div>
+              )}
           </div>
         </div>
       )}

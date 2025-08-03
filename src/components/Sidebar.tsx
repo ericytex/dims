@@ -26,49 +26,49 @@ interface SidebarProps {
 }
 
 const navigation: NavItem[] = [
-  {
-    name: 'Dashboard',
-    href: '/dashboard',
+    {
+      name: 'Dashboard',
+      href: '/dashboard',
     icon: LayoutDashboard,
     roles: ['admin', 'regional_manager', 'district_manager', 'facility_manager', 'inventory_worker']
-  },
-  {
+    },
+    {
     name: 'Users',
-    href: '/users',
-    icon: Users,
+      href: '/users',
+      icon: Users,
     roles: ['admin', 'regional_manager', 'district_manager', 'facility_manager', 'inventory_worker']
-  },
-  {
-    name: 'Facilities',
-    href: '/facilities',
-    icon: Building,
+    },
+    {
+      name: 'Facilities',
+      href: '/facilities',
+      icon: Building,
     roles: ['admin', 'regional_manager', 'district_manager', 'facility_manager']
-  },
-  {
-    name: 'Inventory',
-    href: '/inventory',
-    icon: Package,
+    },
+    {
+      name: 'Inventory',
+      href: '/inventory',
+      icon: Package,
     roles: ['admin', 'regional_manager', 'district_manager', 'facility_manager']
-  },
-  {
+    },
+    {
     name: 'Transactions',
-    href: '/transactions',
+      href: '/transactions',
     icon: FileText,
     roles: ['admin', 'regional_manager', 'district_manager', 'facility_manager']
-  },
-  {
-    name: 'Transfers',
-    href: '/transfers',
+    },
+    {
+      name: 'Transfers',
+      href: '/transfers',
     icon: ArrowLeftRight,
     roles: ['admin', 'regional_manager', 'district_manager', 'facility_manager']
-  },
-  {
-    name: 'Reports',
-    href: '/reports',
-    icon: BarChart3,
+    },
+    {
+      name: 'Reports',
+      href: '/reports',
+      icon: BarChart3,
     roles: ['admin', 'regional_manager', 'district_manager', 'facility_manager']
-  }
-];
+    }
+  ];
 
 export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
   const { user, logout, hasRole } = useAuth();
@@ -85,7 +85,7 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
           onClick={onClose}
         />
       )}
-      
+
       {/* Sidebar */}
       <div className={`
         fixed inset-y-0 left-0 z-50 w-64 bg-white text-gray-800 border-r border-gray-200
@@ -96,7 +96,7 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
         <div className="flex flex-col h-full p-4">
           {/* Header with close button for mobile */}
           <div className="flex items-center justify-between mb-8">
-            <div>
+              <div>
               <h1 className="text-xl font-bold text-uganda-yellow">IMS</h1>
               <p className="text-sm text-gray-600">Inventory Management System</p>
             </div>
@@ -118,7 +118,7 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
                   onClick={onClose} // Close sidebar on navigation for mobile
                   className={`flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors ${
                     isActive
-                      ? 'bg-uganda-yellow text-uganda-black'
+                      ? 'bg-uganda-yellow text-uganda-black' 
                       : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
                   }`}
                 >

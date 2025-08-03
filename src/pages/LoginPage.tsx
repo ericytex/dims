@@ -31,7 +31,7 @@ export default function LoginPage() {
     }
 
     setIsLoading(true);
-    
+
     try {
       const success = await login(email, password);
       if (success) {
@@ -61,31 +61,31 @@ export default function LoginPage() {
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         <div className="flex justify-center">
           <div className="w-20 h-20 flex items-center justify-center">
-            <img 
+              <img 
               src="https://static.wixstatic.com/media/1e6d1c_510e06d9798e43dba04f363ff29d730f~mv2.jpg/v1/fill/w_98,h_104,al_c,q_80,usm_0.66_1.00_0.01,enc_avif,quality_auto/Coat_of_arms_of_Uganda.jpg"
-              alt="Uganda Coat of Arms"
-              className="w-full h-full object-contain"
-            />
-          </div>
+                alt="Uganda Coat of Arms" 
+                className="w-full h-full object-contain"
+              />
+            </div>
         </div>
         <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
           Inventory Management System
-        </h2>
+            </h2>
         <p className="mt-2 text-center text-sm text-gray-600">
-          Republic of Uganda
-        </p>
+              Republic of Uganda
+            </p>
         <p className="mt-1 text-center text-sm text-gray-500">
           Sign in to your account
         </p>
-      </div>
+          </div>
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
         <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
           <form className="space-y-6" onSubmit={handleSubmit}>
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+              <div>
+                <label htmlFor="email" className="block text-sm font-medium text-gray-700">
                 Email address
-              </label>
+                </label>
               <div className="mt-1 relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <Mail className="h-5 w-5 text-gray-400" />
@@ -102,27 +102,27 @@ export default function LoginPage() {
                   placeholder="Enter your email"
                 />
               </div>
-            </div>
+              </div>
 
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                Password
-              </label>
-              <div className="mt-1 relative">
+              <div>
+                <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+                  Password
+                </label>
+                <div className="mt-1 relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <Lock className="h-5 w-5 text-gray-400" />
                 </div>
-                <input
-                  id="password"
-                  name="password"
-                  type={showPassword ? 'text' : 'password'}
+                  <input
+                    id="password"
+                    name="password"
+                    type={showPassword ? 'text' : 'password'}
                   autoComplete="current-password"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
                   className="appearance-none block w-full pl-10 pr-10 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-uganda-yellow focus:border-uganda-yellow sm:text-sm"
-                  placeholder="Enter your password"
-                />
+                    placeholder="Enter your password"
+                  />
                 <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
                   <button
                     type="button"
@@ -172,11 +172,11 @@ export default function LoginPage() {
                     type="button"
                     onClick={() => handleDemoLogin(user)}
                     className="w-full flex items-center justify-between px-3 py-2 border border-gray-300 rounded-md text-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-uganda-yellow transition-colors"
-                  >
+              >
                     <div className="flex flex-col items-start">
                       <span className="font-medium">{user.role}</span>
                       <span className="text-xs text-gray-500">{user.email}</span>
-                    </div>
+                  </div>
                     <span className="text-xs text-gray-400">Click to fill</span>
                   </button>
                 ))}
