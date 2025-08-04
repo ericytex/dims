@@ -31,7 +31,7 @@ export const DemoAccountsSetup: React.FC = () => {
     
     try {
       // Import the Firebase Auth functions directly
-      const { createUserWithEmailAndPassword } = await import('firebase/auth');
+      const { createUserWithEmailAndPassword, updateProfile } = await import('firebase/auth');
       const { auth } = await import('../services/firebase');
       const { setDoc, doc } = await import('firebase/firestore');
       const { db } = await import('../services/firebase');
@@ -41,7 +41,7 @@ export const DemoAccountsSetup: React.FC = () => {
       
       // Update display name
       if (userCredential.user) {
-        await userCredential.user.updateProfile({
+        await updateProfile(userCredential.user, {
           displayName: account.displayName
         });
       }

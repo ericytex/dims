@@ -4,7 +4,8 @@ import {
   signOut,
   onAuthStateChanged,
   User,
-  UserCredential
+  UserCredential,
+  updateProfile
 } from 'firebase/auth';
 import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { auth, db } from './firebase';
@@ -84,7 +85,7 @@ export class FirebaseAuthService {
       
       // Update display name if provided
       if (displayName && userCredential.user) {
-        await userCredential.user.updateProfile({
+        await updateProfile(userCredential.user, {
           displayName
         });
       }
@@ -178,7 +179,7 @@ export class FirebaseAuthService {
           
           // Update display name
           if (userCredential.user) {
-            await userCredential.user.updateProfile({
+            await updateProfile(userCredential.user, {
               displayName: account.displayName
             });
           }
