@@ -171,35 +171,42 @@ export class FirebaseAuthService {
       
       for (const account of DEMO_ACCOUNTS) {
         try {
-          // Check if Firebase Auth account already exists
-          try {
-            // Try to sign in to check if account exists
-            await signInWithEmailAndPassword(auth, account.email, account.password);
-            console.log(`ℹ️ Firebase Auth account already exists: ${account.email}`);
-          } catch (error: any) {
-            if (error.code === 'auth/user-not-found') {
-              // Account doesn't exist, create it
-              console.log(`Creating Firebase Auth account: ${account.email}`);
-              const userCredential = await createUserWithEmailAndPassword(auth, account.email, account.password);
-              
-              // Update display name
-              if (userCredential.user) {
-                await userCredential.user.updateProfile({
-                  displayName: account.displayName
-                });
-              }
-              
-              console.log(`✅ Firebase Auth account created: ${account.email}`);
-            } else {
-              console.log(`ℹ️ Firebase Auth account exists but password might be different: ${account.email}`);
-            }
+          console.log(`Creating account: ${account.email}`);
+          
+          // Create Firebase Auth account
+          const userCredential = await createUserWithEmailAndPassword(auth, account.email, account.password);
+          
+          // Update display name
+          if (userCredential.user) {
+            await userCredential.user.updateProfile({
+              displayName: account.displayName
+            });
           }
           
-          // Create/update Firestore document
-          const userDoc = await getDoc(doc(db, 'users', account.email));
+          console.log(`✅ Firebase Auth account created: ${account.email}`);
           
-          if (!userDoc.exists()) {
-            // Create user document in Firestore
+          // Create Firestore document
+          await setDoc(doc(db, 'users', account.email), {
+            email: account.email,
+            displayName: account.displayName,
+            role: account.role,
+            phone: account.phone,
+            facilityId: account.facilityId,
+            facilityName: account.facilityName,
+            region: account.region,
+            district: account.district,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            isDemoAccount: true
+          });
+          
+          console.log(`✅ Firestore document created: ${account.email}`);
+          
+        } catch (error: any) {
+          if (error.code === 'auth/email-already-in-use') {
+            console.log(`ℹ️ Account already exists: ${account.email}`);
+            
+            // Still create/update Firestore document
             await setDoc(doc(db, 'users', account.email), {
               email: account.email,
               displayName: account.displayName,
@@ -214,13 +221,10 @@ export class FirebaseAuthService {
               isDemoAccount: true
             });
             
-            console.log(`✅ Firestore document created: ${account.email}`);
+            console.log(`✅ Firestore document updated: ${account.email}`);
           } else {
-            console.log(`ℹ️ Firestore document already exists: ${account.email}`);
+            console.error(`❌ Error creating demo account ${account.email}:`, error);
           }
-          
-        } catch (error) {
-          console.error(`❌ Error creating demo account ${account.email}:`, error);
         }
       }
       
