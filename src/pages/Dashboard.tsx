@@ -1,5 +1,5 @@
 import React from 'react';
-import { useAuth } from '../contexts/AuthContext';
+import { useFirebaseAuth } from '../hooks/useFirebaseAuth';
 import {
   Package,
   Building,
@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 
 export default function Dashboard() {
-  const { user } = useAuth();
+  const { user } = useFirebaseAuth();
 
   const stats = [
     {

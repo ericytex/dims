@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
+import { useFirebaseAuth } from '../hooks/useFirebaseAuth';
 import { useNotification } from '../contexts/NotificationContext';
 import { Eye, EyeOff, Lock, Mail, ChevronDown, ChevronUp } from 'lucide-react';
 import InstallPrompt from '../components/InstallPrompt';
@@ -11,7 +11,7 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [showDemoAccounts, setShowDemoAccounts] = useState(false);
-  const { login } = useAuth();
+  const { login } = useFirebaseAuth();
   const { addNotification } = useNotification();
   const navigate = useNavigate();
 

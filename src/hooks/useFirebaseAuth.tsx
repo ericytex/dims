@@ -1,7 +1,23 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, createContext, useContext, ReactNode } from 'react';
 import { FirebaseAuthService, AuthUser, DEMO_ACCOUNTS } from '../services/firebaseAuth';
 
-export const useFirebaseAuth = () => {
+interface FirebaseAuthContextType {
+  user: AuthUser | null;
+  loading: boolean;
+  error: string | null;
+  signIn: (email: string, password: string) => Promise<void>;
+  signUp: (email: string, password: string, displayName?: string, role?: string) => Promise<void>;
+  signOut: () => Promise<void>;
+  setupDemoAccounts: () => Promise<void>;
+  isAuthenticated: boolean;
+  demoAccounts: typeof DEMO_ACCOUNTS;
+  login: (email: string, password: string) => Promise<boolean>;
+  logout: () => void;
+}
+
+const FirebaseAuthContext = createContext<FirebaseAuthContextType | undefined>(undefined);
+
+export const FirebaseAuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -77,7 +93,21 @@ export const useFirebaseAuth = () => {
     }
   };
 
-  return {
+  // Compatibility functions for existing code
+  const login = async (email: string, password: string): Promise<boolean> => {
+    try {
+      await signIn(email, password);
+      return true;
+    } catch (error) {
+      return false;
+    }
+  };
+
+  const logout = () => {
+    signOut();
+  };
+
+  const value: FirebaseAuthContextType = {
     user,
     loading,
     error,
@@ -86,6 +116,22 @@ export const useFirebaseAuth = () => {
     signOut,
     setupDemoAccounts,
     isAuthenticated: !!user,
-    demoAccounts: DEMO_ACCOUNTS
+    demoAccounts: DEMO_ACCOUNTS,
+    login,
+    logout
   };
+
+  return (
+    <FirebaseAuthContext.Provider value={value}>
+      {children}
+    </FirebaseAuthContext.Provider>
+  );
+};
+
+export const useFirebaseAuth = () => {
+  const context = useContext(FirebaseAuthContext);
+  if (context === undefined) {
+    throw new Error('useFirebaseAuth must be used within a FirebaseAuthProvider');
+  }
+  return context;
 }; 

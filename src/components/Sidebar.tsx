@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
+import { useFirebaseAuth } from '../hooks/useFirebaseAuth';
 import {
   LayoutDashboard,
   Users,
@@ -78,10 +78,10 @@ const navigation: NavItem[] = [
   ];
 
 export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
-  const { user, logout, hasRole } = useAuth();
+  const { user, logout } = useFirebaseAuth();
   const location = useLocation();
 
-  const filteredNavigation = navigation.filter(item => hasRole(item.roles));
+  const filteredNavigation = navigation.filter(item => user && item.roles.includes(user.role));
 
   return (
     <>

@@ -1,5 +1,5 @@
 import React from 'react';
-import { useAuth } from '../contexts/AuthContext';
+import { useFirebaseAuth } from '../hooks/useFirebaseAuth';
 import { Menu, Bell, LogOut } from 'lucide-react';
 
 interface HeaderProps {
@@ -7,7 +7,7 @@ interface HeaderProps {
 }
 
 export default function Header({ onMenuClick }: HeaderProps) {
-  const { user, logout } = useAuth();
+  const { user, logout } = useFirebaseAuth();
 
   return (
     <header className="bg-white shadow-sm border-b border-gray-200">

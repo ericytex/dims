@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { FirebaseAuthProvider, useFirebaseAuth } from './hooks/useFirebaseAuth';
 import { NotificationProvider } from './contexts/NotificationContext';
 import { OfflineProvider } from './contexts/OfflineContext';
 import LoginPage from './pages/LoginPage';
@@ -20,7 +20,7 @@ import NotificationContainer from './components/NotificationContainer';
 import OfflineStatus from './components/OfflineStatus';
 
 function AppContent() {
-  const { isAuthenticated } = useAuth();
+  const { user } = useFirebaseAuth();
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -28,10 +28,10 @@ function AppContent() {
       <OfflineStatus />
       <Routes>
         <Route path="/login" element={
-          isAuthenticated ? <Navigate to="/dashboard" /> : <LoginPage />
+          user ? <Navigate to="/dashboard" /> : <LoginPage />
         } />
         <Route path="/" element={
-          isAuthenticated ? <Navigate to="/dashboard" /> : <Navigate to="/login" />
+          user ? <Navigate to="/dashboard" /> : <Navigate to="/login" />
         } />
         <Route path="/dashboard" element={
           <ProtectedRoute>
@@ -103,13 +103,13 @@ function AppContent() {
 function App() {
   return (
     <Router>
-      <AuthProvider>
+      <FirebaseAuthProvider>
         <NotificationProvider>
           <OfflineProvider>
           <AppContent />
           </OfflineProvider>
         </NotificationProvider>
-      </AuthProvider>
+      </FirebaseAuthProvider>
     </Router>
   );
 }
