@@ -53,6 +53,7 @@ export class CentralSQLiteSync {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('auth-token')}`,
         },
+        credentials: 'include',
       });
 
       if (!response.ok) {
@@ -83,6 +84,7 @@ export class CentralSQLiteSync {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('auth-token')}`,
         },
+        credentials: 'include',
         body: formData,
       });
 
