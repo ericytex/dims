@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { FirebaseAuthService, AuthUser } from '../services/firebaseAuth';
+import { FirebaseAuthService, AuthUser, DEMO_ACCOUNTS } from '../services/firebaseAuth';
 
 export const useFirebaseAuth = () => {
   const [user, setUser] = useState<AuthUser | null>(null);
@@ -7,9 +7,15 @@ export const useFirebaseAuth = () => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const unsubscribe = FirebaseAuthService.onAuthStateChange((firebaseUser) => {
+    const unsubscribe = FirebaseAuthService.onAuthStateChange(async (firebaseUser) => {
       if (firebaseUser) {
-        setUser(FirebaseAuthService.convertToAuthUser(firebaseUser));
+        try {
+          const authUser = await FirebaseAuthService.convertToAuthUser(firebaseUser);
+          setUser(authUser);
+        } catch (error) {
+          console.error('Error converting user:', error);
+          setUser(null);
+        }
       } else {
         setUser(null);
       }
@@ -32,11 +38,11 @@ export const useFirebaseAuth = () => {
     }
   };
 
-  const signUp = async (email: string, password: string, displayName?: string) => {
+  const signUp = async (email: string, password: string, displayName?: string, role?: string) => {
     try {
       setError(null);
       setLoading(true);
-      await FirebaseAuthService.signUp(email, password, displayName);
+      await FirebaseAuthService.signUp(email, password, displayName, role);
     } catch (error: any) {
       setError(error.message);
       throw error;
@@ -58,6 +64,19 @@ export const useFirebaseAuth = () => {
     }
   };
 
+  const setupDemoAccounts = async () => {
+    try {
+      setError(null);
+      setLoading(true);
+      await FirebaseAuthService.setupDemoAccounts();
+    } catch (error: any) {
+      setError(error.message);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return {
     user,
     loading,
@@ -65,6 +84,8 @@ export const useFirebaseAuth = () => {
     signIn,
     signUp,
     signOut,
-    isAuthenticated: !!user
+    setupDemoAccounts,
+    isAuthenticated: !!user,
+    demoAccounts: DEMO_ACCOUNTS
   };
 }; 
