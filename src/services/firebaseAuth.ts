@@ -119,10 +119,17 @@ export class FirebaseAuthService {
     }
   }
 
-  // Get user data from Firestore
-  static async getUserData(uid: string): Promise<AuthUser | null> {
+  // Get user data from Firestore - try both UID and email
+  static async getUserData(uid: string, email?: string): Promise<AuthUser | null> {
     try {
-      const userDoc = await getDoc(doc(db, 'users', uid));
+      // First try to get user data by UID
+      let userDoc = await getDoc(doc(db, 'users', uid));
+      
+      // If not found and email is provided, try by email
+      if (!userDoc.exists() && email) {
+        userDoc = await getDoc(doc(db, 'users', email));
+      }
+      
       if (userDoc.exists()) {
         const data = userDoc.data();
         return {
@@ -222,12 +229,29 @@ export class FirebaseAuthService {
   // Convert Firebase User to AuthUser with Firestore data
   static async convertToAuthUser(user: User): Promise<AuthUser> {
     try {
-      const userData = await this.getUserData(user.uid);
+      // Try to get user data using both UID and email
+      const userData = await this.getUserData(user.uid, user.email);
       if (userData) {
         return userData;
       }
       
-      // Fallback to basic user data
+      // If no user data found, check if it's a demo account
+      const demoAccount = DEMO_ACCOUNTS.find(account => account.email === user.email);
+      if (demoAccount) {
+        return {
+          uid: user.uid,
+          email: user.email,
+          displayName: demoAccount.displayName,
+          role: demoAccount.role,
+          phone: demoAccount.phone,
+          facilityId: demoAccount.facilityId,
+          facilityName: demoAccount.facilityName,
+          region: demoAccount.region,
+          district: demoAccount.district
+        };
+      }
+      
+      // Fallback to basic user data with default role
       return {
         uid: user.uid,
         email: user.email,
@@ -249,4 +273,4 @@ export class FirebaseAuthService {
   static getDemoAccounts(): typeof DEMO_ACCOUNTS {
     return DEMO_ACCOUNTS;
   }
-} 
+}
