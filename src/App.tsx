@@ -12,6 +12,7 @@ import StockTransactions from './pages/StockTransactions';
 import TransferManagement from './pages/TransferManagement';
 import Reports from './pages/Reports';
 import DatabaseTestPage from './pages/DatabaseTestPage';
+import { FirebaseTest } from './components/FirebaseTest';
 import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
 import NotificationContainer from './components/NotificationContainer';
@@ -86,6 +87,9 @@ function AppContent() {
               <DatabaseTestPage />
             </Layout>
           </ProtectedRoute>
+        } />
+        <Route path="/firebase-test" element={
+          <FirebaseTest />
         } />
       </Routes>
     </div>
