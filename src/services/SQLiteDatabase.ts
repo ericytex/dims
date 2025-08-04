@@ -136,7 +136,11 @@ export class SQLiteDatabase {
       this.worker = await createDbWorker(
         ['/sql-wasm.wasm'],
         'https://sql.js.org/dist/',
-        {}
+        {
+          httpHeaders: {
+            'Cache-Control': 'no-cache'
+          }
+        }
       );
 
       // Try to load existing database from IndexedDB
@@ -330,11 +334,79 @@ export class SQLiteDatabase {
 
     try {
       const result = this.db.exec(sql, params);
+      
+      // Mark changes as pending for sync if it's an INSERT, UPDATE, or DELETE
+      if (this.isWriteOperation(sql)) {
+        await this.markChangesAsPending(sql);
+      }
+      
       await this.queueSave();
       return result;
     } catch (error) {
       console.error('SQL execution error:', error);
       throw error;
+    }
+  }
+
+  /**
+   * Check if SQL operation is a write operation
+   */
+  private isWriteOperation(sql: string): boolean {
+    const upperSql = sql.trim().toUpperCase();
+    return upperSql.startsWith('INSERT') || 
+           upperSql.startsWith('UPDATE') || 
+           upperSql.startsWith('DELETE') ||
+           upperSql.startsWith('CREATE') ||
+           upperSql.startsWith('DROP') ||
+           upperSql.startsWith('ALTER');
+  }
+
+  /**
+   * Mark changes as pending for sync
+   */
+  private async markChangesAsPending(sql: string): Promise<void> {
+    try {
+      const upperSql = sql.trim().toUpperCase();
+      
+      if (upperSql.includes('INVENTORY_ITEMS')) {
+        // Mark inventory items as pending
+        await this.execute(`
+          UPDATE inventory_items 
+          SET sync_status = 'pending' 
+          WHERE id IN (
+            SELECT id FROM inventory_items 
+            WHERE sync_status = 'synced' 
+            ORDER BY updated_at DESC 
+            LIMIT 1
+          )
+        `);
+      } else if (upperSql.includes('STOCK_TRANSACTIONS')) {
+        // Mark stock transactions as pending
+        await this.execute(`
+          UPDATE stock_transactions 
+          SET sync_status = 'pending' 
+          WHERE id IN (
+            SELECT id FROM stock_transactions 
+            WHERE sync_status = 'synced' 
+            ORDER BY created_at DESC 
+            LIMIT 1
+          )
+        `);
+      } else if (upperSql.includes('TRANSFERS')) {
+        // Mark transfers as pending
+        await this.execute(`
+          UPDATE transfers 
+          SET sync_status = 'pending' 
+          WHERE id IN (
+            SELECT id FROM transfers 
+            WHERE sync_status = 'synced' 
+            ORDER BY created_at DESC 
+            LIMIT 1
+          )
+        `);
+      }
+    } catch (error) {
+      console.error('Error marking changes as pending:', error);
     }
   }
 
@@ -672,7 +744,7 @@ export class SQLiteDatabase {
   /**
    * Check if database is initialized
    */
-  isInitialized(): boolean {
+  isDatabaseInitialized(): boolean {
     return this.isInitialized;
   }
 }

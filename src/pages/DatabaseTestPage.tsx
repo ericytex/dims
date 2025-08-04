@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useSQLiteDatabase } from '../hooks/useSQLiteDatabase';
 import DatabaseManager from '../components/DatabaseManager';
+import CentralSyncStatus from '../components/CentralSyncStatus';
 
 const DatabaseTestPage: React.FC = () => {
   const { execute, query, isInitialized } = useSQLiteDatabase();
@@ -102,10 +103,15 @@ const DatabaseTestPage: React.FC = () => {
           <p className="text-gray-600">Test the SQLite persistence functionality with sample operations.</p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Database Manager */}
           <div>
             <DatabaseManager />
+          </div>
+
+          {/* Central Sync Status */}
+          <div>
+            <CentralSyncStatus />
           </div>
 
           {/* Test Operations */}
