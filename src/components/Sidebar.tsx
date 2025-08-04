@@ -9,6 +9,7 @@ import {
   FileText,
   ArrowLeftRight,
   BarChart3,
+  Database,
   LogOut,
   X
 } from 'lucide-react';
@@ -67,6 +68,12 @@ const navigation: NavItem[] = [
       href: '/reports',
       icon: BarChart3,
     roles: ['admin', 'regional_manager', 'district_manager', 'facility_manager']
+    },
+    {
+      name: 'Database Test',
+      href: '/database-test',
+      icon: Database,
+    roles: ['admin']
     }
   ];
 

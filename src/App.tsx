@@ -11,6 +11,7 @@ import InventoryManagement from './pages/InventoryManagement';
 import StockTransactions from './pages/StockTransactions';
 import TransferManagement from './pages/TransferManagement';
 import Reports from './pages/Reports';
+import DatabaseTestPage from './pages/DatabaseTestPage';
 import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
 import NotificationContainer from './components/NotificationContainer';
@@ -76,6 +77,13 @@ function AppContent() {
           <ProtectedRoute>
             <Layout>
               <Reports />
+            </Layout>
+          </ProtectedRoute>
+        } />
+        <Route path="/database-test" element={
+          <ProtectedRoute allowedRoles={['admin']}>
+            <Layout>
+              <DatabaseTestPage />
             </Layout>
           </ProtectedRoute>
         } />
