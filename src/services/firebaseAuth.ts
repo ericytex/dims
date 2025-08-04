@@ -164,18 +164,42 @@ export class FirebaseAuthService {
     }
   }
 
-  // Setup demo accounts
+  // Setup demo accounts - Create both Firebase Auth accounts and Firestore documents
   static async setupDemoAccounts(): Promise<void> {
     try {
       console.log('Setting up demo accounts...');
       
       for (const account of DEMO_ACCOUNTS) {
         try {
-          // Check if user already exists
+          // Check if Firebase Auth account already exists
+          try {
+            // Try to sign in to check if account exists
+            await signInWithEmailAndPassword(auth, account.email, account.password);
+            console.log(`ℹ️ Firebase Auth account already exists: ${account.email}`);
+          } catch (error: any) {
+            if (error.code === 'auth/user-not-found') {
+              // Account doesn't exist, create it
+              console.log(`Creating Firebase Auth account: ${account.email}`);
+              const userCredential = await createUserWithEmailAndPassword(auth, account.email, account.password);
+              
+              // Update display name
+              if (userCredential.user) {
+                await userCredential.user.updateProfile({
+                  displayName: account.displayName
+                });
+              }
+              
+              console.log(`✅ Firebase Auth account created: ${account.email}`);
+            } else {
+              console.log(`ℹ️ Firebase Auth account exists but password might be different: ${account.email}`);
+            }
+          }
+          
+          // Create/update Firestore document
           const userDoc = await getDoc(doc(db, 'users', account.email));
           
           if (!userDoc.exists()) {
-            // Create user document
+            // Create user document in Firestore
             await setDoc(doc(db, 'users', account.email), {
               email: account.email,
               displayName: account.displayName,
@@ -190,10 +214,11 @@ export class FirebaseAuthService {
               isDemoAccount: true
             });
             
-            console.log(`✅ Demo account created: ${account.email}`);
+            console.log(`✅ Firestore document created: ${account.email}`);
           } else {
-            console.log(`ℹ️ Demo account already exists: ${account.email}`);
+            console.log(`ℹ️ Firestore document already exists: ${account.email}`);
           }
+          
         } catch (error) {
           console.error(`❌ Error creating demo account ${account.email}:`, error);
         }
