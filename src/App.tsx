@@ -14,6 +14,7 @@ import Reports from './pages/Reports';
 import DatabaseTestPage from './pages/DatabaseTestPage';
 import { FirebaseTest } from './components/FirebaseTest';
 import { DemoAccountsSetup } from './components/DemoAccountsSetup';
+import { FirebaseConfigTest } from './components/FirebaseConfigTest';
 import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
 import NotificationContainer from './components/NotificationContainer';
@@ -91,6 +92,9 @@ function AppContent() {
         } />
         <Route path="/firebase-test" element={
           <FirebaseTest />
+        } />
+        <Route path="/firebase-config-test" element={
+          <FirebaseConfigTest />
         } />
         <Route path="/demo-setup" element={
           <DemoAccountsSetup />
