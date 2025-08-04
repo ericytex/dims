@@ -102,7 +102,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
       const response = await fetch(`${process.env.NODE_ENV === 'production' 
-        ? 'https://ims-server-zzxxyy-ericytexs-projects.vercel.app' 
+        ? 'https://ims-server-one.vercel.app' 
         : 'http://localhost:3001'}/api/login`, {
         method: 'POST',
         headers: {
@@ -141,7 +141,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       // Call backend logout endpoint
       await fetch(`${process.env.NODE_ENV === 'production' 
-        ? 'https://ims-server-zzxxyy-ericytexs-projects.vercel.app' 
+        ? 'https://ims-server-one.vercel.app' 
         : 'http://localhost:3001'}/api/logout`, {
         method: 'POST',
         credentials: 'include',
