@@ -4,15 +4,16 @@ import { getAuth } from 'firebase/auth';
 import { getStorage } from 'firebase/storage';
 import { getAnalytics } from 'firebase/analytics';
 
-// Firebase configuration
+// Your web app's Firebase configuration
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID,
-  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
+  apiKey: "AIzaSyCiyIJWG437NPnonanQ1mtHABgx5cMnIAA",
+  authDomain: "dims-8fa3b.firebaseapp.com",
+  projectId: "dims-8fa3b",
+  storageBucket: "dims-8fa3b.firebasestorage.app",
+  messagingSenderId: "285235030897",
+  appId: "1:285235030897:web:4a3f7397663d6d1091a4d0",
+  measurementId: "G-LC02PP71JR"
 };
 
 // Initialize Firebase
@@ -35,4 +36,4 @@ enableIndexedDbPersistence(db).catch((err) => {
   }
 });
 
-export default app; 
+export default app;
