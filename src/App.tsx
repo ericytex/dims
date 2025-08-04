@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { NotificationProvider } from './contexts/NotificationContext';
+import { OfflineProvider } from './contexts/OfflineContext';
 import LoginPage from './pages/LoginPage';
 import Dashboard from './pages/Dashboard';
 import UserManagement from './pages/UserManagement';
@@ -13,6 +14,7 @@ import Reports from './pages/Reports';
 import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
 import NotificationContainer from './components/NotificationContainer';
+import OfflineStatus from './components/OfflineStatus';
 
 function AppContent() {
   const { isAuthenticated } = useAuth();
@@ -20,6 +22,7 @@ function AppContent() {
   return (
     <div className="min-h-screen bg-gray-50">
       <NotificationContainer />
+      <OfflineStatus />
       <Routes>
         <Route path="/login" element={
           isAuthenticated ? <Navigate to="/dashboard" /> : <LoginPage />
@@ -86,7 +89,9 @@ function App() {
     <Router>
       <AuthProvider>
         <NotificationProvider>
+          <OfflineProvider>
           <AppContent />
+          </OfflineProvider>
         </NotificationProvider>
       </AuthProvider>
     </Router>

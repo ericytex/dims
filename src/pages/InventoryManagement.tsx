@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNotification } from '../contexts/NotificationContext';
+import { useOffline } from '../contexts/OfflineContext';
 import {
   Plus,
   Search,
@@ -166,6 +167,7 @@ export default function InventoryManagement() {
     status: 'active' as const
   });
   const { addNotification } = useNotification();
+  const { isOnline, addOfflineInventoryUpdate } = useOffline();
 
   const categories = [
     { value: 'all', label: 'All Categories' },
@@ -268,19 +270,44 @@ export default function InventoryManagement() {
       return;
     }
 
+    const updateData = {
+      type: modalType,
+      item: modalType === 'add' ? {
+        id: Date.now().toString(),
+        ...formData,
+        lastUpdated: new Date().toISOString().split('T')[0]
+      } : selectedItem ? {
+        ...selectedItem,
+        ...formData,
+        lastUpdated: new Date().toISOString().split('T')[0]
+      } : null
+    };
+
     if (modalType === 'add') {
-    const newItem: InventoryItem = {
+      const newItem: InventoryItem = {
         id: Date.now().toString(),
         ...formData,
         lastUpdated: new Date().toISOString().split('T')[0]
       };
       setInventory([...inventory, newItem]);
-      addNotification('Item added successfully', 'success');
+      
+      if (!isOnline) {
+        addOfflineInventoryUpdate(updateData);
+        addNotification('Item added offline. Will sync when online.', 'info');
+    } else {
+        addNotification('Item added successfully', 'success');
+      }
     } else if (modalType === 'edit' && selectedItem) {
       setInventory(inventory.map(item => 
         item.id === selectedItem.id ? { ...item, ...formData, lastUpdated: new Date().toISOString().split('T')[0] } : item
       ));
-      addNotification('Item updated successfully', 'success');
+      
+      if (!isOnline) {
+        addOfflineInventoryUpdate(updateData);
+        addNotification('Item updated offline. Will sync when online.', 'info');
+      } else {
+        addNotification('Item updated successfully', 'success');
+      }
     }
 
     setShowModal(false);
@@ -688,8 +715,8 @@ export default function InventoryManagement() {
                       rows={3}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
                       placeholder="Enter item description"
-                    />
-                  </div>
+                      />
+                    </div>
                     
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">

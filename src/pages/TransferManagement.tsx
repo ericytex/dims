@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNotification } from '../contexts/NotificationContext';
+import { useOffline } from '../contexts/OfflineContext';
 import {
   Plus,
   Search,
@@ -128,6 +129,7 @@ export default function TransferManagement() {
   const [modalType, setModalType] = useState<'add' | 'view'>('add');
   const [selectedTransfer, setSelectedTransfer] = useState<Transfer | null>(null);
   const { addNotification } = useNotification();
+  const { isOnline, addOfflineTransfer } = useOffline();
 
   const statuses = [
     { value: 'all', label: 'All Status' },
@@ -170,21 +172,49 @@ export default function TransferManagement() {
   };
 
   const handleApproveTransfer = (transfer: Transfer) => {
+    const updatedTransfer = {
+      ...transfer,
+      status: 'approved' as const,
+      approvedBy: 'Current User',
+      approvalDate: '2025-01-09'
+    };
+
     setTransfers(transfers.map(t => 
-      t.id === transfer.id 
-        ? { ...t, status: 'approved', approvedBy: 'Current User', approvalDate: '2025-01-09' }
-        : t
+      t.id === transfer.id ? updatedTransfer : t
     ));
-    addNotification(`Transfer request for ${transfer.itemName} has been approved.`);
+
+    if (!isOnline) {
+      addOfflineTransfer({
+        type: 'approval',
+        transfer: updatedTransfer
+      });
+      addNotification(`Transfer approved offline. Will sync when online.`, 'info');
+    } else {
+      addNotification(`Transfer request for ${transfer.itemName} has been approved.`);
+    }
   };
 
   const handleRejectTransfer = (transfer: Transfer) => {
+    const updatedTransfer = {
+      ...transfer,
+      status: 'rejected' as const,
+      approvedBy: 'Current User',
+      approvalDate: '2025-01-09'
+    };
+
     setTransfers(transfers.map(t => 
-      t.id === transfer.id 
-        ? { ...t, status: 'rejected', approvedBy: 'Current User', approvalDate: '2025-01-09' }
-        : t
+      t.id === transfer.id ? updatedTransfer : t
     ));
-    addNotification(`Transfer request for ${transfer.itemName} has been rejected.`, 'warning');
+
+    if (!isOnline) {
+      addOfflineTransfer({
+        type: 'rejection',
+        transfer: updatedTransfer
+      });
+      addNotification(`Transfer rejected offline. Will sync when online.`, 'warning');
+    } else {
+      addNotification(`Transfer request for ${transfer.itemName} has been rejected.`, 'warning');
+    }
   };
 
   const getStatusColor = (status: string) => {

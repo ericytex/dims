@@ -100,20 +100,60 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const login = async (email: string, password: string): Promise<boolean> => {
-    const userData = mockUsers[email];
-    if (userData && userData.password === password) {
-      setUser(userData.user);
+    try {
+      const response = await fetch(`${process.env.NODE_ENV === 'production' 
+        ? 'https://ims-server-zzxxyy-ericytexs-projects.vercel.app' 
+        : 'http://localhost:3001'}/api/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({ email, password }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Login failed');
+      }
+
+      const data = await response.json();
+      const userData = {
+        id: data.user.id.toString(),
+        name: data.user.name,
+        email: data.user.email,
+        phone: '+256700000000', // Default phone
+        role: data.user.role,
+        token: data.token
+      };
+      
+      localStorage.setItem('ims_user', JSON.stringify(userData));
+      setUser(userData);
       setIsAuthenticated(true);
-      localStorage.setItem('ims_user', JSON.stringify(userData.user));
       return true;
+    } catch (error) {
+      console.error('Login error:', error);
+      return false;
     }
-    return false;
   };
 
-  const logout = () => {
+  const logout = async () => {
+    try {
+      // Call backend logout endpoint
+      await fetch(`${process.env.NODE_ENV === 'production' 
+        ? 'https://ims-server-zzxxyy-ericytexs-projects.vercel.app' 
+        : 'http://localhost:3001'}/api/logout`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
+    
     setUser(null);
     setIsAuthenticated(false);
     localStorage.removeItem('ims_user');
+    localStorage.removeItem('auth-token');
   };
 
   const hasRole = (roles: string[]): boolean => {

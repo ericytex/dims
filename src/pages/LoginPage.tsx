@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useNotification } from '../contexts/NotificationContext';
 import { Eye, EyeOff, Lock, Mail, ChevronDown, ChevronUp } from 'lucide-react';
+import InstallPrompt from '../components/InstallPrompt';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -58,6 +59,7 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+      <InstallPrompt />
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         <div className="flex justify-center">
           <div className="w-20 h-20 flex items-center justify-center">
@@ -76,7 +78,7 @@ export default function LoginPage() {
             </p>
         <p className="mt-1 text-center text-sm text-gray-500">
           Sign in to your account
-        </p>
+            </p>
           </div>
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNotification } from '../contexts/NotificationContext';
+import { useOffline } from '../contexts/OfflineContext';
 import {
   Plus,
   Search,
@@ -144,6 +145,7 @@ export default function StockTransactions() {
     status: 'completed' as const
   });
   const { addNotification } = useNotification();
+  const { isOnline, addOfflineTransaction } = useOffline();
 
   const transactionTypes = [
     { value: 'all', label: 'All Types' },
@@ -233,6 +235,20 @@ export default function StockTransactions() {
       return;
     }
 
+    const transactionData = {
+      type: modalType,
+      transaction: modalType === 'add' ? {
+        id: Date.now().toString(),
+        ...formData,
+        user: 'Current User',
+        date: new Date().toISOString().split('T')[0],
+        time: new Date().toLocaleTimeString('en-US', { hour12: false })
+      } : selectedTransaction ? {
+        ...selectedTransaction,
+        ...formData
+      } : null
+    };
+
     if (modalType === 'add') {
       const newTransaction: Transaction = {
         id: Date.now().toString(),
@@ -242,12 +258,24 @@ export default function StockTransactions() {
         time: new Date().toLocaleTimeString('en-US', { hour12: false })
       };
       setTransactions([newTransaction, ...transactions]);
-      addNotification('Transaction added successfully', 'success');
+      
+      if (!isOnline) {
+        addOfflineTransaction(transactionData);
+        addNotification('Transaction added offline. Will sync when online.', 'info');
+      } else {
+        addNotification('Transaction added successfully', 'success');
+      }
     } else if (modalType === 'edit' && selectedTransaction) {
       setTransactions(transactions.map(t => 
         t.id === selectedTransaction.id ? { ...t, ...formData } : t
       ));
-      addNotification('Transaction updated successfully', 'success');
+      
+      if (!isOnline) {
+        addOfflineTransaction(transactionData);
+        addNotification('Transaction updated offline. Will sync when online.', 'info');
+      } else {
+        addNotification('Transaction updated successfully', 'success');
+      }
     }
 
     setShowModal(false);
@@ -342,7 +370,7 @@ export default function StockTransactions() {
           <button
           onClick={handleAddTransaction}
           className="bg-uganda-yellow text-uganda-black px-4 py-2 rounded-lg hover:bg-yellow-400 transition-colors flex items-center space-x-2"
-        >
+          >
           <Plus className="w-4 h-4" />
           <span>Add Transaction</span>
           </button>
