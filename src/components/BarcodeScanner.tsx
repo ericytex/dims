@@ -290,9 +290,7 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
               "ean_8_reader",
               "code_39_reader",
               "upc_reader",
-              "upc_e_reader",
-              "qr_reader",
-              "datamatrix_reader"
+              "upc_e_reader"
             ]
           },
           locate: true
@@ -363,10 +361,10 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
             }
             
             // Validate format
-            if (!isValidFormat(code, format)) {
-              console.log('Invalid barcode format ignored:', code);
-              return;
-            }
+            // if (!isValidFormat(code, format)) {
+            //   console.log('Invalid barcode format ignored:', code);
+            //   return;
+            // }
 
             console.log('Barcode confirmed:', code, 'Confidence:', confidence);
             handleScan(code, format);
