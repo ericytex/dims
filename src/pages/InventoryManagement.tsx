@@ -216,13 +216,16 @@ export default function InventoryManagement() {
 
   // Barcode scanning functionality
   const handleBarcodeScan = (barcode: string) => {
-    // First, try to find an existing item with this barcode
-    const existingItem = inventoryItems.find(item => item.sku === barcode);
+    console.log('Searching for barcode:', barcode);
     
-    if (existingItem) {
+    // Use enhanced search function
+    const foundItem = searchByBarcode(barcode);
+    
+    if (foundItem) {
       // If found, show the item details
-      handleViewItem(existingItem);
-      showNotification(`Found item: ${existingItem.name}`, 'success');
+      handleViewItem(foundItem);
+      showNotification(`Found item: ${foundItem.name} (SKU: ${foundItem.sku})`, 'success');
+      console.log('Item found:', foundItem);
     } else {
       // If not found, pre-fill the add form with the barcode
       setFormData(prev => ({
@@ -231,12 +234,66 @@ export default function InventoryManagement() {
       }));
       setShowAddModal(true);
       showNotification(`Barcode ${barcode} not found. You can add a new item.`, 'info');
+      console.log('Item not found, opening add modal');
     }
     setShowBarcodeScanner(false);
   };
 
   const handleOpenBarcodeScanner = () => {
     setShowBarcodeScanner(true);
+  };
+
+  // Function to add a test item with the dummy barcode
+  const addTestItem = async () => {
+    const testItem = {
+      name: 'Test Product - Barcode Scanner',
+      description: 'Test item for barcode scanning functionality',
+      category: 'Test',
+      sku: '072782051600', // The dummy barcode
+      unit: 'pieces',
+      currentStock: 50,
+      minStock: 10,
+      maxStock: 100,
+      cost: 1500,
+      supplier: 'Test Supplier',
+      facilityId: 'main-warehouse',
+      location: 'A1-B2-C3',
+      status: 'active' as const
+    };
+
+    try {
+      await addInventoryItem(testItem);
+      showNotification('Test item added successfully!', 'success');
+    } catch (error) {
+      showNotification('Failed to add test item', 'error');
+    }
+  };
+
+  // Enhanced barcode search function
+  const searchByBarcode = (barcode: string) => {
+    // Search by SKU (barcode)
+    const foundBySku = inventoryItems.find(item => item.sku === barcode);
+    if (foundBySku) {
+      return foundBySku;
+    }
+
+    // Search by name (in case barcode is stored in name)
+    const foundByName = inventoryItems.find(item => 
+      item.name.toLowerCase().includes(barcode.toLowerCase())
+    );
+    if (foundByName) {
+      return foundByName;
+    }
+
+    // Search by description
+    const foundByDescription = inventoryItems.find(item => 
+      item.description?.toLowerCase().includes(barcode.toLowerCase())
+    );
+    if (foundByDescription) {
+      return foundByDescription;
+    }
+
+    return null;
   };
 
   if (loading) {
@@ -361,6 +418,13 @@ export default function InventoryManagement() {
             >
               <QrCode className="w-4 h-4" />
               <span>Scan Barcode</span>
+            </button>
+            <button
+              onClick={addTestItem}
+              className="w-full mt-2 bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-colors flex items-center justify-center space-x-2 text-sm"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Add Test Item (072782051600)</span>
             </button>
           </div>
           
