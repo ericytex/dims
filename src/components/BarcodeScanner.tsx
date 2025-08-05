@@ -19,8 +19,6 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
   const [scanStatus, setScanStatus] = useState<'idle' | 'scanning' | 'success' | 'error'>('idle');
   const [lastScannedCode, setLastScannedCode] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
-  const [availableCameras, setAvailableCameras] = useState<string[]>([]);
-  const [selectedCamera, setSelectedCamera] = useState<string>('');
   const [isInitialized, setIsInitialized] = useState(false);
   
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -43,19 +41,11 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
         // Create new reader instance
         codeReaderRef.current = new BrowserMultiFormatReader();
         
-        // Get available cameras
-        const devices = await codeReaderRef.current.listVideoInputDevices();
-        const cameraIds = devices.map(device => device.deviceId);
+        // Test camera access
+        await codeReaderRef.current.listVideoInputDevices();
         
-        console.log('Available cameras:', cameraIds);
-        
-        setAvailableCameras(cameraIds);
-        if (cameraIds.length > 0) {
-          setSelectedCamera(cameraIds[0]);
-        }
-        
-        setIsInitialized(true);
         console.log('Scanner initialized successfully');
+        setIsInitialized(true);
       } catch (error) {
         console.error('Failed to initialize scanner:', error);
         setErrorMessage('Failed to initialize scanner. Please refresh and try again.');
@@ -145,20 +135,15 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
       return;
     }
     
-    if (!videoRef.current) {
-      setErrorMessage('Video element not ready. Please try again.');
-      return;
-    }
-    
     try {
       setScanStatus('scanning');
       setIsScanning(true);
       setErrorMessage('');
       
-      console.log('Starting scanner with camera:', selectedCamera);
+      console.log('Starting scanner with default camera');
       
       await codeReaderRef.current.decodeFromVideoDevice(
-        selectedCamera || undefined,
+        undefined, // Use default camera
         videoRef.current,
         (result, error) => {
           if (result) {
@@ -247,24 +232,6 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
                 <AlertCircle className="w-4 h-4 text-yellow-500" />
                 <span className="text-sm text-yellow-700">Initializing scanner...</span>
               </div>
-            </div>
-          )}
-
-          {/* Camera Selection */}
-          {availableCameras.length > 1 && (
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Select Camera</label>
-              <select
-                value={selectedCamera}
-                onChange={(e) => setSelectedCamera(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
-              >
-                {availableCameras.map((cameraId, index) => (
-                  <option key={cameraId} value={cameraId}>
-                    Camera {index + 1}
-                  </option>
-                ))}
-              </select>
             </div>
           )}
 
