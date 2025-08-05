@@ -38,6 +38,13 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
     setIsInitialized(true);
   }, []);
 
+  // Ensure video element is ready when scanning starts
+  useEffect(() => {
+    if (isScanning && videoRef.current) {
+      console.log('Video element is ready for scanning');
+    }
+  }, [isScanning]);
+
   const playSuccessSound = () => {
     if (isSoundEnabled && audioRef.current) {
       audioRef.current.play().catch(console.error);
@@ -93,11 +100,6 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
       return;
     }
 
-    if (!videoRef.current) {
-      setErrorMessage('Video element not ready. Please try again.');
-      return;
-    }
-
     try {
       setScanStatus('scanning');
       setIsScanning(true);
@@ -105,8 +107,21 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
       
       console.log('Starting barcode scanner...');
       
-      // Wait a moment for the video element to be properly mounted
-      await new Promise(resolve => setTimeout(resolve, 100));
+      // Wait for video element to be properly mounted and ready
+      let attempts = 0;
+      while (!videoRef.current && attempts < 10) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+        attempts++;
+      }
+      
+      if (!videoRef.current) {
+        setErrorMessage('Video element not ready. Please try again.');
+        setIsScanning(false);
+        setScanStatus('error');
+        return;
+      }
+      
+      console.log('Video element ready, initializing Quagga...');
       
       // Configure Quagga for barcode detection
       Quagga.init({
@@ -200,17 +215,29 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
   const stopScanning = () => {
     console.log('Stopping scanner...');
     
-    // Stop Quagga
-    Quagga.stop();
+    try {
+      // Stop Quagga
+      Quagga.stop();
+    } catch (error) {
+      console.error('Error stopping Quagga:', error);
+    }
     
     // Stop camera stream
     if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => track.stop());
+      try {
+        streamRef.current.getTracks().forEach(track => track.stop());
+      } catch (error) {
+        console.error('Error stopping camera stream:', error);
+      }
       streamRef.current = null;
     }
     
     if (videoRef.current) {
-      videoRef.current.srcObject = null;
+      try {
+        videoRef.current.srcObject = null;
+      } catch (error) {
+        console.error('Error clearing video element:', error);
+      }
     }
     
     setIsScanning(false);
@@ -301,16 +328,15 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
 
             <div className="relative border-2 border-gray-300 rounded-lg overflow-hidden">
               <div className="aspect-video bg-gray-100 flex items-center justify-center">
-                {isScanning ? (
-                  <video
-                    ref={videoRef}
-                    className="w-full h-full object-cover"
-                    autoPlay
-                    playsInline
-                    muted
-                    style={{ display: 'block' }}
-                  />
-                ) : (
+                <video
+                  ref={videoRef}
+                  className={`w-full h-full object-cover ${isScanning ? 'block' : 'hidden'}`}
+                  autoPlay
+                  playsInline
+                  muted
+                  style={{ display: isScanning ? 'block' : 'none' }}
+                />
+                {!isScanning && (
                   <div className="text-center text-gray-500">
                     <QrCode className="w-12 h-12 mx-auto mb-2" />
                     <p>{isInitialized ? 'Click "Start Scanner" to begin' : 'Initializing...'}</p>
