@@ -72,7 +72,8 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
     
     // QR format
     if (selectedFormat === 'qr') {
-      return format === 'QR_CODE';
+      const qrFormats = ['QR_CODE', 'DATAMATRIX'];
+      return qrFormats.includes(format);
     }
     
     return true;
@@ -289,7 +290,9 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
               "ean_8_reader",
               "code_39_reader",
               "upc_reader",
-              "upc_e_reader"
+              "upc_e_reader",
+              "qr_reader",
+              "datamatrix_reader"
             ]
           },
           locate: true
@@ -337,7 +340,7 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
             
             const code = result.codeResult.code;
             const confidence = result.codeResult.confidence || 0;
-            const format = result.codeResult.format;
+            const format = result.codeResult.format || getBarcodeFormat(code);
             
             console.log('Barcode detected:', code, 'Confidence:', confidence, 'Format:', format);
             
