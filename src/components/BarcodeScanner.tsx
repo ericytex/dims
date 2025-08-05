@@ -21,6 +21,7 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
   const [errorMessage, setErrorMessage] = useState('');
   const [availableCameras, setAvailableCameras] = useState<string[]>([]);
   const [selectedCamera, setSelectedCamera] = useState<string>('');
+  const [isInitialized, setIsInitialized] = useState(false);
   
   const videoRef = useRef<HTMLVideoElement>(null);
   const codeReaderRef = useRef<BrowserMultiFormatReader | null>(null);
@@ -35,28 +36,44 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
 
   // Initialize ZXing reader and get available cameras
   useEffect(() => {
+    const initializeScanner = async () => {
+      try {
+        console.log('Initializing scanner...');
+        
+        // Create new reader instance
+        codeReaderRef.current = new BrowserMultiFormatReader();
+        
+        // Get available cameras
+        const devices = await codeReaderRef.current.listVideoInputDevices();
+        const cameraIds = devices.map(device => device.deviceId);
+        
+        console.log('Available cameras:', cameraIds);
+        
+        setAvailableCameras(cameraIds);
+        if (cameraIds.length > 0) {
+          setSelectedCamera(cameraIds[0]);
+        }
+        
+        setIsInitialized(true);
+        console.log('Scanner initialized successfully');
+      } catch (error) {
+        console.error('Failed to initialize scanner:', error);
+        setErrorMessage('Failed to initialize scanner. Please refresh and try again.');
+        setIsInitialized(false);
+      }
+    };
+
     if (isOpen && !codeReaderRef.current) {
-      codeReaderRef.current = new BrowserMultiFormatReader();
-      
-      // Get available cameras
-      codeReaderRef.current.listVideoInputDevices()
-        .then((devices) => {
-          const cameraIds = devices.map(device => device.deviceId);
-          setAvailableCameras(cameraIds);
-          if (cameraIds.length > 0) {
-            setSelectedCamera(cameraIds[0]);
-          }
-        })
-        .catch((error) => {
-          console.error('Failed to get cameras:', error);
-          setErrorMessage('Failed to access camera devices');
-        });
+      initializeScanner();
     }
     
     return () => {
       if (codeReaderRef.current) {
+        console.log('Cleaning up scanner...');
         codeReaderRef.current.reset();
+        codeReaderRef.current = null;
       }
+      setIsInitialized(false);
     };
   }, [isOpen]);
 
@@ -113,8 +130,23 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
   }, []);
 
   const startScanning = async () => {
-    if (!codeReaderRef.current || !videoRef.current) {
-      setErrorMessage('Scanner not initialized');
+    console.log('Starting scanner...');
+    console.log('Initialized:', isInitialized);
+    console.log('CodeReader:', codeReaderRef.current);
+    console.log('VideoRef:', videoRef.current);
+    
+    if (!isInitialized) {
+      setErrorMessage('Scanner not initialized. Please wait or refresh the page.');
+      return;
+    }
+    
+    if (!codeReaderRef.current) {
+      setErrorMessage('Scanner not initialized. Please refresh the page.');
+      return;
+    }
+    
+    if (!videoRef.current) {
+      setErrorMessage('Video element not ready. Please try again.');
       return;
     }
     
@@ -148,6 +180,7 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
   };
 
   const stopScanning = () => {
+    console.log('Stopping scanner...');
     if (codeReaderRef.current) {
       codeReaderRef.current.reset();
     }
@@ -207,6 +240,16 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
             </div>
           )}
 
+          {/* Initialization Status */}
+          {!isInitialized && (
+            <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+              <div className="flex items-center space-x-2">
+                <AlertCircle className="w-4 h-4 text-yellow-500" />
+                <span className="text-sm text-yellow-700">Initializing scanner...</span>
+              </div>
+            </div>
+          )}
+
           {/* Camera Selection */}
           {availableCameras.length > 1 && (
             <div className="mb-4">
@@ -231,10 +274,13 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
               <span className="text-sm font-medium text-gray-700">Camera Scanner</span>
               <button
                 onClick={isScanning ? stopScanning : startScanning}
+                disabled={!isInitialized}
                 className={`flex items-center space-x-1 px-3 py-1 rounded text-sm transition-colors ${
                   isScanning 
                     ? 'bg-red-500 text-white hover:bg-red-600' 
-                    : 'bg-blue-500 text-white hover:bg-blue-600'
+                    : isInitialized
+                    ? 'bg-blue-500 text-white hover:bg-blue-600'
+                    : 'bg-gray-400 text-white cursor-not-allowed'
                 }`}
               >
                 <Camera className="w-4 h-4" />
@@ -255,7 +301,7 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
                 ) : (
                   <div className="text-center text-gray-500">
                     <QrCode className="w-12 h-12 mx-auto mb-2" />
-                    <p>Click "Start Scanner" to begin</p>
+                    <p>{isInitialized ? 'Click "Start Scanner" to begin' : 'Initializing...'}</p>
                   </div>
                 )}
               </div>
@@ -314,6 +360,7 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
           <div className="mt-4 p-3 bg-blue-50 rounded-lg">
             <h3 className="text-sm font-medium text-blue-800 mb-1">How to use:</h3>
             <ul className="text-xs text-blue-700 space-y-1">
+              <li>• Wait for scanner to initialize</li>
               <li>• Click "Start Scanner" to use camera</li>
               <li>• Allow camera permissions when prompted</li>
               <li>• Point camera at barcode/QR code</li>
