@@ -1,6 +1,6 @@
-import React, { useState, useCallback } from 'react';
-import { BarcodeScanner } from 'react-barcode-scanner';
-import { Camera, X, Search, QrCode } from 'lucide-react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
+import { BrowserMultiFormatReader, Result } from '@zxing/library';
+import { Camera, X, Search, QrCode, Volume2, VolumeX } from 'lucide-react';
 
 interface BarcodeScannerProps {
   onScan: (barcode: string) => void;
@@ -15,17 +15,101 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
 }) => {
   const [isScanning, setIsScanning] = useState(false);
   const [manualBarcode, setManualBarcode] = useState('');
+  const [isSoundEnabled, setIsSoundEnabled] = useState(true);
+  const [scanStatus, setScanStatus] = useState<'idle' | 'scanning' | 'success' | 'error'>('idle');
+  const [lastScannedCode, setLastScannedCode] = useState('');
+  
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const codeReaderRef = useRef<BrowserMultiFormatReader | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  const handleScan = useCallback((result: any) => {
-    if (result && result.text) {
-      onScan(result.text);
-      setIsScanning(false);
+  // Initialize audio for success sound
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      audioRef.current = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBSuBzvLZiTYIG2m98OScTgwOUarm7blmGgU7k9n1unEiBC13yO/eizEIHWq+8+OWT');
     }
-  }, [onScan]);
+  }, []);
+
+  // Initialize ZXing reader
+  useEffect(() => {
+    if (isOpen && !codeReaderRef.current) {
+      codeReaderRef.current = new BrowserMultiFormatReader();
+    }
+    
+    return () => {
+      if (codeReaderRef.current) {
+        codeReaderRef.current.reset();
+      }
+    };
+  }, [isOpen]);
+
+  const playSuccessSound = () => {
+    if (isSoundEnabled && audioRef.current) {
+      audioRef.current.play().catch(console.error);
+    }
+  };
+
+  const handleScan = useCallback((result: Result) => {
+    if (result && result.getText()) {
+      const scannedCode = result.getText();
+      
+      // Prevent duplicate scans
+      if (scannedCode === lastScannedCode) {
+        return;
+      }
+      
+      setLastScannedCode(scannedCode);
+      setScanStatus('success');
+      playSuccessSound();
+      
+      // Show success feedback briefly
+      setTimeout(() => {
+        onScan(scannedCode);
+        setIsScanning(false);
+        setScanStatus('idle');
+        setLastScannedCode('');
+      }, 1000);
+    }
+  }, [onScan, lastScannedCode, isSoundEnabled]);
 
   const handleError = useCallback((error: any) => {
     console.error('Barcode scan error:', error);
+    setScanStatus('error');
+    setTimeout(() => setScanStatus('scanning'), 2000);
   }, []);
+
+  const startScanning = async () => {
+    if (!codeReaderRef.current || !videoRef.current) return;
+    
+    try {
+      setScanStatus('scanning');
+      setIsScanning(true);
+      
+      await codeReaderRef.current.decodeFromVideoDevice(
+        undefined, // Use default camera
+        videoRef.current,
+        (result, error) => {
+          if (result) {
+            handleScan(result);
+          }
+          if (error && error.name !== 'NotFoundException') {
+            handleError(error);
+          }
+        }
+      );
+    } catch (error) {
+      console.error('Failed to start scanner:', error);
+      setScanStatus('error');
+    }
+  };
+
+  const stopScanning = () => {
+    if (codeReaderRef.current) {
+      codeReaderRef.current.reset();
+    }
+    setIsScanning(false);
+    setScanStatus('idle');
+  };
 
   const handleManualSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,19 +119,36 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
     }
   };
 
+  const toggleSound = () => {
+    setIsSoundEnabled(!isSoundEnabled);
+  };
+
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+      <div className="bg-white rounded-lg shadow-xl max-w-lg w-full mx-4">
         <div className="flex items-center justify-between p-4 border-b border-gray-200">
           <h2 className="text-lg font-semibold text-gray-900">Scan Barcode</h2>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-600"
-          >
-            <X className="w-6 h-6" />
-          </button>
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={toggleSound}
+              className={`p-2 rounded-lg transition-colors ${
+                isSoundEnabled 
+                  ? 'bg-green-100 text-green-600 hover:bg-green-200' 
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+              title={isSoundEnabled ? 'Sound On' : 'Sound Off'}
+            >
+              {isSoundEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
+            </button>
+            <button
+              onClick={onClose}
+              className="text-gray-400 hover:text-gray-600"
+            >
+              <X className="w-6 h-6" />
+            </button>
+          </div>
         </div>
 
         <div className="p-4">
@@ -56,40 +157,60 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm font-medium text-gray-700">Camera Scanner</span>
               <button
-                onClick={() => setIsScanning(!isScanning)}
-                className="flex items-center space-x-1 px-3 py-1 bg-blue-500 text-white rounded text-sm hover:bg-blue-600"
+                onClick={isScanning ? stopScanning : startScanning}
+                className={`flex items-center space-x-1 px-3 py-1 rounded text-sm transition-colors ${
+                  isScanning 
+                    ? 'bg-red-500 text-white hover:bg-red-600' 
+                    : 'bg-blue-500 text-white hover:bg-blue-600'
+                }`}
               >
                 <Camera className="w-4 h-4" />
                 <span>{isScanning ? 'Stop' : 'Start'} Scanner</span>
               </button>
             </div>
 
-            {isScanning && (
-              <div className="relative border-2 border-gray-300 rounded-lg overflow-hidden">
-                <div className="aspect-video bg-gray-100 flex items-center justify-center">
-                  <BarcodeScanner
-                    onUpdate={handleScan}
-                    onError={handleError}
-                    className="w-full h-full"
+            <div className="relative border-2 border-gray-300 rounded-lg overflow-hidden">
+              <div className="aspect-video bg-gray-100 flex items-center justify-center">
+                {isScanning ? (
+                  <video
+                    ref={videoRef}
+                    className="w-full h-full object-cover"
+                    autoPlay
+                    playsInline
+                    muted
                   />
-                </div>
+                ) : (
+                  <div className="text-center text-gray-500">
+                    <QrCode className="w-12 h-12 mx-auto mb-2" />
+                    <p>Click "Start Scanner" to begin</p>
+                  </div>
+                )}
+              </div>
+              
+              {/* Scanning overlay */}
+              {isScanning && (
                 <div className="absolute inset-0 border-2 border-blue-500 rounded-lg pointer-events-none">
                   <div className="absolute top-0 left-0 w-8 h-8 border-l-2 border-t-2 border-blue-500"></div>
                   <div className="absolute top-0 right-0 w-8 h-8 border-r-2 border-t-2 border-blue-500"></div>
                   <div className="absolute bottom-0 left-0 w-8 h-8 border-l-2 border-b-2 border-blue-500"></div>
                   <div className="absolute bottom-0 right-0 w-8 h-8 border-r-2 border-b-2 border-blue-500"></div>
+                  
+                  {/* Status indicator */}
+                  <div className="absolute top-2 left-2">
+                    <div className={`px-2 py-1 rounded text-xs font-medium ${
+                      scanStatus === 'scanning' ? 'bg-blue-100 text-blue-800' :
+                      scanStatus === 'success' ? 'bg-green-100 text-green-800' :
+                      scanStatus === 'error' ? 'bg-red-100 text-red-800' :
+                      'bg-gray-100 text-gray-800'
+                    }`}>
+                      {scanStatus === 'scanning' ? 'Scanning...' :
+                       scanStatus === 'success' ? 'Detected!' :
+                       scanStatus === 'error' ? 'Error' : 'Ready'}
+                    </div>
+                  </div>
                 </div>
-              </div>
-            )}
-
-            {!isScanning && (
-              <div className="aspect-video bg-gray-100 rounded-lg flex items-center justify-center">
-                <div className="text-center text-gray-500">
-                  <QrCode className="w-12 h-12 mx-auto mb-2" />
-                  <p>Click "Start Scanner" to begin</p>
-                </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
 
           {/* Manual Input Section */}
@@ -122,8 +243,10 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
             <ul className="text-xs text-blue-700 space-y-1">
               <li>• Click "Start Scanner" to use camera</li>
               <li>• Point camera at barcode/QR code</li>
+              <li>• Hold steady for 1-2 seconds</li>
+              <li>• You'll hear a sound when detected</li>
               <li>• Or enter barcode manually above</li>
-              <li>• Scanner will automatically detect and search</li>
+              <li>• Supports: QR, Code128, EAN, UPC, Code39</li>
             </ul>
           </div>
         </div>
