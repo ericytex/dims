@@ -30,6 +30,8 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
   const [focusTime, setFocusTime] = useState(0);
   const [isFocused, setIsFocused] = useState(false);
   const [scanLinePosition, setScanLinePosition] = useState(0);
+  const [zoomLevel, setZoomLevel] = useState(1);
+  const [isInitializing, setIsInitializing] = useState(false);
   
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -124,7 +126,7 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
     focusTimerRef.current = setInterval(() => {
       setFocusTime(prev => {
         const newTime = prev + 1;
-        if (newTime >= 3) { // 3 seconds focus time
+        if (newTime >= 2) { // Reduced to 2 seconds for faster response
           setIsFocused(true);
           if (focusTimerRef.current) {
             clearInterval(focusTimerRef.current);
@@ -133,6 +135,23 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
         return newTime;
       });
     }, 1000);
+  };
+
+  // Zoom in/out functionality using CSS transform
+  const handleZoom = (direction: 'in' | 'out') => {
+    const newZoom = direction === 'in' 
+      ? Math.min(zoomLevel * 1.2, 3)
+      : Math.max(zoomLevel / 1.2, 0.5);
+    
+    setZoomLevel(newZoom);
+    
+    // Apply zoom using CSS transform on video element
+    if (videoRef.current) {
+      videoRef.current.style.transform = `scale(${newZoom})`;
+      videoRef.current.style.transformOrigin = 'center center';
+    }
+    
+    console.log('Zoom applied:', newZoom);
   };
 
   // Start scanning line animation
@@ -256,15 +275,12 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
     }
 
     try {
+      setIsInitializing(true);
       setScanStatus('scanning');
       setIsScanning(true);
       setErrorMessage('');
       
       console.log('Starting barcode scanner...');
-      
-      // Start focus timer and scanning line animation
-      startFocusTimer();
-      startScanLineAnimation();
       
       // Wait for video element to be properly mounted and ready
       let attempts = 0;
@@ -278,18 +294,19 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
         setErrorMessage('Video element not ready. Please try again.');
         setIsScanning(false);
         setScanStatus('error');
+        setIsInitializing(false);
         return;
       }
       
       console.log('Video element ready, getting camera stream...');
       
-      // First, try to get camera permissions with enhanced settings
+      // Get camera stream with zoom capabilities
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ 
           video: { 
             facingMode: "environment",
-            width: { min: 640, ideal: 1280, max: 1920 },
-            height: { min: 480, ideal: 720, max: 1080 }
+            width: { ideal: 1280 },
+            height: { ideal: 720 }
           } 
         });
         
@@ -312,10 +329,11 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
         setErrorMessage('Failed to access camera. Please check permissions.');
         setIsScanning(false);
         setScanStatus('error');
+        setIsInitializing(false);
         return;
       }
       
-      // Initialize Quagga with enhanced settings for better image processing
+      // Initialize Quagga with optimized settings for faster detection
       try {
         await Quagga.init({
           inputStream: {
@@ -323,23 +341,23 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
             type: "LiveStream",
             target: videoRef.current,
             constraints: {
-              width: { min: 640, ideal: 1280, max: 1920 },
-              height: { min: 480, ideal: 720, max: 1080 },
+              width: { ideal: 1280 },
+              height: { ideal: 720 },
               facingMode: "environment"
             },
-            area: { // Define scanning area for better focus
-              top: "20%",
-              right: "10%",
-              left: "10%",
-              bottom: "20%"
+            area: { // Smaller scanning area for better focus
+              top: "25%",
+              right: "15%",
+              left: "15%",
+              bottom: "25%"
             }
           },
           locator: {
-            patchSize: "medium",
-            halfSample: true
+            patchSize: "small", // Smaller patches for faster processing
+            halfSample: false // Disable half sample for speed
           },
-          numOfWorkers: 4, // Increase workers for better processing
-          frequency: 10, // Increase frequency for more responsive scanning
+          numOfWorkers: 2, // Reduce workers for faster startup
+          frequency: 20, // Increase frequency for more responsive scanning
           decoder: {
             readers: [
               "code_128_reader",
@@ -359,7 +377,11 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
         await Quagga.start();
         console.log('Quagga started successfully');
         
-        // Set up detection handler
+        // Start focus timer and scanning line after successful initialization
+        startFocusTimer();
+        startScanLineAnimation();
+        
+        // Set up detection handler with immediate processing
         Quagga.onDetected((result: any) => {
           if (isPaused) return;
           
@@ -368,15 +390,12 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
           
           console.log('Barcode detected:', code, 'Format:', format);
           
-          // Only process if camera is focused (after 3 seconds)
-          if (isFocused) {
-            handleScan(code, format);
-          } else {
-            console.log('Camera not focused yet, ignoring scan');
-          }
+          // Process scan immediately without focus delay for faster response
+          handleScan(code, format);
         });
         
         setScanStatus('scanning');
+        setIsInitializing(false);
         console.log('Scanner started successfully');
         
       } catch (error) {
@@ -384,6 +403,7 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
         setErrorMessage('Failed to initialize scanner. Please refresh and try again.');
         setIsScanning(false);
         setScanStatus('error');
+        setIsInitializing(false);
       }
       
     } catch (error) {
@@ -391,6 +411,7 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
       setErrorMessage('Failed to start scanner. Please try again.');
       setIsScanning(false);
       setScanStatus('error');
+      setIsInitializing(false);
     }
   };
 
@@ -596,20 +617,44 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
               <div className="mb-4">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm font-medium text-gray-700">Barcode Scanner</span>
-                  <button
-                    onClick={isScanning ? stopScanning : startScanning}
-                    disabled={!isInitialized}
-                    className={`flex items-center space-x-1 px-3 py-1 rounded text-sm transition-colors ${
-                      isScanning 
-                        ? 'bg-red-500 text-white hover:bg-red-600' 
-                        : isInitialized
-                        ? 'bg-blue-500 text-white hover:bg-blue-600'
-                        : 'bg-gray-400 text-white cursor-not-allowed'
-                    }`}
-                  >
-                    <Camera className="w-4 h-4" />
-                    <span>{isScanning ? 'Stop' : 'Start'} Scanner</span>
-                  </button>
+                  <div className="flex items-center space-x-2">
+                    {/* Zoom controls */}
+                    {isScanning && (
+                      <div className="flex items-center space-x-1">
+                        <button
+                          onClick={() => handleZoom('out')}
+                          className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs hover:bg-gray-200"
+                          title="Zoom Out"
+                        >
+                          -
+                        </button>
+                        <span className="text-xs text-gray-500">Zoom: {zoomLevel.toFixed(1)}x</span>
+                        <button
+                          onClick={() => handleZoom('in')}
+                          className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs hover:bg-gray-200"
+                          title="Zoom In"
+                        >
+                          +
+                        </button>
+                      </div>
+                    )}
+                    <button
+                      onClick={isScanning ? stopScanning : startScanning}
+                      disabled={!isInitialized || isInitializing}
+                      className={`flex items-center space-x-1 px-3 py-1 rounded text-sm transition-colors ${
+                        isScanning 
+                          ? 'bg-red-500 text-white hover:bg-red-600' 
+                          : isInitialized && !isInitializing
+                          ? 'bg-blue-500 text-white hover:bg-blue-600'
+                          : 'bg-gray-400 text-white cursor-not-allowed'
+                      }`}
+                    >
+                      <Camera className="w-4 h-4" />
+                      <span>
+                        {isInitializing ? 'Initializing...' : isScanning ? 'Stop' : 'Start'} Scanner
+                      </span>
+                    </button>
+                  </div>
                 </div>
 
                 <div className="relative border-2 border-gray-300 rounded-lg overflow-hidden">
