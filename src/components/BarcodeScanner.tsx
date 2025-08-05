@@ -52,6 +52,91 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
   const frameThrottleRef = useRef<NodeJS.Timeout | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const testIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const codeReaderRef = useRef<any>(null); // Ref for ZXing code reader
+
+  // Helper function for basic edge detection (fallback)
+  const performBasicEdgeDetection = (canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D) => {
+    // Get image data from center area (where barcode should be)
+    const centerX = Math.floor(canvas.width / 2);
+    const centerY = Math.floor(canvas.height / 2);
+    const areaSize = Math.min(canvas.width, canvas.height) / 3;
+    
+    const imageData = ctx.getImageData(
+      centerX - areaSize / 2,
+      centerY - areaSize / 2,
+      areaSize,
+      areaSize
+    );
+    
+    // Simple edge detection for barcode-like patterns
+    const data = imageData.data;
+    let edgeCount = 0;
+    let totalPixels = 0;
+    
+    for (let y = 1; y < areaSize - 1; y++) {
+      for (let x = 1; x < areaSize - 1; x++) {
+        const idx = (y * areaSize + x) * 4;
+        const gray = (data[idx] + data[idx + 1] + data[idx + 2]) / 3;
+        
+        // Check for strong edges (potential barcode lines)
+        const left = (data[idx - 4] + data[idx - 3] + data[idx - 2]) / 3;
+        const right = (data[idx + 4] + data[idx + 5] + data[idx + 6]) / 3;
+        const edge = Math.abs(gray - left) + Math.abs(gray - right);
+        
+        if (edge > 50) { // Strong edge threshold
+          edgeCount++;
+        }
+        totalPixels++;
+      }
+    }
+    
+    const edgeRatio = edgeCount / totalPixels;
+    console.log('Edge detection - ratio:', edgeRatio.toFixed(3), 'edges:', edgeCount);
+    
+    // If we detect many edges in a pattern, it might be a barcode
+    if (edgeRatio > 0.1 && edgeCount > 100) {
+      console.log('Potential barcode detected! Edge ratio:', edgeRatio.toFixed(3));
+      // For now, just log the detection - we can enhance this later
+    }
+  };
+
+  // Helper function to extract barcode pattern from image data
+  const extractBarcodePattern = (barcodeData: number[]): string | null => {
+    // Convert grayscale data to binary (black/white)
+    const binaryData: boolean[] = [];
+    const threshold = 128; // Middle gray value
+    
+    for (let i = 0; i < barcodeData.length; i++) {
+      binaryData.push(barcodeData[i] < threshold);
+    }
+    
+    // Find the most common pattern
+    const patterns: { [key: string]: number } = {};
+    const patternLength = 10; // Look for patterns of 10 pixels
+    
+    for (let i = 0; i <= binaryData.length - patternLength; i++) {
+      const pattern = binaryData.slice(i, i + patternLength).map(b => b ? '1' : '0').join('');
+      patterns[pattern] = (patterns[pattern] || 0) + 1;
+    }
+    
+    // Find the most frequent pattern
+    let maxCount = 0;
+    let mostFrequentPattern = '';
+    
+    for (const [pattern, count] of Object.entries(patterns)) {
+      if (count > maxCount) {
+        maxCount = count;
+        mostFrequentPattern = pattern;
+      }
+    }
+    
+    // If we found a significant pattern, return it
+    if (maxCount > 5) {
+      return mostFrequentPattern;
+    }
+    
+    return null;
+  };
 
   // Helper function to validate barcode format
   const isValidBarcode = (code: string): boolean => {
@@ -539,53 +624,56 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
           if (sharpness > 10 && canvasRef.current && videoRef.current) {
             const canvas = canvasRef.current;
             const ctx = canvas.getContext('2d');
-            if (ctx && videoRef.current) {
+            if (ctx && videoRef.current && videoRef.current.videoWidth && videoRef.current.videoHeight) {
               // Draw video frame to canvas
               canvas.width = videoRef.current.videoWidth;
               canvas.height = videoRef.current.videoHeight;
               ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
               
-              // Get image data from center area (where barcode should be)
-              const centerX = Math.floor(canvas.width / 2);
-              const centerY = Math.floor(canvas.height / 2);
-              const areaSize = Math.min(canvas.width, canvas.height) / 3;
-              
-              const imageData = ctx.getImageData(
-                centerX - areaSize / 2,
-                centerY - areaSize / 2,
-                areaSize,
-                areaSize
-              );
-              
-              // Simple edge detection for barcode-like patterns
+              // Simple barcode detection using image analysis
+              const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
               const data = imageData.data;
-              let edgeCount = 0;
-              let totalPixels = 0;
               
-              for (let y = 1; y < areaSize - 1; y++) {
-                for (let x = 1; x < areaSize - 1; x++) {
-                  const idx = (y * areaSize + x) * 4;
-                  const gray = (data[idx] + data[idx + 1] + data[idx + 2]) / 3;
-                  
-                  // Check for strong edges (potential barcode lines)
-                  const left = (data[idx - 4] + data[idx - 3] + data[idx - 2]) / 3;
-                  const right = (data[idx + 4] + data[idx + 5] + data[idx + 6]) / 3;
-                  const edge = Math.abs(gray - left) + Math.abs(gray - right);
-                  
-                  if (edge > 50) { // Strong edge threshold
-                    edgeCount++;
+              // Analyze horizontal lines for barcode patterns
+              const centerY = Math.floor(canvas.height / 2);
+              const lineWidth = canvas.width;
+              const barcodeData: number[] = [];
+              
+              // Sample multiple horizontal lines around center
+              for (let y = centerY - 10; y <= centerY + 10; y += 2) {
+                if (y >= 0 && y < canvas.height) {
+                  const lineData: number[] = [];
+                  for (let x = 0; x < lineWidth; x++) {
+                    const idx = (y * lineWidth + x) * 4;
+                    const gray = (data[idx] + data[idx + 1] + data[idx + 2]) / 3;
+                    lineData.push(gray);
                   }
-                  totalPixels++;
+                  barcodeData.push(...lineData);
                 }
               }
               
-              const edgeRatio = edgeCount / totalPixels;
-              console.log('Edge detection - ratio:', edgeRatio.toFixed(3), 'edges:', edgeCount);
+              // Detect barcode-like patterns (alternating black/white bars)
+              let transitions = 0;
+              let lastValue = barcodeData[0];
+              for (let i = 1; i < barcodeData.length; i++) {
+                if (Math.abs(barcodeData[i] - lastValue) > 30) { // Significant change threshold
+                  transitions++;
+                }
+                lastValue = barcodeData[i];
+              }
               
-              // If we detect many edges in a pattern, it might be a barcode
-              if (edgeRatio > 0.1 && edgeCount > 100) {
-                console.log('Potential barcode detected! Edge ratio:', edgeRatio.toFixed(3));
-                // For now, just log the detection - we can enhance this later
+              console.log('Barcode analysis - transitions:', transitions, 'total pixels:', barcodeData.length);
+              
+              // If we detect many transitions, it might be a barcode
+              if (transitions > 50) {
+                console.log('Potential barcode detected! Transitions:', transitions);
+                
+                // Try to extract barcode data
+                const barcodePattern = extractBarcodePattern(barcodeData);
+                if (barcodePattern) {
+                  console.log('Extracted barcode pattern:', barcodePattern);
+                  handleScan(barcodePattern, 'UNKNOWN');
+                }
               }
             }
           }
