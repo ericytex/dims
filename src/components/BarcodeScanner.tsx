@@ -521,7 +521,7 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
         return;
       }
 
-      // Camera-only mode - bypass Quagga entirely
+      // Camera-only mode - bypass Quagga entirely (default behavior now)
       console.log('Starting camera-only mode (bypassing Quagga)...');
       setIsInitializing(false);
       setIsScanning(true);
