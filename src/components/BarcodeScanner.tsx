@@ -36,15 +36,23 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
     // Remove any non-alphanumeric characters except hyphens
     const cleanCode = code.replace(/[^a-zA-Z0-9-]/g, '');
     
-    // Check for common patterns like IDRC, IM-, etc.
+    // More flexible patterns - accept most alphanumeric combinations
     const validPatterns = [
       /^IDRC\d+$/,           // IDRC followed by numbers
       /^IM-\d+-\d+-[A-Z]+$/, // IM-23-034-KSJ pattern
       /^[A-Z]{2,}\d+$/,      // Letters followed by numbers
       /^[A-Z]+\d+[A-Z]+$/,   // Letters-numbers-letters
       /^\d+[A-Z]+\d+$/,      // Numbers-letters-numbers
-      /^[A-Z0-9-]{3,}$/      // General alphanumeric with hyphens
+      /^[A-Z0-9-]{3,}$/,     // General alphanumeric with hyphens
+      /^[A-Z0-9]{3,}$/,      // Pure alphanumeric
+      /^[0-9]{3,}$/,         // Pure numbers (3+ digits)
+      /^[A-Z]{3,}$/          // Pure letters (3+ characters)
     ];
+    
+    // If no specific pattern matches, accept if it's at least 3 characters
+    if (cleanCode.length >= 3) {
+      return true;
+    }
     
     return validPatterns.some(pattern => pattern.test(cleanCode));
   };
@@ -294,17 +302,17 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
             
             console.log('Barcode detected:', code, 'Confidence:', confidence);
             
-            // Only process high-confidence readings (above 80%)
-            if (confidence < 0.8) {
-              console.log('Low confidence reading ignored:', confidence);
-              return;
-            }
+            // Temporarily disable confidence check to debug
+            // if (confidence < 0.6) {
+            //   console.log('Low confidence reading ignored:', confidence);
+            //   return;
+            // }
             
-            // Validate barcode format (basic checks)
-            if (!isValidBarcode(code)) {
-              console.log('Invalid barcode format ignored:', code);
-              return;
-            }
+            // Temporarily disable validation to debug
+            // if (!isValidBarcode(code)) {
+            //   console.log('Invalid barcode format ignored:', code);
+            //   return;
+            // }
             
             // Check if this is a recent duplicate (within last 3 seconds)
             if (isRecentDuplicate(code)) {
@@ -312,7 +320,7 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
               return;
             }
             
-            console.log('High-confidence barcode confirmed:', code);
+            console.log('Barcode confirmed:', code, 'Confidence:', confidence);
             handleScan(code);
           } catch (detectionError: any) {
             console.error('Error processing detected barcode:', detectionError);
