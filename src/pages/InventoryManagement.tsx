@@ -94,23 +94,7 @@ export default function InventoryManagement() {
     });
 
   const handleAddItem = () => {
-    setFormData({
-      name: '',
-      description: '',
-      category: '',
-      sku: '',
-      unit: '',
-      currentStock: 0,
-      minStock: 0,
-      maxStock: 0,
-      cost: 0,
-      supplier: '',
-      facility: '',
-      location: '',
-      expiryDate: '',
-      status: 'active',
-      _scanningForSku: false
-    });
+    clearFormFields();
     setShowAddModal(true);
   };
 
@@ -181,13 +165,25 @@ export default function InventoryManagement() {
         await updateInventoryItem(selectedItem.id, itemData);
         showNotification('Item updated successfully', 'success');
         setShowEditModal(false);
+        setSelectedItem(null);
       } else {
         await addInventoryItem(itemData);
-        showNotification('Item added successfully', 'success');
-        setShowAddModal(false);
+        
+        // Show prominent success notification
+        showNotification(`✅ Item "${formData.name}" added successfully! Ready for next item.`, 'success');
+        
+        // Also show a more prominent notification with longer duration
+        setTimeout(() => {
+          showNotification(`🎉 Item "${formData.name}" has been added to inventory. You can now add another item.`, 'success');
+        }, 100);
+        
+        // Clear all form fields for next item
+        clearFormFields();
+        
+        // Keep modal open for next item entry
+        // Don't close the modal - let user continue adding items
+        setSelectedItem(null);
       }
-
-      setSelectedItem(null);
     } catch (error: any) {
       showNotification(`Error saving item: ${error.message}`, 'error');
     }
@@ -336,12 +332,10 @@ export default function InventoryManagement() {
       currentStock: 50,
       minStock: 10,
       maxStock: 100,
-      cost: 1500,
+      cost: 25000,
       supplier: 'Test Supplier',
-      facility: 'main-warehouse',
-      location: 'A1-B2-C3',
-      expiryDate: '2025-12-31', // Add expiry date
-      lastUpdated: new Date().toISOString(), // Add last updated timestamp
+      facility: 'Test Facility',
+      location: 'Test Location',
       status: 'active' as const
     };
 
@@ -351,6 +345,27 @@ export default function InventoryManagement() {
     } catch (error) {
       showNotification('Failed to add test item', 'error');
     }
+  };
+
+  // Helper function to clear form fields
+  const clearFormFields = () => {
+    setFormData({
+      name: '',
+      description: '',
+      category: '',
+      sku: '',
+      unit: '',
+      currentStock: 0,
+      minStock: 0,
+      maxStock: 0,
+      cost: 0,
+      supplier: '',
+      facility: '',
+      location: '',
+      expiryDate: '',
+      status: 'active' as const,
+      _scanningForSku: false
+    });
   };
 
   if (loading) {
