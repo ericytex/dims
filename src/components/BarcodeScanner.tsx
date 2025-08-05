@@ -40,6 +40,7 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
   const [frameCount, setFrameCount] = useState(0);
   const [sharpnessScore, setSharpnessScore] = useState(0);
   const [debugMode, setDebugMode] = useState(false);
+  const [testMode, setTestMode] = useState(false);
   
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -476,6 +477,17 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
         throw new Error('Video element not ready after multiple attempts');
       }
 
+      console.log('Video ready, dimensions:', videoRef.current.videoWidth, 'x', videoRef.current.videoHeight);
+
+      // If in test mode, just start the camera without Quagga
+      if (testMode) {
+        console.log('Test mode: Camera started without Quagga');
+        setIsInitializing(false);
+        setIsScanning(true);
+        setScanStatus('scanning');
+        return;
+      }
+
       // Configure Quagga with enhanced accuracy settings
       Quagga.init({
         inputStream: {
@@ -528,17 +540,23 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
 
         // Set up detection with frame throttling
         Quagga.onDetected((result: any) => {
+          console.log('Raw Quagga detection:', result);
+          
           // Apply frame throttling
           if (!throttleFrameProcessing(() => {})) {
+            console.log('Frame throttled, skipping detection');
             return; // Skip this frame
           }
 
           // Check sharpness before processing
           const sharpness = checkSharpness();
           setSharpnessScore(sharpness);
+          setFrameCount(prev => prev + 1);
           
-          // Only process if sharpness is above threshold
-          if (sharpness < 10) { // Adjust threshold as needed
+          console.log('Processing frame - Sharpness:', sharpness, 'Frame count:', frameCount + 1);
+          
+          // Only process if sharpness is above threshold (or in debug mode)
+          if (!debugMode && sharpness < 5) {
             console.log('Frame too blurry, skipping detection');
             return;
           }
@@ -561,6 +579,7 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
 
         // Start Quagga
         Quagga.start();
+        console.log('Quagga started successfully');
       });
 
     } catch (error: any) {
@@ -661,6 +680,18 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
             >
               <Bug className="w-4 h-4" />
             </button>
+            {/* Test Mode Toggle */}
+            <button
+              onClick={() => setTestMode(!testMode)}
+              className={`p-2 rounded-lg transition-colors ${
+                testMode 
+                  ? 'bg-purple-100 text-purple-600 hover:bg-purple-200' 
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+              title={testMode ? 'Test Mode On (Camera Only)' : 'Test Mode Off'}
+            >
+              <Camera className="w-4 h-4" />
+            </button>
             <button
               onClick={toggleSound}
               className={`p-2 rounded-lg transition-colors ${
@@ -755,6 +786,7 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
                   {scanStatus === 'scanning' && (fallbackMode ? 'Camera Active (Manual Mode)' : (isPaused ? `Paused (${scanMode === 'auto' ? '5s' : '5min'})` : `${scanMode === 'auto' ? 'Auto Scanning' : 'Manual Mode'}`))}
                   {scanStatus === 'error' && 'Error'}
                   {scanStatus === 'idle' && 'Ready'}
+                  {testMode && isScanning && 'Test Mode (Camera Only)'}
                 </div>
               </div>
 
@@ -840,6 +872,15 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
                       playsInline
                       muted
                       style={{ display: isScanning ? 'block' : 'none' }}
+                      onLoadedMetadata={() => {
+                        console.log('Video metadata loaded');
+                        if (videoRef.current) {
+                          console.log('Video dimensions:', videoRef.current.videoWidth, 'x', videoRef.current.videoHeight);
+                        }
+                      }}
+                      onCanPlay={() => {
+                        console.log('Video can play');
+                      }}
                     />
                     
                     {/* Hidden canvas for sharpness analysis */}
@@ -939,6 +980,15 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
                     <div className="bg-red-50 border border-red-200 rounded p-2">
                       <p className="text-red-700 text-xs font-medium">
                         🐛 Debug Mode: Lenient validation enabled
+                      </p>
+                    </div>
+                  )}
+                  
+                  {/* Test Mode Indicator */}
+                  {testMode && (
+                    <div className="bg-purple-50 border border-purple-200 rounded p-2">
+                      <p className="text-purple-700 text-xs font-medium">
+                        📷 Test Mode: Camera only (no barcode detection)
                       </p>
                     </div>
                   )}
