@@ -232,16 +232,16 @@ export default function InventoryManagement() {
       showNotification(`Found item: ${foundItem.name} (SKU: ${foundItem.sku})`, 'success');
       console.log('Item found:', foundItem);
       
-      // Show the item details after a brief delay to let the list update
+      // Show the item details immediately
+      handleViewItem(foundItem);
+      
+      // Scroll to the item in the list after a brief delay
       setTimeout(() => {
-        handleViewItem(foundItem);
-        
-        // Scroll to the item in the list
         const element = document.getElementById(`item-${foundItem.id}`);
         if (element) {
           element.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
-      }, 200);
+      }, 100);
     } else {
       // If not found, stop scanning and pre-fill the add form
       setShowBarcodeScanner(false);

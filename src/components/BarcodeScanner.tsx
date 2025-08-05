@@ -173,15 +173,9 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
     setLastScannedCode(barcode);
     setLastScannedResult({ code: barcode, format: detectedFormat });
     
-    // Pause scanning based on mode
-    const pauseTime = scanMode === 'auto' ? 5000 : 300000; // 5s for auto, 5min for manual
-    console.log(`Scanner paused for ${pauseTime/1000}s after successful scan`);
-    
-    setTimeout(() => {
-      setIsPaused(false);
-      setLastScannedCode(''); // Clear the last scanned code after pause
-      console.log('Scanner resumed after pause');
-    }, pauseTime);
+    // Stop scanning immediately after successful scan
+    console.log('Stopping scanner after successful scan');
+    stopScanning();
     
     // Call the onScan callback
     if (onScan) {
