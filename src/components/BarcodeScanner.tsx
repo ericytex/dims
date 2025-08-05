@@ -22,6 +22,7 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
   const [isInitialized, setIsInitialized] = useState(false);
   const [lastScannedCode, setLastScannedCode] = useState('');
   const [fallbackMode, setFallbackMode] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
   
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -52,25 +53,32 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
     }
   };
 
-  const handleScan = useCallback((barcode: string) => {
+  const handleScan = (barcode: string) => {
     // Prevent duplicate scans
     if (barcode === lastScannedCode) {
       return;
     }
     
-    setLastScannedCode(barcode);
-    setScanStatus('success');
-    setErrorMessage('');
+    console.log('Barcode detected:', barcode);
+    
+    // Play success sound
     playSuccessSound();
     
-    // Show success feedback briefly
+    // Set the scanned code
+    setLastScannedCode(barcode);
+    
+    // Pause scanning for 2 seconds
+    setIsPaused(true);
     setTimeout(() => {
+      setIsPaused(false);
+      setLastScannedCode(''); // Clear the last scanned code after pause
+    }, 2000);
+    
+    // Call the onScan callback
+    if (onScan) {
       onScan(barcode);
-      setIsScanning(false);
-      setScanStatus('idle');
-      setLastScannedCode('');
-    }, 1000);
-  }, [onScan, lastScannedCode, isSoundEnabled]);
+    }
+  };
 
   const handleError = useCallback((error: any) => {
     console.error('Camera error:', error);
@@ -222,6 +230,12 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
         // Listen for barcode detection
         Quagga.onDetected((result: any) => {
           try {
+            // Don't process if scanning is paused
+            if (isPaused) {
+              console.log('Scanning paused, ignoring barcode');
+              return;
+            }
+            
             const code = result.codeResult.code;
             console.log('Barcode detected:', code);
             handleScan(code);
@@ -296,6 +310,8 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
     setScanStatus('idle');
     setErrorMessage('');
     setFallbackMode(false);
+    setIsPaused(false);
+    setLastScannedCode('');
   };
 
   const handleManualSubmit = (e: React.FormEvent) => {
@@ -353,14 +369,15 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
               {/* Status Display */}
               <div className="text-center">
                 <div className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
-                  scanStatus === 'scanning' ? 'bg-green-100 text-green-800' :
+                  scanStatus === 'scanning' ? (isPaused ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800') :
                   scanStatus === 'error' ? 'bg-red-100 text-red-800' :
                   'bg-gray-100 text-gray-800'
                 }`}>
-                  {scanStatus === 'scanning' && <div className="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></div>}
+                  {scanStatus === 'scanning' && !isPaused && <div className="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></div>}
+                  {scanStatus === 'scanning' && isPaused && <div className="w-2 h-2 bg-yellow-500 rounded-full mr-2"></div>}
                   {scanStatus === 'error' && <div className="w-2 h-2 bg-red-500 rounded-full mr-2"></div>}
                   {scanStatus === 'idle' && <div className="w-2 h-2 bg-gray-500 rounded-full mr-2"></div>}
-                  {scanStatus === 'scanning' && (fallbackMode ? 'Camera Active (Manual Mode)' : 'Scanning...')}
+                  {scanStatus === 'scanning' && (fallbackMode ? 'Camera Active (Manual Mode)' : (isPaused ? 'Paused (2s)' : 'Scanning...'))}
                   {scanStatus === 'error' && 'Error'}
                   {scanStatus === 'idle' && 'Ready'}
                 </div>
