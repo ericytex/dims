@@ -43,7 +43,7 @@ interface InventoryItem {
 
 export default function InventoryManagement() {
   const { showNotification } = useNotification();
-  const { isOnline } = useOffline();
+  const { isOnline, addOfflineInventoryUpdate } = useOffline();
   const { user } = useFirebaseAuth();
   const { 
     inventoryItems, 
@@ -162,15 +162,32 @@ export default function InventoryManagement() {
       };
 
       if (showEditModal && selectedItem) {
-        await updateInventoryItem(selectedItem.id, itemData);
-        showNotification('Item updated successfully', 'success');
+        if (isOnline) {
+          await updateInventoryItem(selectedItem.id, itemData);
+          showNotification('Item updated successfully', 'success');
+        } else {
+          // Offline update - store locally
+          await addOfflineInventoryUpdate({
+            ...itemData,
+            id: selectedItem.id,
+            type: 'update'
+          });
+          showNotification('Item updated offline - will sync when online', 'success');
+        }
         setShowEditModal(false);
         setSelectedItem(null);
       } else {
-        await addInventoryItem(itemData);
-        
-        // Show prominent success notification
-        showNotification(`✅ Item "${formData.name}" added successfully! Ready for next item.`, 'success');
+        if (isOnline) {
+          await addInventoryItem(itemData);
+          showNotification(`✅ Item "${formData.name}" added successfully! Ready for next item.`, 'success');
+        } else {
+          // Offline add - store locally
+          await addOfflineInventoryUpdate({
+            ...itemData,
+            type: 'add'
+          });
+          showNotification(`✅ Item "${formData.name}" added offline! Will sync when online.`, 'success');
+        }
         
         // Also show a more prominent notification with longer duration
         setTimeout(() => {
@@ -431,6 +448,21 @@ export default function InventoryManagement() {
           <span>Add Item</span>
         </button>
       </div>
+
+      {/* Offline Status Indicator */}
+      {!isOnline && (
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+          <div className="flex items-center space-x-2">
+            <AlertTriangle className="w-5 h-5 text-yellow-600" />
+            <div>
+              <h3 className="text-sm font-medium text-yellow-800">Offline Mode</h3>
+              <p className="text-sm text-yellow-700">
+                You're currently offline. Items will be saved locally and synced when you're back online.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
