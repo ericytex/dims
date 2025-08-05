@@ -38,8 +38,22 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
       try {
         console.log('Initializing scanner...');
         
-        // Create new reader instance
-        codeReaderRef.current = new BrowserMultiFormatReader();
+        // Create new reader instance with specific formats
+        codeReaderRef.current = new BrowserMultiFormatReader({
+          formats: [
+            'QR_CODE',
+            'CODE_128',
+            'CODE_39',
+            'EAN_13',
+            'EAN_8',
+            'UPC_A',
+            'UPC_E',
+            'CODABAR',
+            'ITF',
+            'RSS_14',
+            'RSS_EXPANDED'
+          ]
+        });
         
         // Test camera access
         await codeReaderRef.current.listVideoInputDevices();
@@ -123,7 +137,6 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
     console.log('Starting scanner...');
     console.log('Initialized:', isInitialized);
     console.log('CodeReader:', codeReaderRef.current);
-    console.log('VideoRef:', videoRef.current);
     
     if (!isInitialized) {
       setErrorMessage('Scanner not initialized. Please wait or refresh the page.');
@@ -150,10 +163,19 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
             console.log('Barcode detected:', result.getText());
             handleScan(result);
           }
-          if (error && error.name !== 'NotFoundException') {
+          if (error) {
             console.error('Scanning error:', error);
-            handleError(error);
+            // Only show error if it's not a "not found" error (which is normal)
+            if (error.name !== 'NotFoundException' && error.name !== 'NoMultiFormatReaderWasAbleToDetectTheCode') {
+              handleError(error);
+            }
           }
+        },
+        {
+          // Scanner configuration for better detection
+          tryHarder: true,
+          tryInverted: true,
+          tryRotated: true
         }
       );
       
@@ -330,8 +352,10 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
               <li>• Wait for scanner to initialize</li>
               <li>• Click "Start Scanner" to use camera</li>
               <li>• Allow camera permissions when prompted</li>
-              <li>• Point camera at barcode/QR code</li>
-              <li>• Hold steady for 1-2 seconds</li>
+              <li>• Hold phone steady, 10-15cm from barcode</li>
+              <li>• Ensure good lighting on the barcode</li>
+              <li>• Try different angles if not detected</li>
+              <li>• Hold for 2-3 seconds for detection</li>
               <li>• You'll hear a sound when detected</li>
               <li>• Or enter barcode manually above</li>
               <li>• Supports: QR, Code128, EAN, UPC, Code39</li>
