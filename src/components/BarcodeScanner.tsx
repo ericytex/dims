@@ -507,8 +507,37 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
         setIsInitializing(false);
         setIsScanning(true);
         setScanStatus('scanning');
+        
+        // Set up a simple frame counter for simple camera mode
+        testIntervalRef.current = setInterval(() => {
+          setFrameCount(prev => prev + 1);
+          if (videoRef.current) {
+            const sharpness = checkSharpness();
+            setSharpnessScore(sharpness);
+            console.log('Simple camera mode frame:', frameCount + 1, 'Sharpness:', sharpness);
+          }
+        }, 100);
+        
         return;
       }
+
+      // Camera-only mode - bypass Quagga entirely
+      console.log('Starting camera-only mode (bypassing Quagga)...');
+      setIsInitializing(false);
+      setIsScanning(true);
+      setScanStatus('scanning');
+      
+      // Set up frame processing without Quagga
+      testIntervalRef.current = setInterval(() => {
+        setFrameCount(prev => prev + 1);
+        if (videoRef.current) {
+          const sharpness = checkSharpness();
+          setSharpnessScore(sharpness);
+          console.log('Camera-only mode frame:', frameCount + 1, 'Sharpness:', sharpness);
+        }
+      }, 100);
+      
+      return;
 
       // Ensure video element is visible before initializing Quagga
       if (videoRef.current) {
@@ -841,6 +870,26 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
             >
               <Camera className="w-4 h-4" />
             </button>
+            {/* Camera-Only Mode Toggle */}
+            <button
+              onClick={() => {
+                // Toggle camera-only mode and restart scanner
+                const newMode = !simpleCameraMode;
+                setSimpleCameraMode(newMode);
+                if (isScanning) {
+                  stopScanning();
+                  setTimeout(() => startScanning(), 500);
+                }
+              }}
+              className={`p-2 rounded-lg transition-colors ${
+                !simpleCameraMode && isScanning
+                  ? 'bg-green-100 text-green-600 hover:bg-green-200' 
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+              title="Camera-Only Mode (No Quagga)"
+            >
+              <Camera className="w-4 h-4" />
+            </button>
             <button
               onClick={toggleSound}
               className={`p-2 rounded-lg transition-colors ${
@@ -937,6 +986,7 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
                   {scanStatus === 'idle' && 'Ready'}
                   {testMode && isScanning && 'Test Mode (Camera Only)'}
                   {simpleCameraMode && isScanning && 'Simple Camera Mode'}
+                  {!simpleCameraMode && !testMode && isScanning && 'Camera-Only Mode (No Quagga)'}
                 </div>
               </div>
 
