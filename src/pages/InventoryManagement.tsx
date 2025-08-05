@@ -308,6 +308,8 @@ export default function InventoryManagement() {
       supplier: 'Test Supplier',
       facility: 'main-warehouse',
       location: 'A1-B2-C3',
+      expiryDate: '2025-12-31', // Add expiry date
+      lastUpdated: new Date().toISOString(), // Add last updated timestamp
       status: 'active' as const
     };
 
