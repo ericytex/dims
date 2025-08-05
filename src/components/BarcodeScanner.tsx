@@ -500,12 +500,21 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
         return;
       }
 
+      // Ensure video element is visible before initializing Quagga
+      if (videoRef.current) {
+        videoRef.current.style.display = 'block';
+        console.log('Video element display set to block');
+      }
+
+      // Small delay to ensure video is properly displayed
+      await new Promise(resolve => setTimeout(resolve, 100));
+
       // Configure Quagga with enhanced accuracy settings
       console.log('Starting Quagga initialization...');
       console.log('Video element for Quagga:', videoRef.current);
       console.log('Video dimensions for Quagga:', videoRef.current?.videoWidth, 'x', videoRef.current?.videoHeight);
       
-      const initQuagga = (useWorkers: boolean = true) => {
+      const initQuagga = (useWorkers: boolean = false) => { // Start with workers disabled
         Quagga.init({
           inputStream: {
             name: "Live",
@@ -527,7 +536,7 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
             patchSize: "small",
             halfSample: false
           },
-          numOfWorkers: useWorkers ? 1 : 0, // Use 0 workers if fallback
+          numOfWorkers: 0, // Disable workers completely to avoid browser compatibility issues
           frequency: 10,   // Reduced from 20 to 10 for better performance
           decoder: {
             readers: [
@@ -549,19 +558,12 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
               stack: err.stack
             });
             
-            // If first attempt failed and we were using workers, try without workers
-            if (useWorkers) {
-              console.log('Retrying Quagga initialization without workers...');
-              initQuagga(false);
-              return;
-            }
-            
             setErrorMessage('Failed to initialize scanner. Please refresh and try again.');
             setIsInitializing(false);
             return;
           }
 
-          console.log('Quagga initialized successfully', useWorkers ? 'with workers' : 'without workers');
+          console.log('Quagga initialized successfully without workers');
           setIsInitializing(false);
           setIsScanning(true);
 
@@ -624,8 +626,8 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
         });
       };
       
-      // Start with workers enabled
-      initQuagga(true);
+      // Start without workers
+      initQuagga(false);
 
     } catch (error: any) {
       console.error('Failed to start scanner:', error);
