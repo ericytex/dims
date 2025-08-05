@@ -11,6 +11,7 @@ interface Notification {
 interface NotificationContextType {
   notifications: Notification[];
   addNotification: (notification: Omit<Notification, 'id'> | string, type?: 'success' | 'error' | 'warning' | 'info') => void;
+  showNotification: (message: string, type?: 'success' | 'error' | 'warning' | 'info') => void;
   removeNotification: (id: string) => void;
 }
 
@@ -46,6 +47,23 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     }, newNotification.duration || 5000);
   };
 
+  const showNotification = (message: string, type: 'success' | 'error' | 'warning' | 'info' = 'info') => {
+    const id = Math.random().toString(36).substr(2, 9);
+    const newNotification: Notification = {
+      id,
+      type,
+      title: type.charAt(0).toUpperCase() + type.slice(1),
+      message,
+      duration: 5000
+    };
+    setNotifications(prev => [...prev, newNotification]);
+
+    // Auto remove after duration (default 5 seconds)
+    setTimeout(() => {
+      removeNotification(id);
+    }, newNotification.duration || 5000);
+  };
+
   const removeNotification = (id: string) => {
     setNotifications(prev => prev.filter(notification => notification.id !== id));
   };
@@ -54,6 +72,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     <NotificationContext.Provider value={{
       notifications,
       addNotification,
+      showNotification,
       removeNotification
     }}>
       {children}
