@@ -501,6 +501,10 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
       }
 
       // Configure Quagga with enhanced accuracy settings
+      console.log('Starting Quagga initialization...');
+      console.log('Video element for Quagga:', videoRef.current);
+      console.log('Video dimensions for Quagga:', videoRef.current?.videoWidth, 'x', videoRef.current?.videoHeight);
+      
       Quagga.init({
         inputStream: {
           name: "Live",
@@ -538,6 +542,11 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
       }, (err: any) => {
         if (err) {
           console.error('Quagga initialization failed:', err);
+          console.error('Quagga error details:', {
+            name: err.name,
+            message: err.message,
+            stack: err.stack
+          });
           setErrorMessage('Failed to initialize scanner. Please refresh and try again.');
           setIsInitializing(false);
           return;
@@ -580,6 +589,11 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
         // Set up error handling
         Quagga.onError((error: any) => {
           console.error('Quagga error:', error);
+          console.error('Quagga error details:', {
+            name: error.name,
+            message: error.message,
+            stack: error.stack
+          });
           if (error.name === 'NotAllowedError') {
             setErrorMessage('Camera access denied. Please allow camera permissions.');
           } else if (error.name === 'NotFoundError') {
@@ -590,8 +604,14 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
         });
 
         // Start Quagga
-        Quagga.start();
-        console.log('Quagga started successfully');
+        console.log('Attempting to start Quagga...');
+        try {
+          Quagga.start();
+          console.log('Quagga started successfully');
+        } catch (startError) {
+          console.error('Error starting Quagga:', startError);
+          setErrorMessage('Failed to start Quagga scanner.');
+        }
       });
 
     } catch (error: any) {
