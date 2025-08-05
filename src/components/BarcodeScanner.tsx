@@ -184,7 +184,19 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
               "code_39_vin_reader",
               "codabar_reader",
               "upc_reader",
-              "upc_e_reader"
+              "upc_e_reader",
+              "i2of5_reader",
+              "2of5_reader",
+              "code_93_reader",
+              "code_93_reader_extended",
+              "code_128_reader_extended",
+              "code_39_reader_extended",
+              "code_39_vin_reader_extended",
+              "codabar_reader_extended",
+              "upc_reader_extended",
+              "upc_e_reader_extended",
+              "i2of5_reader_extended",
+              "2of5_reader_extended"
             ]
           },
           locate: true
