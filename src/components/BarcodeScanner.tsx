@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 // @ts-ignore
 import Quagga from 'quagga';
-import { Camera, X, Search, QrCode, Volume2, VolumeX, AlertCircle, Zap } from 'lucide-react';
+import { Camera, X, Search, QrCode, Volume2, VolumeX, AlertCircle, Zap, Bug } from 'lucide-react';
 
 interface BarcodeScannerProps {
   onScan: (barcode: string) => void;
@@ -39,6 +39,7 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
   const [isTorchEnabled, setIsTorchEnabled] = useState(false);
   const [frameCount, setFrameCount] = useState(0);
   const [sharpnessScore, setSharpnessScore] = useState(0);
+  const [debugMode, setDebugMode] = useState(false);
   
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -187,50 +188,58 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
     }
   };
 
-  // Pre-validation: Check if barcode has been detected multiple times
+  // Pre-validation: Check for multiple detections
   const validateMultipleDetections = (code: string): boolean => {
     const now = Date.now();
     const recentDetections = detectionHistory.filter(
-      detection => now - detection.timestamp < 3000 // 3 second window
+      detection => detection.code === code && now - detection.timestamp < 3000
     );
     
-    const sameCodeDetections = recentDetections.filter(
-      detection => detection.code === code
-    );
+    const count = recentDetections.length;
+    setDetectionCount(count);
     
-    // Require at least 3 detections of the same code within 3 seconds
-    return sameCodeDetections.length >= 3;
+    console.log(`Multiple detections check: ${count}/${debugMode ? '1' : '2'} for code: ${code}`);
+    
+    // In debug mode, require only 1 detection; otherwise require 2
+    return debugMode ? count >= 1 : count >= 2;
   };
 
-  // Post-processing: Check confidence and validate barcode quality
+  // Post-processing: Validate barcode quality
   const validateBarcodeQuality = (result: any): boolean => {
     const code = result.codeResult.code;
     const confidence = result.codeResult.confidence || 0;
     
-    // Check confidence threshold
-    if (confidence < 0.7) {
-      console.log('Low confidence detection:', confidence);
+    console.log(`Quality check for: ${code}, Confidence: ${confidence}, Sharpness: ${sharpnessScore}, Debug: ${debugMode}`);
+    
+    // In debug mode, skip confidence check; otherwise use reduced threshold
+    if (!debugMode && confidence < 0.3) {
+      console.log('Confidence too low:', confidence);
       return false;
     }
     
-    // Check if code is valid format
     if (!isValidBarcode(code)) {
       console.log('Invalid barcode format:', code);
       return false;
     }
     
-    // Check for recent duplicates
     if (isRecentDuplicate(code)) {
       console.log('Recent duplicate detected:', code);
       return false;
     }
     
-    // Check if code is too short or too long
-    if (code.length < 3 || code.length > 50) {
+    // More lenient length check
+    if (code.length < 2 || code.length > 100) {
       console.log('Invalid barcode length:', code.length);
       return false;
     }
     
+    // In debug mode, skip sharpness check; otherwise use reduced threshold
+    if (!debugMode && sharpnessScore < 5) {
+      console.log('Frame too blurry, sharpness:', sharpnessScore);
+      return false;
+    }
+    
+    console.log('Quality validation passed for:', code);
     return true;
   };
 
@@ -267,10 +276,10 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
     handleScan(code, result.codeResult.format);
   };
 
-  // Frame throttling: Process only 1 frame per 300ms
+  // Frame throttling: Process only 1 frame per 100ms (reduced from 300ms)
   const throttleFrameProcessing = (callback: () => void) => {
     const now = Date.now();
-    if (now - lastFrameTime < 300) {
+    if (now - lastFrameTime < 100) {
       return false; // Skip this frame
     }
     setLastFrameTime(now);
@@ -640,6 +649,18 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
         <div className="flex items-center justify-between p-4 border-b border-gray-200">
           <h2 className="text-lg font-semibold text-gray-900">Scan Barcode</h2>
           <div className="flex items-center space-x-2">
+            {/* Debug Mode Toggle */}
+            <button
+              onClick={() => setDebugMode(!debugMode)}
+              className={`p-2 rounded-lg transition-colors ${
+                debugMode 
+                  ? 'bg-red-100 text-red-600 hover:bg-red-200' 
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+              title={debugMode ? 'Debug Mode On' : 'Debug Mode Off'}
+            >
+              <Bug className="w-4 h-4" />
+            </button>
             <button
               onClick={toggleSound}
               className={`p-2 rounded-lg transition-colors ${
@@ -913,16 +934,25 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
               {/* Accuracy Indicators */}
               {isScanning && !fallbackMode && (
                 <div className="space-y-2">
+                  {/* Debug Mode Indicator */}
+                  {debugMode && (
+                    <div className="bg-red-50 border border-red-200 rounded p-2">
+                      <p className="text-red-700 text-xs font-medium">
+                        🐛 Debug Mode: Lenient validation enabled
+                      </p>
+                    </div>
+                  )}
+                  
                   <div className="flex items-center justify-between text-xs">
                     <span className="text-gray-600">Detection Count:</span>
-                    <span className={`font-medium ${detectionCount >= 3 ? 'text-green-600' : 'text-yellow-600'}`}>
-                      {detectionCount}/3
+                    <span className={`font-medium ${detectionCount >= (debugMode ? 1 : 2) ? 'text-green-600' : 'text-yellow-600'}`}>
+                      {detectionCount}/{debugMode ? '1' : '2'}
                     </span>
                   </div>
                   
                   <div className="flex items-center justify-between text-xs">
                     <span className="text-gray-600">Sharpness:</span>
-                    <span className={`font-medium ${sharpnessScore > 10 ? 'text-green-600' : 'text-red-600'}`}>
+                    <span className={`font-medium ${sharpnessScore > (debugMode ? 0 : 5) ? 'text-green-600' : 'text-red-600'}`}>
                       {sharpnessScore.toFixed(1)}
                     </span>
                   </div>
