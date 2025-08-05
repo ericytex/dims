@@ -71,8 +71,9 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
   };
 
   const handleScan = (barcode: string) => {
-    // Prevent duplicate scans
-    if (barcode === lastScannedCode) {
+    // Prevent duplicate scans with better logic
+    if (barcode === lastScannedCode || isPaused) {
+      console.log('Ignoring duplicate scan or scanner is paused:', barcode);
       return;
     }
     
@@ -84,12 +85,15 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
     // Set the scanned code
     setLastScannedCode(barcode);
     
-    // Pause scanning for 2 seconds
+    // Pause scanning for 5 minutes (300,000ms) as requested
     setIsPaused(true);
+    console.log('Scanner paused for 5 minutes after successful scan');
+    
     setTimeout(() => {
       setIsPaused(false);
       setLastScannedCode(''); // Clear the last scanned code after pause
-    }, 2000);
+      console.log('Scanner resumed after 5-minute pause');
+    }, 300000); // 5 minutes = 300,000ms
     
     // Call the onScan callback
     if (onScan) {
@@ -394,7 +398,7 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
                   {scanStatus === 'scanning' && isPaused && <div className="w-2 h-2 bg-yellow-500 rounded-full mr-2"></div>}
                   {scanStatus === 'error' && <div className="w-2 h-2 bg-red-500 rounded-full mr-2"></div>}
                   {scanStatus === 'idle' && <div className="w-2 h-2 bg-gray-500 rounded-full mr-2"></div>}
-                  {scanStatus === 'scanning' && (fallbackMode ? 'Camera Active (Manual Mode)' : (isPaused ? 'Paused (2s)' : 'Scanning...'))}
+                  {scanStatus === 'scanning' && (fallbackMode ? 'Camera Active (Manual Mode)' : (isPaused ? 'Paused (5min)' : 'Scanning...'))}
                   {scanStatus === 'error' && 'Error'}
                   {scanStatus === 'idle' && 'Ready'}
                 </div>
