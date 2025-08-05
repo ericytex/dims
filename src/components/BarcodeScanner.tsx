@@ -96,12 +96,12 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
   // Helper function to check for recent duplicates
   const isRecentDuplicate = (code: string): boolean => {
     const now = Date.now();
-    const threeSecondsAgo = now - 3000; // 3 seconds
+    const fiveSecondsAgo = now - 5000; // 5 seconds
     
-    // Clean up old entries (older than 3 seconds)
+    // Clean up old entries (older than 5 seconds)
     setRecentScans(prev => prev.filter(scan => {
       const [timestamp] = scan.split('|');
-      return parseInt(timestamp) > threeSecondsAgo;
+      return parseInt(timestamp) > fiveSecondsAgo;
     }));
     
     // Check if this code was recently scanned
@@ -162,6 +162,9 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
     
     console.log('Barcode detected:', barcode);
     
+    // Immediately pause scanning to prevent rapid beeping
+    setIsPaused(true);
+    
     // Play success sound
     playSuccessSound();
     
@@ -172,7 +175,6 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
     
     // Pause scanning based on mode
     const pauseTime = scanMode === 'auto' ? 5000 : 300000; // 5s for auto, 5min for manual
-    setIsPaused(true);
     console.log(`Scanner paused for ${pauseTime/1000}s after successful scan`);
     
     setTimeout(() => {
@@ -349,6 +351,12 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
             
             console.log('Barcode detected:', code, 'Confidence:', confidence, 'Format:', format);
             
+            // Check if this is a recent duplicate (within last 5 seconds)
+            if (isRecentDuplicate(code)) {
+              console.log('Recent duplicate ignored:', code);
+              return;
+            }
+            
             // Temporarily disable confidence check to debug
             // if (confidence < 0.6) {
             //   console.log('Low confidence reading ignored:', confidence);
@@ -360,12 +368,6 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
             //   console.log('Invalid barcode format ignored:', code);
             //   return;
             // }
-            
-            // Check if this is a recent duplicate (within last 3 seconds)
-            if (isRecentDuplicate(code)) {
-              console.log('Recent duplicate ignored:', code);
-              return;
-            }
             
             // Validate format
             // if (!isValidFormat(code, format)) {
