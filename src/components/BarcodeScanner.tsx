@@ -41,6 +41,7 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
   const [sharpnessScore, setSharpnessScore] = useState(0);
   const [debugMode, setDebugMode] = useState(false);
   const [testMode, setTestMode] = useState(false);
+  const [simpleCameraMode, setSimpleCameraMode] = useState(false);
   
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -500,6 +501,15 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
         return;
       }
 
+      // Simple camera mode - just start camera without any processing
+      if (simpleCameraMode) {
+        console.log('Simple camera mode: Just starting camera');
+        setIsInitializing(false);
+        setIsScanning(true);
+        setScanStatus('scanning');
+        return;
+      }
+
       // Ensure video element is visible before initializing Quagga
       if (videoRef.current) {
         videoRef.current.style.display = 'block';
@@ -819,6 +829,18 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
             >
               <Camera className="w-4 h-4" />
             </button>
+            {/* Simple Camera Mode Toggle */}
+            <button
+              onClick={() => setSimpleCameraMode(!simpleCameraMode)}
+              className={`p-2 rounded-lg transition-colors ${
+                simpleCameraMode 
+                  ? 'bg-orange-100 text-orange-600 hover:bg-orange-200' 
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+              title={simpleCameraMode ? 'Simple Camera Mode On' : 'Simple Camera Mode Off'}
+            >
+              <Camera className="w-4 h-4" />
+            </button>
             <button
               onClick={toggleSound}
               className={`p-2 rounded-lg transition-colors ${
@@ -914,6 +936,7 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
                   {scanStatus === 'error' && 'Error'}
                   {scanStatus === 'idle' && 'Ready'}
                   {testMode && isScanning && 'Test Mode (Camera Only)'}
+                  {simpleCameraMode && isScanning && 'Simple Camera Mode'}
                 </div>
               </div>
 
@@ -972,12 +995,21 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
                       </div>
                     )}
                     <button
-                      onClick={isScanning ? stopScanning : startScanning}
-                      disabled={!isInitialized || isInitializing}
+                      onClick={() => {
+                        console.log('Button clicked - isScanning:', isScanning, 'isInitialized:', isInitialized, 'isInitializing:', isInitializing);
+                        if (isScanning) {
+                          console.log('Calling stopScanning...');
+                          stopScanning();
+                        } else {
+                          console.log('Calling startScanning...');
+                          startScanning();
+                        }
+                      }}
+                      disabled={isInitializing}
                       className={`flex items-center space-x-1 px-3 py-1 rounded text-sm transition-colors ${
                         isScanning 
                           ? 'bg-red-500 text-white hover:bg-red-600' 
-                          : isInitialized && !isInitializing
+                          : !isInitializing
                           ? 'bg-blue-500 text-white hover:bg-blue-600'
                           : 'bg-gray-400 text-white cursor-not-allowed'
                       }`}
