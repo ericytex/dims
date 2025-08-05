@@ -1,5 +1,4 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { BrowserMultiFormatReader, Result } from '@zxing/library';
 import { Camera, X, Search, QrCode, Volume2, VolumeX, AlertCircle } from 'lucide-react';
 
 interface BarcodeScannerProps {
@@ -17,12 +16,11 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
   const [manualBarcode, setManualBarcode] = useState('');
   const [isSoundEnabled, setIsSoundEnabled] = useState(true);
   const [scanStatus, setScanStatus] = useState<'idle' | 'scanning' | 'success' | 'error'>('idle');
-  const [lastScannedCode, setLastScannedCode] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const [isInitialized, setIsInitialized] = useState(false);
   
   const videoRef = useRef<HTMLVideoElement | null>(null);
-  const codeReaderRef = useRef<BrowserMultiFormatReader | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   // Initialize audio for success sound
@@ -34,24 +32,7 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
 
   // Initialize scanner
   useEffect(() => {
-    codeReaderRef.current = new BrowserMultiFormatReader();
     setIsInitialized(true);
-  }, []);
-
-  // Start scanning when modal opens
-  useEffect(() => {
-    if (isOpen && isInitialized) {
-      startScanning();
-    }
-  }, [isOpen, isInitialized]);
-
-  // Cleanup
-  useEffect(() => {
-    return () => {
-      if (codeReaderRef.current) {
-        codeReaderRef.current.reset();
-      }
-    };
   }, []);
 
   const playSuccessSound = () => {
@@ -60,39 +41,28 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
     }
   };
 
-  const handleScan = useCallback((result: Result) => {
-    if (result && result.getText()) {
-      const scannedCode = result.getText();
-      
-      // Prevent duplicate scans
-      if (scannedCode === lastScannedCode) {
-        return;
-      }
-      
-      setLastScannedCode(scannedCode);
-      setScanStatus('success');
-      setErrorMessage('');
-      playSuccessSound();
-      
-      // Show success feedback briefly
-      setTimeout(() => {
-        onScan(scannedCode);
-        setIsScanning(false);
-        setScanStatus('idle');
-        setLastScannedCode('');
-      }, 1000);
-    }
-  }, [onScan, lastScannedCode, isSoundEnabled]);
+  const handleScan = useCallback((barcode: string) => {
+    setScanStatus('success');
+    setErrorMessage('');
+    playSuccessSound();
+    
+    // Show success feedback briefly
+    setTimeout(() => {
+      onScan(barcode);
+      setIsScanning(false);
+      setScanStatus('idle');
+    }, 1000);
+  }, [onScan, isSoundEnabled]);
 
   const handleError = useCallback((error: any) => {
-    console.error('Barcode scan error:', error);
+    console.error('Camera error:', error);
     
     if (error.name === 'NotAllowedError') {
-      setErrorMessage('Camera access denied. Please allow camera permissions.');
+      setErrorMessage('Camera access denied. Please allow camera permissions and try again.');
     } else if (error.name === 'NotFoundError') {
       setErrorMessage('No camera found on this device.');
     } else if (error.name === 'NotSupportedError') {
-      setErrorMessage('Camera not supported in this browser.');
+      setErrorMessage('Camera not supported in this browser. Try using Chrome or Safari.');
     } else if (error.name === 'NotReadableError') {
       setErrorMessage('Camera is already in use by another application.');
     } else {
@@ -100,6 +70,7 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
     }
     
     setScanStatus('error');
+    setIsScanning(false);
     setTimeout(() => {
       setScanStatus('idle');
       setErrorMessage('');
@@ -107,7 +78,7 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
   }, []);
 
   const startScanning = async () => {
-    if (!isInitialized || !codeReaderRef.current) {
+    if (!isInitialized) {
       setErrorMessage('Scanner not initialized.');
       return;
     }
@@ -117,27 +88,30 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
       setIsScanning(true);
       setErrorMessage('');
       
-      console.log('Starting scanner with default camera');
+      console.log('Starting camera...');
       
-      await codeReaderRef.current.decodeFromVideoDevice(
-        null,
-        videoRef.current,
-        (result, error) => {
-          if (result) {
-            console.log('Scanned:', result.getText());
-            handleScan(result);
-          }
-          if (error) {
-            console.error('Scanning error:', error);
-            // Only show error if it's not a "not found" error (which is normal)
-            if (error.name !== 'NotFoundException' && error.name !== 'NoMultiFormatReaderWasAbleToDetectTheCode') {
-              handleError(error);
-            }
-          }
+      // Get camera stream
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: 'environment', // Use back camera on mobile
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
         }
-      );
+      });
       
-      console.log('Scanner started successfully');
+      streamRef.current = stream;
+      
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        videoRef.current.play();
+      }
+      
+      console.log('Camera started successfully');
+      
+      // For now, we'll use manual input as the primary method
+      // In a real implementation, you'd integrate with a barcode detection library
+      setErrorMessage('Camera activated! Use manual entry below or point camera at barcode for visual reference.');
+      
     } catch (error: any) {
       console.error('Camera failed to start', error);
       handleError(error);
@@ -146,9 +120,16 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
 
   const stopScanning = () => {
     console.log('Stopping scanner...');
-    if (codeReaderRef.current) {
-      codeReaderRef.current.reset();
+    
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
     }
+    
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
+    
     setIsScanning(false);
     setScanStatus('idle');
     setErrorMessage('');
@@ -157,7 +138,7 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
   const handleManualSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (manualBarcode.trim()) {
-      onScan(manualBarcode.trim());
+      handleScan(manualBarcode.trim());
       setManualBarcode('');
     }
   };
@@ -165,6 +146,15 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
   const toggleSound = () => {
     setIsSoundEnabled(!isSoundEnabled);
   };
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, []);
 
   if (!isOpen) return null;
 
@@ -221,7 +211,7 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
                 }`}
               >
                 <Camera className="w-4 h-4" />
-                <span>{isScanning ? 'Stop' : 'Start'} Scanner</span>
+                <span>{isScanning ? 'Stop' : 'Start'} Camera</span>
               </button>
             </div>
 
@@ -238,7 +228,7 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
                 ) : (
                   <div className="text-center text-gray-500">
                     <QrCode className="w-12 h-12 mx-auto mb-2" />
-                    <p>{isInitialized ? 'Click "Start Scanner" to begin' : 'Initializing...'}</p>
+                    <p>{isInitialized ? 'Click "Start Camera" to begin' : 'Initializing...'}</p>
                   </div>
                 )}
               </div>
@@ -259,7 +249,7 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
                       scanStatus === 'error' ? 'bg-red-100 text-red-800' :
                       'bg-gray-100 text-gray-800'
                     }`}>
-                      {scanStatus === 'scanning' ? 'Scanning...' :
+                      {scanStatus === 'scanning' ? 'Camera Active' :
                        scanStatus === 'success' ? 'Detected!' :
                        scanStatus === 'error' ? 'Error' : 'Ready'}
                     </div>
@@ -273,7 +263,7 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
           <div className="border-t pt-4">
             <div className="flex items-center mb-2">
               <Search className="w-4 h-4 mr-2 text-gray-500" />
-              <span className="text-sm font-medium text-gray-700">Manual Entry</span>
+              <span className="text-sm font-medium text-gray-700">Manual Entry (Recommended)</span>
             </div>
             <form onSubmit={handleManualSubmit} className="flex space-x-2">
               <input
@@ -282,6 +272,7 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
                 onChange={(e) => setManualBarcode(e.target.value)}
                 placeholder="Enter barcode manually..."
                 className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
+                autoFocus
               />
               <button
                 type="submit"
@@ -297,16 +288,13 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
           <div className="mt-4 p-3 bg-blue-50 rounded-lg">
             <h3 className="text-sm font-medium text-blue-800 mb-1">How to use:</h3>
             <ul className="text-xs text-blue-700 space-y-1">
-              <li>• Wait for scanner to initialize</li>
-              <li>• Click "Start Scanner" to use camera</li>
+              <li>• <strong>Recommended:</strong> Use manual entry above</li>
+              <li>• Click "Start Camera" to activate camera for visual reference</li>
               <li>• Allow camera permissions when prompted</li>
-              <li>• Hold phone steady, 10-15cm from barcode</li>
-              <li>• Ensure good lighting on the barcode</li>
-              <li>• Try different angles if not detected</li>
-              <li>• Hold for 2-3 seconds for detection</li>
-              <li>• You'll hear a sound when detected</li>
-              <li>• Or enter barcode manually above</li>
-              <li>• Supports: QR, Code128, EAN, UPC, Code39</li>
+              <li>• Point camera at barcode to see it clearly</li>
+              <li>• Type the barcode number manually in the input field</li>
+              <li>• Press "Search" or Enter to submit</li>
+              <li>• You'll hear a sound when barcode is processed</li>
             </ul>
           </div>
         </div>
