@@ -505,114 +505,127 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
       console.log('Video element for Quagga:', videoRef.current);
       console.log('Video dimensions for Quagga:', videoRef.current?.videoWidth, 'x', videoRef.current?.videoHeight);
       
-      Quagga.init({
-        inputStream: {
-          name: "Live",
-          type: "LiveStream",
-          target: videoRef.current,
-          constraints: {
-            facingMode: "environment",
-            width: { min: 640, ideal: 1280, max: 1920 },
-            height: { min: 480, ideal: 720, max: 1080 }
+      const initQuagga = (useWorkers: boolean = true) => {
+        Quagga.init({
+          inputStream: {
+            name: "Live",
+            type: "LiveStream",
+            target: videoRef.current,
+            constraints: {
+              facingMode: "environment",
+              width: { min: 640, ideal: 1280, max: 1920 },
+              height: { min: 480, ideal: 720, max: 1080 }
+            },
+            area: {
+              top: "25%",    // Scan only center 50% of the frame
+              right: "25%",
+              left: "25%",
+              bottom: "25%"
+            }
           },
-          area: {
-            top: "25%",    // Scan only center 50% of the frame
-            right: "25%",
-            left: "25%",
-            bottom: "25%"
-          }
-        },
-        locator: {
-          patchSize: "small",
-          halfSample: false
-        },
-        numOfWorkers: 2,
-        frequency: 20,
-        decoder: {
-          readers: [
-            "code_128_reader",
-            "ean_reader",
-            "ean_8_reader",
-            "code_39_reader",
-            "upc_reader",
-            "upc_e_reader"
-          ]
-        },
-        locate: true
-      }, (err: any) => {
-        if (err) {
-          console.error('Quagga initialization failed:', err);
-          console.error('Quagga error details:', {
-            name: err.name,
-            message: err.message,
-            stack: err.stack
-          });
-          setErrorMessage('Failed to initialize scanner. Please refresh and try again.');
-          setIsInitializing(false);
-          return;
-        }
-
-        console.log('Quagga initialized successfully');
-        setIsInitializing(false);
-        setIsScanning(true);
-
-        // Start focus timer
-        startFocusTimer();
-
-        // Set up detection with frame throttling
-        Quagga.onDetected((result: any) => {
-          console.log('Raw Quagga detection:', result);
-          
-          // Apply frame throttling
-          if (!throttleFrameProcessing(() => {})) {
-            console.log('Frame throttled, skipping detection');
-            return; // Skip this frame
-          }
-
-          // Check sharpness before processing
-          const sharpness = checkSharpness();
-          setSharpnessScore(sharpness);
-          setFrameCount(prev => prev + 1);
-          
-          console.log('Processing frame - Sharpness:', sharpness, 'Frame count:', frameCount + 1);
-          
-          // Only process if sharpness is above threshold (or in debug mode)
-          if (!debugMode && sharpness < 5) {
-            console.log('Frame too blurry, skipping detection');
+          locator: {
+            patchSize: "small",
+            halfSample: false
+          },
+          numOfWorkers: useWorkers ? 1 : 0, // Use 0 workers if fallback
+          frequency: 10,   // Reduced from 20 to 10 for better performance
+          decoder: {
+            readers: [
+              "code_128_reader",
+              "ean_reader",
+              "ean_8_reader",
+              "code_39_reader",
+              "upc_reader",
+              "upc_e_reader"
+            ]
+          },
+          locate: true
+        }, (err: any) => {
+          if (err) {
+            console.error('Quagga initialization failed:', err);
+            console.error('Quagga error details:', {
+              name: err.name,
+              message: err.message,
+              stack: err.stack
+            });
+            
+            // If first attempt failed and we were using workers, try without workers
+            if (useWorkers) {
+              console.log('Retrying Quagga initialization without workers...');
+              initQuagga(false);
+              return;
+            }
+            
+            setErrorMessage('Failed to initialize scanner. Please refresh and try again.');
+            setIsInitializing(false);
             return;
           }
 
-          // Process detection with enhanced validation
-          handleDetection(result);
-        });
+          console.log('Quagga initialized successfully', useWorkers ? 'with workers' : 'without workers');
+          setIsInitializing(false);
+          setIsScanning(true);
 
-        // Set up error handling
-        Quagga.onError((error: any) => {
-          console.error('Quagga error:', error);
-          console.error('Quagga error details:', {
-            name: error.name,
-            message: error.message,
-            stack: error.stack
+          // Start focus timer
+          startFocusTimer();
+
+          // Set up detection with frame throttling
+          Quagga.onDetected((result: any) => {
+            console.log('Raw Quagga detection:', result);
+            
+            // Apply frame throttling
+            if (!throttleFrameProcessing(() => {})) {
+              console.log('Frame throttled, skipping detection');
+              return; // Skip this frame
+            }
+
+            // Check sharpness before processing
+            const sharpness = checkSharpness();
+            setSharpnessScore(sharpness);
+            setFrameCount(prev => prev + 1);
+            
+            console.log('Processing frame - Sharpness:', sharpness, 'Frame count:', frameCount + 1);
+            
+            // Only process if sharpness is above threshold (or in debug mode)
+            if (!debugMode && sharpness < 5) {
+              console.log('Frame too blurry, skipping detection');
+              return;
+            }
+
+            // Process detection with enhanced validation
+            handleDetection(result);
           });
-          if (error.name === 'NotAllowedError') {
-            setErrorMessage('Camera access denied. Please allow camera permissions.');
-          } else if (error.name === 'NotFoundError') {
-            setErrorMessage('No camera found on this device.');
-          } else {
-            setErrorMessage('Scanner error: ' + error.message);
+
+          // Set up error handling
+          Quagga.onError((error: any) => {
+            console.error('Quagga error:', error);
+            console.error('Quagga error details:', {
+              name: error.name,
+              message: error.message,
+              stack: error.stack
+            });
+            if (error.name === 'NotAllowedError') {
+              setErrorMessage('Camera access denied. Please allow camera permissions.');
+            } else if (error.name === 'NotFoundError') {
+              setErrorMessage('No camera found on this device.');
+            } else {
+              setErrorMessage('Scanner error: ' + error.message);
+            }
+          });
+
+          // Start Quagga
+          console.log('Attempting to start Quagga...');
+          try {
+            Quagga.start();
+            console.log('Quagga started successfully');
+          } catch (startError) {
+            console.error('Error starting Quagga:', startError);
+            setErrorMessage('Failed to start Quagga scanner.');
           }
         });
-
-        // Start Quagga
-        console.log('Attempting to start Quagga...');
-        try {
-          Quagga.start();
-          console.log('Quagga started successfully');
-        } catch (startError) {
-          console.error('Error starting Quagga:', startError);
-          setErrorMessage('Failed to start Quagga scanner.');
-        }
-      });
+      };
+      
+      // Start with workers enabled
+      initQuagga(true);
 
     } catch (error: any) {
       console.error('Failed to start scanner:', error);
