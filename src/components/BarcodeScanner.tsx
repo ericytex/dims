@@ -586,102 +586,6 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
         return;
       }
 
-      // Simple camera mode - just start camera without any processing
-      if (simpleCameraMode) {
-        console.log('Simple camera mode: Just starting camera');
-        setIsInitializing(false);
-        setIsScanning(true);
-        setScanStatus('scanning');
-        
-        // Set up a simple frame counter for simple camera mode
-        testIntervalRef.current = setInterval(() => {
-          setFrameCount(prev => prev + 1);
-          if (videoRef.current) {
-            const sharpness = checkSharpness();
-            setSharpnessScore(sharpness);
-            console.log('Simple camera mode frame:', frameCount + 1, 'Sharpness:', sharpness);
-          }
-        }, 100);
-        
-        return;
-      }
-
-      // Camera-only mode - bypass Quagga entirely (default behavior now)
-      console.log('Starting camera-only mode (bypassing Quagga)...');
-      setIsInitializing(false);
-      setIsScanning(true);
-      setScanStatus('scanning');
-      
-      // Set up frame processing without Quagga
-      testIntervalRef.current = setInterval(() => {
-        setFrameCount(prev => prev + 1);
-        if (videoRef.current) {
-          const sharpness = checkSharpness();
-          setSharpnessScore(sharpness);
-          console.log('Camera-only mode frame:', frameCount + 1, 'Sharpness:', sharpness);
-          
-          // Basic barcode detection using canvas
-          if (sharpness > 10 && canvasRef.current && videoRef.current) {
-            const canvas = canvasRef.current;
-            const ctx = canvas.getContext('2d');
-            if (ctx && videoRef.current && videoRef.current.videoWidth && videoRef.current.videoHeight) {
-              // Draw video frame to canvas
-              canvas.width = videoRef.current.videoWidth;
-              canvas.height = videoRef.current.videoHeight;
-              ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
-              
-              // Simple barcode detection using image analysis
-              const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-              const data = imageData.data;
-              
-              // Analyze horizontal lines for barcode patterns
-              const centerY = Math.floor(canvas.height / 2);
-              const lineWidth = canvas.width;
-              const barcodeData: number[] = [];
-              
-              // Sample multiple horizontal lines around center
-              for (let y = centerY - 10; y <= centerY + 10; y += 2) {
-                if (y >= 0 && y < canvas.height) {
-                  const lineData: number[] = [];
-                  for (let x = 0; x < lineWidth; x++) {
-                    const idx = (y * lineWidth + x) * 4;
-                    const gray = (data[idx] + data[idx + 1] + data[idx + 2]) / 3;
-                    lineData.push(gray);
-                  }
-                  barcodeData.push(...lineData);
-                }
-              }
-              
-              // Detect barcode-like patterns (alternating black/white bars)
-              let transitions = 0;
-              let lastValue = barcodeData[0];
-              for (let i = 1; i < barcodeData.length; i++) {
-                if (Math.abs(barcodeData[i] - lastValue) > 30) { // Significant change threshold
-                  transitions++;
-                }
-                lastValue = barcodeData[i];
-              }
-              
-              console.log('Barcode analysis - transitions:', transitions, 'total pixels:', barcodeData.length);
-              
-              // If we detect many transitions, it might be a barcode
-              if (transitions > 50) {
-                console.log('Potential barcode detected! Transitions:', transitions);
-                
-                // Try to extract barcode data
-                const barcodePattern = extractBarcodePattern(barcodeData);
-                if (barcodePattern) {
-                  console.log('Extracted barcode pattern:', barcodePattern);
-                  handleScan(barcodePattern, 'UNKNOWN');
-                }
-              }
-            }
-          }
-        }
-      }, 100);
-      
-      return;
-
       // Ensure video element is visible before initializing Quagga
       if (videoRef.current) {
         videoRef.current.style.display = 'block';
@@ -704,169 +608,57 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
       console.log('Video element for Quagga:', videoRef.current);
       console.log('Video dimensions for Quagga:', videoRef.current?.videoWidth, 'x', videoRef.current?.videoHeight);
       
-      const initQuagga = (useWorkers: boolean = false) => { // Start with workers disabled
-        Quagga.init({
-          inputStream: {
-            name: "Live",
-            type: "LiveStream",
-            target: videoRef.current,
-            constraints: {
-              facingMode: "environment",
-              width: { min: 640, ideal: 1280, max: 1920 },
-              height: { min: 480, ideal: 720, max: 1080 }
-            },
-            area: {
-              top: "25%",    // Scan only center 50% of the frame
-              right: "25%",
-              left: "25%",
-              bottom: "25%"
-            }
-          },
-          locator: {
-            patchSize: "medium", // Changed from small to medium
-            halfSample: true     // Changed from false to true
-          },
-          numOfWorkers: 0, // Disable workers completely to avoid browser compatibility issues
-          frequency: 5,    // Reduced frequency for better compatibility
-          decoder: {
-            readers: [
-              "code_128_reader",
-              "ean_reader",
-              "ean_8_reader",
-              "code_39_reader",
-              "upc_reader",
-              "upc_e_reader"
-            ]
-          },
-          locate: true
-        }, (err: any) => {
-          if (err) {
-            console.error('Quagga initialization failed:', err);
-            console.error('Quagga error details:', {
-              name: err.name,
-              message: err.message,
-              stack: err.stack
-            });
-            
-            // Try with even simpler configuration
-            console.log('Trying alternative Quagga configuration...');
-            Quagga.init({
-              inputStream: {
-                name: "Live",
-                type: "LiveStream",
-                target: videoRef.current,
-                constraints: {
-                  facingMode: "environment"
-                }
-              },
-              locator: {
-                patchSize: "large",
-                halfSample: true
-              },
-              numOfWorkers: 0,
-              frequency: 3,
-              decoder: {
-                readers: ["code_128_reader", "ean_reader"]
-              },
-              locate: false
-            }, (err2: any) => {
-              if (err2) {
-                console.error('Alternative Quagga configuration also failed:', err2);
-                setErrorMessage('Failed to initialize scanner. Please refresh and try again.');
-                setIsInitializing(false);
-                return;
-              }
-              
-              console.log('Alternative Quagga configuration succeeded');
-              setIsInitializing(false);
-              setIsScanning(true);
-              startFocusTimer();
-              
-              Quagga.onDetected((result: any) => {
-                console.log('Raw Quagga detection (alternative):', result);
-                handleDetection(result);
-              });
-              
-              Quagga.onError((error: any) => {
-                console.error('Quagga error (alternative):', error);
-              });
-              
-              try {
-                Quagga.start();
-                console.log('Alternative Quagga started successfully');
-              } catch (startError) {
-                console.error('Error starting alternative Quagga:', startError);
-              }
-            });
-            
-            return;
+      // Use a very simple Quagga configuration that should work
+      Quagga.init({
+        inputStream: {
+          name: "Live",
+          type: "LiveStream",
+          target: videoRef.current,
+          constraints: {
+            facingMode: "environment"
           }
-
-          console.log('Quagga initialized successfully without workers');
+        },
+        locator: {
+          patchSize: "large",
+          halfSample: true
+        },
+        numOfWorkers: 0, // Disable workers completely
+        frequency: 3,
+        decoder: {
+          readers: ["code_128_reader", "ean_reader"]
+        },
+        locate: false
+      }, (err: any) => {
+        if (err) {
+          console.error('Quagga initialization failed:', err);
+          setErrorMessage('Failed to initialize scanner. Please refresh and try again.');
           setIsInitializing(false);
-          setIsScanning(true);
-
-          // Start focus timer
-          startFocusTimer();
-
-          // Set up detection with frame throttling
-          Quagga.onDetected((result: any) => {
-            console.log('Raw Quagga detection:', result);
+          return;
+        }
+        
+        console.log('Quagga initialized successfully');
+        setIsInitializing(false);
+        setIsScanning(true);
+        setScanStatus('scanning');
+        
+        // Start Quagga
+        Quagga.start();
+        
+        // Set up detection listener
+        Quagga.onDetected((result: any) => {
+          console.log('Quagga detected:', result);
+          if (result && result.codeResult) {
+            const code = result.codeResult.code;
+            const format = result.codeResult.format;
+            console.log('Barcode detected:', code, 'Format:', format);
             
-            // Apply frame throttling
-            if (!throttleFrameProcessing(() => {})) {
-              console.log('Frame throttled, skipping detection');
-              return; // Skip this frame
+            if (isValidBarcode(code)) {
+              console.log('Valid barcode detected:', code);
+              handleScan(code, format);
             }
-
-            // Check sharpness before processing
-            const sharpness = checkSharpness();
-            setSharpnessScore(sharpness);
-            setFrameCount(prev => prev + 1);
-            
-            console.log('Processing frame - Sharpness:', sharpness, 'Frame count:', frameCount + 1);
-            
-            // Only process if sharpness is above threshold (or in debug mode)
-            if (!debugMode && sharpness < 5) {
-              console.log('Frame too blurry, skipping detection');
-              return;
-            }
-
-            // Process detection with enhanced validation
-            handleDetection(result);
-          });
-
-          // Set up error handling
-          Quagga.onError((error: any) => {
-            console.error('Quagga error:', error);
-            console.error('Quagga error details:', {
-              name: error.name,
-              message: error.message,
-              stack: error.stack
-            });
-            if (error.name === 'NotAllowedError') {
-              setErrorMessage('Camera access denied. Please allow camera permissions.');
-            } else if (error.name === 'NotFoundError') {
-              setErrorMessage('No camera found on this device.');
-            } else {
-              setErrorMessage('Scanner error: ' + error.message);
-            }
-          });
-
-          // Start Quagga
-          console.log('Attempting to start Quagga...');
-          try {
-            Quagga.start();
-            console.log('Quagga started successfully');
-          } catch (startError) {
-            console.error('Error starting Quagga:', startError);
-            setErrorMessage('Failed to start Quagga scanner.');
           }
         });
-      };
-      
-      // Start without workers
-      initQuagga(false);
+      });
 
     } catch (error: any) {
       console.error('Failed to start scanner:', error);
