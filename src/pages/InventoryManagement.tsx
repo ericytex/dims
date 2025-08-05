@@ -59,8 +59,6 @@ export default function InventoryManagement() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCategory, setFilterCategory] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
-  const [sortBy, setSortBy] = useState('name');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
 
   // Form state for adding/editing items
   const [formData, setFormData] = useState({
@@ -80,7 +78,7 @@ export default function InventoryManagement() {
     status: 'active' as const
   });
 
-  // Filter and sort inventory items
+  // Filter inventory items
   const filteredInventory = inventoryItems
     .filter(item => {
       const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -89,22 +87,6 @@ export default function InventoryManagement() {
       const matchesCategory = !filterCategory || item.category === filterCategory;
       const matchesStatus = !filterStatus || item.status === filterStatus;
       return matchesSearch && matchesCategory && matchesStatus;
-    })
-    .sort((a, b) => {
-      const aValue = a[sortBy as keyof InventoryItem];
-      const bValue = b[sortBy as keyof InventoryItem];
-      
-      if (typeof aValue === 'string' && typeof bValue === 'string') {
-        return sortOrder === 'asc' 
-          ? aValue.localeCompare(bValue)
-          : bValue.localeCompare(aValue);
-      }
-      
-      if (typeof aValue === 'number' && typeof bValue === 'number') {
-        return sortOrder === 'asc' ? aValue - bValue : bValue - aValue;
-      }
-      
-      return 0;
     });
 
   const handleAddItem = () => {
@@ -207,68 +189,72 @@ export default function InventoryManagement() {
 
   const getStockStatus = (current: number, min: number) => {
     if (current <= min) return 'low';
-    if (current <= min * 1.5) return 'warning';
+    if (current <= min * 1.5) return 'medium';
     return 'good';
   };
 
   const getStockStatusColor = (status: string) => {
     switch (status) {
-      case 'low':
-        return 'text-red-600 bg-red-100';
-      case 'warning':
-        return 'text-yellow-600 bg-yellow-100';
-      case 'good':
-        return 'text-green-600 bg-green-100';
-      default:
-        return 'text-gray-600 bg-gray-100';
+      case 'low': return 'bg-red-100 text-red-800';
+      case 'medium': return 'bg-yellow-100 text-yellow-800';
+      case 'good': return 'bg-green-100 text-green-800';
+      default: return 'bg-gray-100 text-gray-800';
     }
   };
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'active':
-        return 'text-green-600 bg-green-100';
-      case 'inactive':
-        return 'text-gray-600 bg-gray-100';
-      case 'discontinued':
-        return 'text-red-600 bg-red-100';
-      default:
-        return 'text-gray-600 bg-gray-100';
+      case 'active': return 'bg-green-100 text-green-800';
+      case 'inactive': return 'bg-gray-100 text-gray-800';
+      case 'discontinued': return 'bg-red-100 text-red-800';
+      default: return 'bg-gray-100 text-gray-800';
     }
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-lg">Loading inventory...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-lg text-red-600">Error loading inventory: {error}</div>
+      </div>
+    );
+  }
 
   const stats = [
     {
       name: 'Total Items',
       value: inventoryItems.length.toString(),
       change: '+5%',
-      changeType: 'increase',
-      icon: Package,
-      color: 'bg-blue-500'
+      changeType: 'increase' as const,
+      Icon: Package
     },
     {
       name: 'Low Stock Items',
       value: inventoryItems.filter(item => getStockStatus(item.currentStock, item.minStock) === 'low').length.toString(),
       change: '-2%',
-      changeType: 'decrease',
-      icon: AlertTriangle,
-      color: 'bg-red-500'
+      changeType: 'decrease' as const,
+      Icon: AlertTriangle
     },
     {
       name: 'Total Value',
       value: `UGX ${inventoryItems.reduce((sum, item) => sum + (item.currentStock * item.cost), 0).toLocaleString()}`,
       change: '+12%',
-      changeType: 'increase',
-      icon: TrendingUp,
-      color: 'bg-green-500'
+      changeType: 'increase' as const,
+      Icon: TrendingUp
     },
     {
       name: 'Active Items',
       value: inventoryItems.filter(item => item.status === 'active').length.toString(),
       change: '+3%',
-      changeType: 'increase',
-      icon: Package,
-      color: 'bg-uganda-yellow'
+      changeType: 'increase' as const,
+      Icon: Users
     }
   ];
 
@@ -278,32 +264,32 @@ export default function InventoryManagement() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Inventory Management</h1>
-          <p className="text-gray-600 mt-1">Track and manage inventory items</p>
+          <p className="text-gray-600">Manage your inventory items and stock levels</p>
         </div>
         <button
           onClick={handleAddItem}
           className="bg-uganda-yellow text-uganda-black px-4 py-2 rounded-lg hover:bg-yellow-400 transition-colors flex items-center space-x-2"
         >
-          <Plus className="w-4 h-4" />
+          <Plus className="w-5 h-5" />
           <span>Add Item</span>
         </button>
       </div>
 
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {stats.map((stat) => {
-          const Icon = stat.icon;
+        {stats.map((stat, index) => {
+          const Icon = stat.Icon;
           return (
-            <div key={stat.name} className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center">
-                <div className={`p-2 rounded-lg ${stat.color}`}>
+            <div key={index} className="bg-white rounded-lg shadow p-6">
+              <div className="flex items-center">
+                <div className="bg-uganda-yellow rounded-lg p-3">
                   <Icon className="w-6 h-6 text-white" />
-            </div>
-            <div className="ml-4">
+                </div>
+                <div className="ml-4">
                   <p className="text-sm font-medium text-gray-600">{stat.name}</p>
                   <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
-            </div>
-          </div>
+                </div>
+              </div>
               <div className="mt-4 flex items-center">
                 {stat.changeType === 'increase' ? (
                   <TrendingUp className="w-4 h-4 text-green-500" />
@@ -316,7 +302,7 @@ export default function InventoryManagement() {
                   {stat.change}
                 </span>
                 <span className="ml-2 text-sm text-gray-500">from last month</span>
-        </div>
+              </div>
             </div>
           );
         })}
@@ -324,7 +310,7 @@ export default function InventoryManagement() {
 
       {/* Filters */}
       <div className="bg-white rounded-lg shadow p-6">
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Search</label>
             <div className="relative">
@@ -370,35 +356,6 @@ export default function InventoryManagement() {
               <option value="active">Active</option>
               <option value="inactive">Inactive</option>
               <option value="discontinued">Discontinued</option>
-            </select>
-          </div>
-          
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Sort By</label>
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
-            >
-              <option value="name">Name</option>
-              <option value="sku">SKU</option>
-              <option value="currentStock">Current Stock</option>
-              <option value="minStock">Min Stock</option>
-              <option value="maxStock">Max Stock</option>
-              <option value="cost">Cost</option>
-              <option value="lastUpdated">Last Updated</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Sort Order</label>
-            <select
-              value={sortOrder}
-              onChange={(e) => setSortOrder(e.target.value as 'asc' | 'desc')}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
-            >
-              <option value="asc">Ascending</option>
-              <option value="desc">Descending</option>
             </select>
           </div>
           
@@ -520,14 +477,12 @@ export default function InventoryManagement() {
         </div>
       </div>
 
-      {/* Modal */}
+      {/* Add Modal */}
       {showAddModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between p-6 border-b border-gray-200">
-              <h2 className="text-xl font-semibold text-gray-900">
-                Add New Item
-              </h2>
+              <h2 className="text-xl font-semibold text-gray-900">Add New Item</h2>
               <button
                 onClick={() => setShowAddModal(false)}
                 className="text-gray-400 hover:text-gray-600"
@@ -538,226 +493,198 @@ export default function InventoryManagement() {
             
             <div className="p-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="md:col-span-2">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Item Name *
-                      </label>
-                      <input
-                        type="text"
-                        value={formData.name}
-                        onChange={(e) => setFormData({...formData, name: e.target.value})}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
-                        placeholder="Enter item name"
-                      />
-                    </div>
-                  
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Description
-                    </label>
-                    <textarea
-                      value={formData.description}
-                      onChange={(e) => setFormData({...formData, description: e.target.value})}
-                      rows={3}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
-                      placeholder="Enter item description"
-                      />
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Category *
-                      </label>
-                      <select
-                        value={formData.category}
-                        onChange={(e) => setFormData({...formData, category: e.target.value})}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
-                      >
-                      <option value="Electronics">Electronics</option>
-                      <option value="Furniture">Furniture</option>
-                      <option value="Office Supplies">Office Supplies</option>
-                      <option value="Safety Equipment">Safety Equipment</option>
-                      <option value="Industrial Equipment">Industrial Equipment</option>
-                      <option value="Lighting">Lighting</option>
-                      <option value="Tools">Tools</option>
-                      <option value="Clothing">Clothing</option>
-                      <option value="Food & Beverages">Food & Beverages</option>
-                      </select>
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                      SKU *
-                      </label>
-                      <input
-                        type="text"
-                      value={formData.sku}
-                      onChange={(e) => setFormData({...formData, sku: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
-                      placeholder="Enter SKU"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Unit
-                    </label>
-                    <select
-                        value={formData.unit}
-                        onChange={(e) => setFormData({...formData, unit: e.target.value})}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
-                    >
-                      <option value="pieces">Pieces</option>
-                      <option value="units">Units</option>
-                      <option value="boxes">Boxes</option>
-                      <option value="pairs">Pairs</option>
-                      <option value="sets">Sets</option>
-                      <option value="reams">Reams</option>
-                      <option value="liters">Liters</option>
-                      <option value="kilograms">Kilograms</option>
-                    </select>
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Current Stock
-                      </label>
-                      <input
-                        type="number"
-                        value={formData.currentStock}
-                        onChange={(e) => setFormData({...formData, currentStock: parseInt(e.target.value) || 0})}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
-                      placeholder="0"
-                      />
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Min Stock
-                      </label>
-                      <input
-                        type="number"
-                      value={formData.minStock}
-                      onChange={(e) => setFormData({...formData, minStock: parseInt(e.target.value) || 0})}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
-                      placeholder="0"
-                      />
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Max Stock
-                      </label>
-                      <input
-                        type="number"
-                      value={formData.maxStock}
-                      onChange={(e) => setFormData({...formData, maxStock: parseInt(e.target.value) || 0})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
-                      placeholder="0"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Cost (UGX)
-                    </label>
-                    <input
-                      type="number"
-                        value={formData.cost}
-                      onChange={(e) => setFormData({...formData, cost: parseInt(e.target.value) || 0})}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
-                      placeholder="0"
-                      />
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Supplier *
-                      </label>
-                      <input
-                        type="text"
-                        value={formData.supplier}
-                        onChange={(e) => setFormData({...formData, supplier: e.target.value})}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
-                        placeholder="Enter supplier name"
-                      />
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Facility
-                    </label>
-                    <select
-                      value={formData.facility}
-                      onChange={(e) => setFormData({...formData, facility: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
-                    >
-                      <option value="Main Warehouse">Main Warehouse</option>
-                      <option value="Distribution Center">Distribution Center</option>
-                      <option value="Regional Warehouse">Regional Warehouse</option>
-                      <option value="Retail Store">Retail Store</option>
-                    </select>
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Location *
-                      </label>
-                      <input
-                        type="text"
-                      value={formData.location}
-                      onChange={(e) => setFormData({...formData, location: e.target.value})}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
-                      placeholder="Enter storage location"
-                      />
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Expiry Date
-                      </label>
-                      <input
-                        type="date"
-                        value={formData.expiryDate}
-                        onChange={(e) => setFormData({...formData, expiryDate: e.target.value})}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
-                      />
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Status
-                      </label>
-                      <select
-                      value={formData.status}
-                      onChange={(e) => setFormData({...formData, status: e.target.value as any})}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
-                      >
-                      <option value="active">Active</option>
-                      <option value="inactive">Inactive</option>
-                      <option value="discontinued">Discontinued</option>
-                      </select>
-                    </div>
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Item Name *</label>
+                  <input
+                    type="text"
+                    value={formData.name}
+                    onChange={(e) => setFormData({...formData, name: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
+                    placeholder="Enter item name"
+                  />
                 </div>
-              )}
-                  </div>
-                  
-            {showAddModal && (
+                
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                  <textarea
+                    value={formData.description}
+                    onChange={(e) => setFormData({...formData, description: e.target.value})}
+                    rows={3}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
+                    placeholder="Enter item description"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Category *</label>
+                  <select
+                    value={formData.category}
+                    onChange={(e) => setFormData({...formData, category: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
+                  >
+                    <option value="">Select Category</option>
+                    <option value="Electronics">Electronics</option>
+                    <option value="Furniture">Furniture</option>
+                    <option value="Office Supplies">Office Supplies</option>
+                    <option value="Safety Equipment">Safety Equipment</option>
+                    <option value="Industrial Equipment">Industrial Equipment</option>
+                    <option value="Lighting">Lighting</option>
+                    <option value="Tools">Tools</option>
+                    <option value="Clothing">Clothing</option>
+                    <option value="Food & Beverages">Food & Beverages</option>
+                  </select>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">SKU *</label>
+                  <input
+                    type="text"
+                    value={formData.sku}
+                    onChange={(e) => setFormData({...formData, sku: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
+                    placeholder="Enter SKU"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Unit</label>
+                  <select
+                    value={formData.unit}
+                    onChange={(e) => setFormData({...formData, unit: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
+                  >
+                    <option value="">Select Unit</option>
+                    <option value="pieces">Pieces</option>
+                    <option value="units">Units</option>
+                    <option value="boxes">Boxes</option>
+                    <option value="pairs">Pairs</option>
+                    <option value="sets">Sets</option>
+                    <option value="reams">Reams</option>
+                    <option value="liters">Liters</option>
+                    <option value="kilograms">Kilograms</option>
+                  </select>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Current Stock</label>
+                  <input
+                    type="number"
+                    value={formData.currentStock}
+                    onChange={(e) => setFormData({...formData, currentStock: parseInt(e.target.value) || 0})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
+                    placeholder="0"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Min Stock</label>
+                  <input
+                    type="number"
+                    value={formData.minStock}
+                    onChange={(e) => setFormData({...formData, minStock: parseInt(e.target.value) || 0})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
+                    placeholder="0"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Max Stock</label>
+                  <input
+                    type="number"
+                    value={formData.maxStock}
+                    onChange={(e) => setFormData({...formData, maxStock: parseInt(e.target.value) || 0})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
+                    placeholder="0"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Cost (UGX)</label>
+                  <input
+                    type="number"
+                    value={formData.cost}
+                    onChange={(e) => setFormData({...formData, cost: parseInt(e.target.value) || 0})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
+                    placeholder="0"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Supplier *</label>
+                  <input
+                    type="text"
+                    value={formData.supplier}
+                    onChange={(e) => setFormData({...formData, supplier: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
+                    placeholder="Enter supplier name"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Facility</label>
+                  <select
+                    value={formData.facility}
+                    onChange={(e) => setFormData({...formData, facility: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
+                  >
+                    <option value="">Select Facility</option>
+                    <option value="Main Warehouse">Main Warehouse</option>
+                    <option value="Distribution Center">Distribution Center</option>
+                    <option value="Regional Warehouse">Regional Warehouse</option>
+                    <option value="Retail Store">Retail Store</option>
+                  </select>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Location *</label>
+                  <input
+                    type="text"
+                    value={formData.location}
+                    onChange={(e) => setFormData({...formData, location: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
+                    placeholder="Enter storage location"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Expiry Date</label>
+                  <input
+                    type="date"
+                    value={formData.expiryDate}
+                    onChange={(e) => setFormData({...formData, expiryDate: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                  <select
+                    value={formData.status}
+                    onChange={(e) => setFormData({...formData, status: e.target.value as any})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
+                  >
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
+                    <option value="discontinued">Discontinued</option>
+                  </select>
+                </div>
+              </div>
+              
               <div className="flex items-center justify-end space-x-3 p-6 border-t border-gray-200">
-                    <button
-                      onClick={() => setShowAddModal(false)}
+                <button
+                  onClick={() => setShowAddModal(false)}
                   className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      onClick={handleSaveItem}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSaveItem}
                   className="px-4 py-2 bg-uganda-yellow text-uganda-black rounded-lg hover:bg-yellow-400 transition-colors"
-                    >
-                      Add Item
-                    </button>
-                </div>
-              )}
+                >
+                  Add Item
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -767,9 +694,7 @@ export default function InventoryManagement() {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between p-6 border-b border-gray-200">
-              <h2 className="text-xl font-semibold text-gray-900">
-                Edit Item
-              </h2>
+              <h2 className="text-xl font-semibold text-gray-900">Edit Item</h2>
               <button
                 onClick={() => setShowEditModal(false)}
                 className="text-gray-400 hover:text-gray-600"
@@ -780,238 +705,208 @@ export default function InventoryManagement() {
             
             <div className="p-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="md:col-span-2">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Item Name *
-                      </label>
-                      <input
-                        type="text"
-                        value={formData.name}
-                        onChange={(e) => setFormData({...formData, name: e.target.value})}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
-                        placeholder="Enter item name"
-                      />
-                    </div>
-                  
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Description
-                    </label>
-                    <textarea
-                      value={formData.description}
-                      onChange={(e) => setFormData({...formData, description: e.target.value})}
-                      rows={3}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
-                      placeholder="Enter item description"
-                      />
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Category *
-                      </label>
-                      <select
-                        value={formData.category}
-                        onChange={(e) => setFormData({...formData, category: e.target.value})}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
-                      >
-                      <option value="Electronics">Electronics</option>
-                      <option value="Furniture">Furniture</option>
-                      <option value="Office Supplies">Office Supplies</option>
-                      <option value="Safety Equipment">Safety Equipment</option>
-                      <option value="Industrial Equipment">Industrial Equipment</option>
-                      <option value="Lighting">Lighting</option>
-                      <option value="Tools">Tools</option>
-                      <option value="Clothing">Clothing</option>
-                      <option value="Food & Beverages">Food & Beverages</option>
-                      </select>
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                      SKU *
-                      </label>
-                      <input
-                        type="text"
-                      value={formData.sku}
-                      onChange={(e) => setFormData({...formData, sku: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
-                      placeholder="Enter SKU"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Unit
-                    </label>
-                    <select
-                        value={formData.unit}
-                        onChange={(e) => setFormData({...formData, unit: e.target.value})}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
-                    >
-                      <option value="pieces">Pieces</option>
-                      <option value="units">Units</option>
-                      <option value="boxes">Boxes</option>
-                      <option value="pairs">Pairs</option>
-                      <option value="sets">Sets</option>
-                      <option value="reams">Reams</option>
-                      <option value="liters">Liters</option>
-                      <option value="kilograms">Kilograms</option>
-                    </select>
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Current Stock
-                      </label>
-                      <input
-                        type="number"
-                        value={formData.currentStock}
-                        onChange={(e) => setFormData({...formData, currentStock: parseInt(e.target.value) || 0})}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
-                      placeholder="0"
-                      />
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Min Stock
-                      </label>
-                      <input
-                        type="number"
-                      value={formData.minStock}
-                      onChange={(e) => setFormData({...formData, minStock: parseInt(e.target.value) || 0})}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
-                      placeholder="0"
-                      />
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Max Stock
-                      </label>
-                      <input
-                        type="number"
-                      value={formData.maxStock}
-                      onChange={(e) => setFormData({...formData, maxStock: parseInt(e.target.value) || 0})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
-                      placeholder="0"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Cost (UGX)
-                    </label>
-                    <input
-                      type="number"
-                        value={formData.cost}
-                      onChange={(e) => setFormData({...formData, cost: parseInt(e.target.value) || 0})}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
-                      placeholder="0"
-                      />
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Supplier *
-                      </label>
-                      <input
-                        type="text"
-                        value={formData.supplier}
-                        onChange={(e) => setFormData({...formData, supplier: e.target.value})}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
-                        placeholder="Enter supplier name"
-                      />
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Facility
-                    </label>
-                    <select
-                      value={formData.facility}
-                      onChange={(e) => setFormData({...formData, facility: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
-                    >
-                      <option value="Main Warehouse">Main Warehouse</option>
-                      <option value="Distribution Center">Distribution Center</option>
-                      <option value="Regional Warehouse">Regional Warehouse</option>
-                      <option value="Retail Store">Retail Store</option>
-                    </select>
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Location *
-                      </label>
-                      <input
-                        type="text"
-                      value={formData.location}
-                      onChange={(e) => setFormData({...formData, location: e.target.value})}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
-                      placeholder="Enter storage location"
-                      />
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Expiry Date
-                      </label>
-                      <input
-                        type="date"
-                        value={formData.expiryDate}
-                        onChange={(e) => setFormData({...formData, expiryDate: e.target.value})}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
-                      />
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Status
-                      </label>
-                      <select
-                      value={formData.status}
-                      onChange={(e) => setFormData({...formData, status: e.target.value as any})}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
-                      >
-                      <option value="active">Active</option>
-                      <option value="inactive">Inactive</option>
-                      <option value="discontinued">Discontinued</option>
-                      </select>
-                    </div>
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Item Name *</label>
+                  <input
+                    type="text"
+                    value={formData.name}
+                    onChange={(e) => setFormData({...formData, name: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
+                    placeholder="Enter item name"
+                  />
                 </div>
-              )}
-                  </div>
-                  
-            {showEditModal && (
+                
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                  <textarea
+                    value={formData.description}
+                    onChange={(e) => setFormData({...formData, description: e.target.value})}
+                    rows={3}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
+                    placeholder="Enter item description"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Category *</label>
+                  <select
+                    value={formData.category}
+                    onChange={(e) => setFormData({...formData, category: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
+                  >
+                    <option value="">Select Category</option>
+                    <option value="Electronics">Electronics</option>
+                    <option value="Furniture">Furniture</option>
+                    <option value="Office Supplies">Office Supplies</option>
+                    <option value="Safety Equipment">Safety Equipment</option>
+                    <option value="Industrial Equipment">Industrial Equipment</option>
+                    <option value="Lighting">Lighting</option>
+                    <option value="Tools">Tools</option>
+                    <option value="Clothing">Clothing</option>
+                    <option value="Food & Beverages">Food & Beverages</option>
+                  </select>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">SKU *</label>
+                  <input
+                    type="text"
+                    value={formData.sku}
+                    onChange={(e) => setFormData({...formData, sku: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
+                    placeholder="Enter SKU"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Unit</label>
+                  <select
+                    value={formData.unit}
+                    onChange={(e) => setFormData({...formData, unit: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
+                  >
+                    <option value="">Select Unit</option>
+                    <option value="pieces">Pieces</option>
+                    <option value="units">Units</option>
+                    <option value="boxes">Boxes</option>
+                    <option value="pairs">Pairs</option>
+                    <option value="sets">Sets</option>
+                    <option value="reams">Reams</option>
+                    <option value="liters">Liters</option>
+                    <option value="kilograms">Kilograms</option>
+                  </select>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Current Stock</label>
+                  <input
+                    type="number"
+                    value={formData.currentStock}
+                    onChange={(e) => setFormData({...formData, currentStock: parseInt(e.target.value) || 0})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
+                    placeholder="0"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Min Stock</label>
+                  <input
+                    type="number"
+                    value={formData.minStock}
+                    onChange={(e) => setFormData({...formData, minStock: parseInt(e.target.value) || 0})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
+                    placeholder="0"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Max Stock</label>
+                  <input
+                    type="number"
+                    value={formData.maxStock}
+                    onChange={(e) => setFormData({...formData, maxStock: parseInt(e.target.value) || 0})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
+                    placeholder="0"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Cost (UGX)</label>
+                  <input
+                    type="number"
+                    value={formData.cost}
+                    onChange={(e) => setFormData({...formData, cost: parseInt(e.target.value) || 0})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
+                    placeholder="0"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Supplier *</label>
+                  <input
+                    type="text"
+                    value={formData.supplier}
+                    onChange={(e) => setFormData({...formData, supplier: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
+                    placeholder="Enter supplier name"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Facility</label>
+                  <select
+                    value={formData.facility}
+                    onChange={(e) => setFormData({...formData, facility: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
+                  >
+                    <option value="">Select Facility</option>
+                    <option value="Main Warehouse">Main Warehouse</option>
+                    <option value="Distribution Center">Distribution Center</option>
+                    <option value="Regional Warehouse">Regional Warehouse</option>
+                    <option value="Retail Store">Retail Store</option>
+                  </select>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Location *</label>
+                  <input
+                    type="text"
+                    value={formData.location}
+                    onChange={(e) => setFormData({...formData, location: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
+                    placeholder="Enter storage location"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Expiry Date</label>
+                  <input
+                    type="date"
+                    value={formData.expiryDate}
+                    onChange={(e) => setFormData({...formData, expiryDate: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                  <select
+                    value={formData.status}
+                    onChange={(e) => setFormData({...formData, status: e.target.value as any})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
+                  >
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
+                    <option value="discontinued">Discontinued</option>
+                  </select>
+                </div>
+              </div>
+              
               <div className="flex items-center justify-end space-x-3 p-6 border-t border-gray-200">
-                    <button
-                      onClick={() => setShowEditModal(false)}
+                <button
+                  onClick={() => setShowEditModal(false)}
                   className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      onClick={handleSaveItem}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSaveItem}
                   className="px-4 py-2 bg-uganda-yellow text-uganda-black rounded-lg hover:bg-yellow-400 transition-colors"
-                    >
-                      Update Item
-                    </button>
-                </div>
-              )}
+                >
+                  Update Item
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
 
       {/* View Modal */}
-      {showViewModal && (
+      {showViewModal && selectedItem && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between p-6 border-b border-gray-200">
-              <h2 className="text-xl font-semibold text-gray-900">
-                Item Details
-              </h2>
+              <h2 className="text-xl font-semibold text-gray-900">Item Details</h2>
               <button
                 onClick={() => setShowViewModal(false)}
                 className="text-gray-400 hover:text-gray-600"
@@ -1022,84 +917,81 @@ export default function InventoryManagement() {
             
             <div className="p-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
-                    <p className="text-gray-900">{selectedItem?.name}</p>
-                  </div>
-                        <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">SKU</label>
-                    <p className="text-gray-900">{selectedItem?.sku}</p>
-                        </div>
-                        <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
-                          <p className="text-gray-900">{selectedItem?.category}</p>
-                        </div>
-                        <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Unit</label>
-                          <p className="text-gray-900">{selectedItem?.unit}</p>
-                        </div>
-                          <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Current Stock</label>
-                    <p className="text-gray-900">{selectedItem?.currentStock} {selectedItem?.unit}</p>
-                          </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Cost</label>
-                    <p className="text-gray-900">UGX {selectedItem?.cost.toLocaleString()}</p>
-                      </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Supplier</label>
-                    <p className="text-gray-900">{selectedItem?.supplier}</p>
-                    </div>
-                    <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Facility</label>
-                    <p className="text-gray-900">{selectedItem?.facility}</p>
-                        </div>
-                        <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
-                    <p className="text-gray-900">{selectedItem?.location}</p>
-                        </div>
-                        <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(selectedItem?.status || '')}`}>
-                      {selectedItem?.status}
-                          </span>
-                        </div>
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                    <p className="text-gray-900">{selectedItem?.description}</p>
-                      </div>
-                    <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Min Stock</label>
-                    <p className="text-gray-900">{selectedItem?.minStock}</p>
-                        </div>
-                        <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Max Stock</label>
-                    <p className="text-gray-900">{selectedItem?.maxStock}</p>
-                        </div>
-                        {selectedItem?.expiryDate && (
-                          <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Expiry Date</label>
-                            <p className="text-gray-900">{selectedItem.expiryDate}</p>
-                          </div>
-                        )}
-                        <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Last Updated</label>
-                          <p className="text-gray-900">{selectedItem?.lastUpdated}</p>
-                  </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                  <p className="text-gray-900">{selectedItem.name}</p>
                 </div>
-              )}
-                  </div>
-                  
-            {showViewModal && (
-              <div className="flex items-center justify-end space-x-3 p-6 border-t border-gray-200">
-                    <button
-                      onClick={() => setShowViewModal(false)}
-                  className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
-                    >
-                      Close
-                    </button>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">SKU</label>
+                  <p className="text-gray-900">{selectedItem.sku}</p>
                 </div>
-              )}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+                  <p className="text-gray-900">{selectedItem.category}</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Unit</label>
+                  <p className="text-gray-900">{selectedItem.unit}</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Current Stock</label>
+                  <p className="text-gray-900">{selectedItem.currentStock} {selectedItem.unit}</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Cost</label>
+                  <p className="text-gray-900">UGX {selectedItem.cost.toLocaleString()}</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Supplier</label>
+                  <p className="text-gray-900">{selectedItem.supplier}</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Facility</label>
+                  <p className="text-gray-900">{selectedItem.facility}</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
+                  <p className="text-gray-900">{selectedItem.location}</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(selectedItem.status)}`}>
+                    {selectedItem.status}
+                  </span>
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                  <p className="text-gray-900">{selectedItem.description}</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Min Stock</label>
+                  <p className="text-gray-900">{selectedItem.minStock}</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Max Stock</label>
+                  <p className="text-gray-900">{selectedItem.maxStock}</p>
+                </div>
+                {selectedItem.expiryDate && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Expiry Date</label>
+                    <p className="text-gray-900">{selectedItem.expiryDate}</p>
+                  </div>
+                )}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Last Updated</label>
+                  <p className="text-gray-900">{selectedItem.lastUpdated}</p>
+                </div>
+              </div>
+            </div>
+            
+            <div className="flex items-center justify-end space-x-3 p-6 border-t border-gray-200">
+              <button
+                onClick={() => setShowViewModal(false)}
+                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+              >
+                Close
+              </button>
+            </div>
           </div>
         </div>
       )}
