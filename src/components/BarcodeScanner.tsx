@@ -534,6 +534,61 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
           const sharpness = checkSharpness();
           setSharpnessScore(sharpness);
           console.log('Camera-only mode frame:', frameCount + 1, 'Sharpness:', sharpness);
+          
+          // Basic barcode detection using canvas
+          if (sharpness > 10 && canvasRef.current && videoRef.current) {
+            const canvas = canvasRef.current;
+            const ctx = canvas.getContext('2d');
+            if (ctx && videoRef.current) {
+              // Draw video frame to canvas
+              canvas.width = videoRef.current.videoWidth;
+              canvas.height = videoRef.current.videoHeight;
+              ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
+              
+              // Get image data from center area (where barcode should be)
+              const centerX = Math.floor(canvas.width / 2);
+              const centerY = Math.floor(canvas.height / 2);
+              const areaSize = Math.min(canvas.width, canvas.height) / 3;
+              
+              const imageData = ctx.getImageData(
+                centerX - areaSize / 2,
+                centerY - areaSize / 2,
+                areaSize,
+                areaSize
+              );
+              
+              // Simple edge detection for barcode-like patterns
+              const data = imageData.data;
+              let edgeCount = 0;
+              let totalPixels = 0;
+              
+              for (let y = 1; y < areaSize - 1; y++) {
+                for (let x = 1; x < areaSize - 1; x++) {
+                  const idx = (y * areaSize + x) * 4;
+                  const gray = (data[idx] + data[idx + 1] + data[idx + 2]) / 3;
+                  
+                  // Check for strong edges (potential barcode lines)
+                  const left = (data[idx - 4] + data[idx - 3] + data[idx - 2]) / 3;
+                  const right = (data[idx + 4] + data[idx + 5] + data[idx + 6]) / 3;
+                  const edge = Math.abs(gray - left) + Math.abs(gray - right);
+                  
+                  if (edge > 50) { // Strong edge threshold
+                    edgeCount++;
+                  }
+                  totalPixels++;
+                }
+              }
+              
+              const edgeRatio = edgeCount / totalPixels;
+              console.log('Edge detection - ratio:', edgeRatio.toFixed(3), 'edges:', edgeCount);
+              
+              // If we detect many edges in a pattern, it might be a barcode
+              if (edgeRatio > 0.1 && edgeCount > 100) {
+                console.log('Potential barcode detected! Edge ratio:', edgeRatio.toFixed(3));
+                // For now, just log the detection - we can enhance this later
+              }
+            }
+          }
         }
       }, 100);
       
