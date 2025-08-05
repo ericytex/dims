@@ -1,4 +1,6 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
+// @ts-ignore
+import Quagga from 'quagga';
 import { Camera, X, Search, QrCode, Volume2, VolumeX, AlertCircle } from 'lucide-react';
 
 interface BarcodeScannerProps {
@@ -18,6 +20,7 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
   const [scanStatus, setScanStatus] = useState<'idle' | 'scanning' | 'success' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState('');
   const [isInitialized, setIsInitialized] = useState(false);
+  const [lastScannedCode, setLastScannedCode] = useState('');
   
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -42,6 +45,12 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
   };
 
   const handleScan = useCallback((barcode: string) => {
+    // Prevent duplicate scans
+    if (barcode === lastScannedCode) {
+      return;
+    }
+    
+    setLastScannedCode(barcode);
     setScanStatus('success');
     setErrorMessage('');
     playSuccessSound();
@@ -51,8 +60,9 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
       onScan(barcode);
       setIsScanning(false);
       setScanStatus('idle');
+      setLastScannedCode('');
     }, 1000);
-  }, [onScan, isSoundEnabled]);
+  }, [onScan, lastScannedCode, isSoundEnabled]);
 
   const handleError = useCallback((error: any) => {
     console.error('Camera error:', error);
@@ -88,32 +98,68 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
       setIsScanning(true);
       setErrorMessage('');
       
-      console.log('Starting camera...');
+      console.log('Starting barcode scanner...');
       
-      // Get camera stream
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          facingMode: 'environment', // Use back camera on mobile
-          width: { ideal: 1280 },
-          height: { ideal: 720 }
+      // Configure Quagga for barcode detection
+      Quagga.init({
+        inputStream: {
+          name: "Live",
+          type: "LiveStream",
+          target: videoRef.current,
+          constraints: {
+            facingMode: "environment", // Use back camera
+            width: { min: 640, ideal: 1280, max: 1920 },
+            height: { min: 480, ideal: 720, max: 1080 }
+          },
+        },
+        locator: {
+          patchSize: "medium",
+          halfSample: true
+        },
+        numOfWorkers: 2,
+        frequency: 10,
+        decoder: {
+          readers: [
+            "code_128_reader",
+            "ean_reader",
+            "ean_8_reader",
+            "code_39_reader",
+            "code_39_vin_reader",
+            "codabar_reader",
+            "upc_reader",
+            "upc_e_reader"
+          ]
+        },
+        locate: true
+      }, (err: any) => {
+        if (err) {
+          console.error('Quagga initialization failed:', err);
+          handleError(err);
+          return;
+        }
+        
+        console.log('Quagga initialized successfully');
+        Quagga.start();
+      });
+
+      // Listen for barcode detection
+      Quagga.onDetected((result: any) => {
+        const code = result.codeResult.code;
+        console.log('Barcode detected:', code);
+        handleScan(code);
+      });
+
+      // Listen for processing
+      Quagga.onProcessed((result: any) => {
+        if (result) {
+          console.log('Processing barcode...');
         }
       });
-      
-      streamRef.current = stream;
-      
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        videoRef.current.play();
-      }
-      
-      console.log('Camera started successfully');
-      
-      // For now, we'll use manual input as the primary method
-      // In a real implementation, you'd integrate with a barcode detection library
-      setErrorMessage('Camera activated! Use manual entry below or point camera at barcode for visual reference.');
+
+      console.log('Barcode scanner started successfully');
       
     } catch (error: any) {
-      console.error('Camera failed to start', error);
+      console.error('Scanner failed to start', error);
       handleError(error);
     }
   };
@@ -121,6 +167,10 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
   const stopScanning = () => {
     console.log('Stopping scanner...');
     
+    // Stop Quagga
+    Quagga.stop();
+    
+    // Stop camera stream
     if (streamRef.current) {
       streamRef.current.getTracks().forEach(track => track.stop());
       streamRef.current = null;
@@ -150,6 +200,7 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
   // Cleanup on unmount
   useEffect(() => {
     return () => {
+      Quagga.stop();
       if (streamRef.current) {
         streamRef.current.getTracks().forEach(track => track.stop());
       }
@@ -198,7 +249,7 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
           {/* Scanner Section */}
           <div className="mb-4">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium text-gray-700">Camera Scanner</span>
+              <span className="text-sm font-medium text-gray-700">Barcode Scanner</span>
               <button
                 onClick={isScanning ? stopScanning : startScanning}
                 disabled={!isInitialized}
@@ -211,7 +262,7 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
                 }`}
               >
                 <Camera className="w-4 h-4" />
-                <span>{isScanning ? 'Stop' : 'Start'} Camera</span>
+                <span>{isScanning ? 'Stop' : 'Start'} Scanner</span>
               </button>
             </div>
 
@@ -228,7 +279,7 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
                 ) : (
                   <div className="text-center text-gray-500">
                     <QrCode className="w-12 h-12 mx-auto mb-2" />
-                    <p>{isInitialized ? 'Click "Start Camera" to begin' : 'Initializing...'}</p>
+                    <p>{isInitialized ? 'Click "Start Scanner" to begin' : 'Initializing...'}</p>
                   </div>
                 )}
               </div>
@@ -249,7 +300,7 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
                       scanStatus === 'error' ? 'bg-red-100 text-red-800' :
                       'bg-gray-100 text-gray-800'
                     }`}>
-                      {scanStatus === 'scanning' ? 'Camera Active' :
+                      {scanStatus === 'scanning' ? 'Scanning...' :
                        scanStatus === 'success' ? 'Detected!' :
                        scanStatus === 'error' ? 'Error' : 'Ready'}
                     </div>
@@ -263,7 +314,7 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
           <div className="border-t pt-4">
             <div className="flex items-center mb-2">
               <Search className="w-4 h-4 mr-2 text-gray-500" />
-              <span className="text-sm font-medium text-gray-700">Manual Entry (Recommended)</span>
+              <span className="text-sm font-medium text-gray-700">Manual Entry (Backup)</span>
             </div>
             <form onSubmit={handleManualSubmit} className="flex space-x-2">
               <input
@@ -288,13 +339,13 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
           <div className="mt-4 p-3 bg-blue-50 rounded-lg">
             <h3 className="text-sm font-medium text-blue-800 mb-1">How to use:</h3>
             <ul className="text-xs text-blue-700 space-y-1">
-              <li>• <strong>Recommended:</strong> Use manual entry above</li>
-              <li>• Click "Start Camera" to activate camera for visual reference</li>
+              <li>• Click "Start Scanner" to activate barcode detection</li>
               <li>• Allow camera permissions when prompted</li>
-              <li>• Point camera at barcode to see it clearly</li>
-              <li>• Type the barcode number manually in the input field</li>
-              <li>• Press "Search" or Enter to submit</li>
-              <li>• You'll hear a sound when barcode is processed</li>
+              <li>• Point camera at barcode (10-15cm distance)</li>
+              <li>• Hold steady for 1-2 seconds</li>
+              <li>• You'll hear a sound when barcode is detected</li>
+              <li>• Or use manual entry as backup</li>
+              <li>• Supports: Code128, EAN, Code39, UPC, Codabar</li>
             </ul>
           </div>
         </div>
