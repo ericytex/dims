@@ -222,10 +222,21 @@ export default function InventoryManagement() {
     const foundItem = searchByBarcode(barcode);
     
     if (foundItem) {
-      // If found, show the item details
+      // If found, show the item details and highlight in list
       handleViewItem(foundItem);
       showNotification(`Found item: ${foundItem.name} (SKU: ${foundItem.sku})`, 'success');
       console.log('Item found:', foundItem);
+      
+      // Set search term to highlight the found item in the list
+      setSearchTerm(foundItem.sku);
+      
+      // Scroll to the item in the list (if needed)
+      setTimeout(() => {
+        const element = document.getElementById(`item-${foundItem.id}`);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 100);
     } else {
       // If not found, pre-fill the add form with the barcode
       setFormData(prev => ({
@@ -241,32 +252,6 @@ export default function InventoryManagement() {
 
   const handleOpenBarcodeScanner = () => {
     setShowBarcodeScanner(true);
-  };
-
-  // Function to add a test item with the dummy barcode
-  const addTestItem = async () => {
-    const testItem = {
-      name: 'Test Product - Barcode Scanner',
-      description: 'Test item for barcode scanning functionality',
-      category: 'Test',
-      sku: '072782051600', // The dummy barcode
-      unit: 'pieces',
-      currentStock: 50,
-      minStock: 10,
-      maxStock: 100,
-      cost: 1500,
-      supplier: 'Test Supplier',
-      facilityId: 'main-warehouse',
-      location: 'A1-B2-C3',
-      status: 'active' as const
-    };
-
-    try {
-      await addInventoryItem(testItem);
-      showNotification('Test item added successfully!', 'success');
-    } catch (error) {
-      showNotification('Failed to add test item', 'error');
-    }
   };
 
   // Enhanced barcode search function
@@ -419,13 +404,6 @@ export default function InventoryManagement() {
               <QrCode className="w-4 h-4" />
               <span>Scan Barcode</span>
             </button>
-            <button
-              onClick={addTestItem}
-              className="w-full mt-2 bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-colors flex items-center justify-center space-x-2 text-sm"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Add Test Item (072782051600)</span>
-            </button>
           </div>
           
           <div>
@@ -513,7 +491,7 @@ export default function InventoryManagement() {
               {filteredInventory.map((item) => {
                 const stockStatus = getStockStatus(item.currentStock, item.minStock);
                 return (
-                  <tr key={item.id} className="hover:bg-gray-50">
+                  <tr key={item.id} className="hover:bg-gray-50" id={`item-${item.id}`}>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div>
                         <div className="text-sm font-medium text-gray-900">{item.name}</div>
