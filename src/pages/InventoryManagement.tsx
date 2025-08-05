@@ -264,11 +264,27 @@ export default function InventoryManagement() {
     console.log('Searching for barcode:', barcode);
     console.log('Available inventory items:', inventoryItems.map(item => ({ name: item.name, sku: item.sku })));
     
-    // Search by SKU (barcode)
+    // Search by exact SKU match
     const foundBySku = inventoryItems.find(item => item.sku === barcode);
     if (foundBySku) {
-      console.log('Found by SKU:', foundBySku);
+      console.log('Found by exact SKU:', foundBySku);
       return foundBySku;
+    }
+
+    // Search by SKU with leading zeros removed
+    const barcodeWithoutLeadingZeros = barcode.replace(/^0+/, '');
+    const foundBySkuWithoutZeros = inventoryItems.find(item => item.sku === barcodeWithoutLeadingZeros);
+    if (foundBySkuWithoutZeros) {
+      console.log('Found by SKU without leading zeros:', foundBySkuWithoutZeros);
+      return foundBySkuWithoutZeros;
+    }
+
+    // Search by SKU with leading zeros added
+    const barcodeWithLeadingZeros = barcode.padStart(12, '0');
+    const foundBySkuWithZeros = inventoryItems.find(item => item.sku === barcodeWithLeadingZeros);
+    if (foundBySkuWithZeros) {
+      console.log('Found by SKU with leading zeros:', foundBySkuWithZeros);
+      return foundBySkuWithZeros;
     }
 
     // Search by name (in case barcode is stored in name)
@@ -299,7 +315,7 @@ export default function InventoryManagement() {
       name: 'Test Product - Barcode Scanner',
       description: 'Test item for barcode scanning functionality',
       category: 'Test',
-      sku: '072782051600', // The dummy barcode
+      sku: '0072782051600', // Updated to match the scanned barcode
       unit: 'pieces',
       currentStock: 50,
       minStock: 10,
@@ -463,7 +479,7 @@ export default function InventoryManagement() {
               className="w-full mt-2 bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-colors flex items-center justify-center space-x-2 text-sm"
             >
               <Plus className="w-4 h-4" />
-              <span>Add Test Item (072782051600)</span>
+              <span>Add Test Item (0072782051600)</span>
             </button>
           </div>
           
