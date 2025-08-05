@@ -32,12 +32,16 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
   const [scanLinePosition, setScanLinePosition] = useState(0);
   const [zoomLevel, setZoomLevel] = useState(1);
   const [isInitializing, setIsInitializing] = useState(false);
+  const [detectionCount, setDetectionCount] = useState(0);
+  const [lastDetectedCode, setLastDetectedCode] = useState('');
+  const [detectionHistory, setDetectionHistory] = useState<Array<{code: string, confidence: number, timestamp: number}>>([]);
   
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const focusTimerRef = useRef<NodeJS.Timeout | null>(null);
   const scanLineRef = useRef<NodeJS.Timeout | null>(null);
+  const validationTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Helper function to validate barcode format
   const isValidBarcode = (code: string): boolean => {
@@ -175,6 +179,86 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
       clearInterval(scanLineRef.current);
       scanLineRef.current = null;
     }
+  };
+
+  // Pre-validation: Check if barcode has been detected multiple times
+  const validateMultipleDetections = (code: string): boolean => {
+    const now = Date.now();
+    const recentDetections = detectionHistory.filter(
+      detection => now - detection.timestamp < 3000 // 3 second window
+    );
+    
+    const sameCodeDetections = recentDetections.filter(
+      detection => detection.code === code
+    );
+    
+    // Require at least 3 detections of the same code within 3 seconds
+    return sameCodeDetections.length >= 3;
+  };
+
+  // Post-processing: Check confidence and validate barcode quality
+  const validateBarcodeQuality = (result: any): boolean => {
+    const code = result.codeResult.code;
+    const confidence = result.codeResult.confidence || 0;
+    
+    // Check confidence threshold
+    if (confidence < 0.7) {
+      console.log('Low confidence detection:', confidence);
+      return false;
+    }
+    
+    // Check if code is valid format
+    if (!isValidBarcode(code)) {
+      console.log('Invalid barcode format:', code);
+      return false;
+    }
+    
+    // Check for recent duplicates
+    if (isRecentDuplicate(code)) {
+      console.log('Recent duplicate detected:', code);
+      return false;
+    }
+    
+    // Check if code is too short or too long
+    if (code.length < 3 || code.length > 50) {
+      console.log('Invalid barcode length:', code.length);
+      return false;
+    }
+    
+    return true;
+  };
+
+  // Enhanced detection handler with validation
+  const handleDetection = (result: any) => {
+    if (isPaused) return;
+    
+    const code = result.codeResult.code;
+    const confidence = result.codeResult.confidence || 0;
+    const timestamp = Date.now();
+    
+    console.log('Raw detection:', code, 'Confidence:', confidence);
+    
+    // Add to detection history
+    setDetectionHistory(prev => [
+      ...prev.filter(detection => timestamp - detection.timestamp < 5000), // Keep last 5 seconds
+      { code, confidence, timestamp }
+    ]);
+    
+    // Pre-validation: Check for multiple detections
+    if (!validateMultipleDetections(code)) {
+      console.log('Insufficient detections for validation:', code);
+      return;
+    }
+    
+    // Post-processing: Validate barcode quality
+    if (!validateBarcodeQuality(result)) {
+      console.log('Barcode quality validation failed:', code);
+      return;
+    }
+    
+    // If we reach here, the barcode is validated
+    console.log('Barcode validated successfully:', code);
+    handleScan(code, result.codeResult.format);
   };
 
   // Initialize scanner
@@ -381,17 +465,14 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
         startFocusTimer();
         startScanLineAnimation();
         
-        // Set up detection handler with immediate processing
+        // Set up detection handler with validation
         Quagga.onDetected((result: any) => {
           if (isPaused) return;
           
-          const code = result.codeResult.code;
-          const format = result.codeResult.format;
+          console.log('Raw Quagga detection:', result);
           
-          console.log('Barcode detected:', code, 'Format:', format);
-          
-          // Process scan immediately without focus delay for faster response
-          handleScan(code, format);
+          // Use enhanced detection handler with validation
+          handleDetection(result);
         });
         
         setScanStatus('scanning');
@@ -711,9 +792,27 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
                         <div className={`px-2 py-1 rounded text-xs font-medium ${
                           isFocused ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
                         }`}>
-                          {isFocused ? 'Focused' : `Focusing... (${3 - focusTime}s)`}
+                          {isFocused ? 'Focused' : `Focusing... (${2 - focusTime}s)`}
                         </div>
                       </div>
+                      
+                      {/* Validation status */}
+                      {detectionHistory.length > 0 && (
+                        <div className="absolute bottom-2 left-2">
+                          <div className="px-2 py-1 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                            Detections: {detectionHistory.filter(d => Date.now() - d.timestamp < 3000).length}/3
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* Confidence indicator */}
+                      {detectionHistory.length > 0 && (
+                        <div className="absolute bottom-2 right-2">
+                          <div className="px-2 py-1 rounded text-xs font-medium bg-purple-100 text-purple-800">
+                            Confidence: {Math.round((detectionHistory[detectionHistory.length - 1]?.confidence || 0) * 100)}%
+                          </div>
+                        </div>
+                      )}
                       
                       {/* Scanning area indicator */}
                       <div className="absolute inset-0 border-2 border-dashed border-red-400 opacity-50 m-4"></div>
