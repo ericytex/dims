@@ -28,11 +28,13 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
   const streamRef = useRef<MediaStream | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  // Initialize audio for success sound
+  // Initialize audio for beep sound
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      audioRef.current = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBSuBzvLZiTYIG2m98OScTgwOUarm7blmGgU7k9n1unEiBC13yO/eizEIHWq+8+OWT');
-    }
+    const audio = new Audio();
+    // Base64 encoded beep sound (short, clear beep)
+    audio.src = 'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBSuBzvLZiTYIG2m98OScTgwOUarm7blmGgU7k9n1unEiBC13yO/eizEIHWq+8+OWT';
+    audio.volume = 0.5;
+    audioRef.current = audio;
   }, []);
 
   // Initialize scanner
@@ -49,7 +51,13 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
 
   const playSuccessSound = () => {
     if (isSoundEnabled && audioRef.current) {
-      audioRef.current.play().catch(console.error);
+      console.log('Playing beep sound...');
+      audioRef.current.currentTime = 0;
+      audioRef.current.play().catch((error) => {
+        console.error('Failed to play beep sound:', error);
+      });
+    } else {
+      console.log('Beep sound disabled or audio not ready');
     }
   };
 
