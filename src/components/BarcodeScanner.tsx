@@ -93,12 +93,20 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
       return;
     }
 
+    if (!videoRef.current) {
+      setErrorMessage('Video element not ready. Please try again.');
+      return;
+    }
+
     try {
       setScanStatus('scanning');
       setIsScanning(true);
       setErrorMessage('');
       
       console.log('Starting barcode scanner...');
+      
+      // Wait a moment for the video element to be properly mounted
+      await new Promise(resolve => setTimeout(resolve, 100));
       
       // Configure Quagga for barcode detection
       Quagga.init({
@@ -134,19 +142,34 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
       }, (err: any) => {
         if (err) {
           console.error('Quagga initialization failed:', err);
-          handleError(err);
+          setErrorMessage('Failed to initialize scanner. Please try again.');
+          setIsScanning(false);
+          setScanStatus('error');
           return;
         }
         
         console.log('Quagga initialized successfully');
-        Quagga.start();
+        
+        try {
+          Quagga.start();
+          console.log('Barcode scanner started successfully');
+        } catch (startError: any) {
+          console.error('Failed to start Quagga:', startError);
+          setErrorMessage('Failed to start camera. Please try again.');
+          setIsScanning(false);
+          setScanStatus('error');
+        }
       });
 
       // Listen for barcode detection
       Quagga.onDetected((result: any) => {
-        const code = result.codeResult.code;
-        console.log('Barcode detected:', code);
-        handleScan(code);
+        try {
+          const code = result.codeResult.code;
+          console.log('Barcode detected:', code);
+          handleScan(code);
+        } catch (detectionError: any) {
+          console.error('Error processing detected barcode:', detectionError);
+        }
       });
 
       // Listen for processing
@@ -156,11 +179,21 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
         }
       });
 
-      console.log('Barcode scanner started successfully');
+      // Listen for errors
+      Quagga.onError((error: any) => {
+        console.error('Quagga error:', error);
+        if (error.name !== 'NotFoundError') {
+          setErrorMessage('Scanner error. Please try again.');
+          setIsScanning(false);
+          setScanStatus('error');
+        }
+      });
       
     } catch (error: any) {
       console.error('Scanner failed to start', error);
-      handleError(error);
+      setErrorMessage('Failed to start scanner. Please try again.');
+      setIsScanning(false);
+      setScanStatus('error');
     }
   };
 
@@ -275,6 +308,7 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
                     autoPlay
                     playsInline
                     muted
+                    style={{ display: 'block' }}
                   />
                 ) : (
                   <div className="text-center text-gray-500">
