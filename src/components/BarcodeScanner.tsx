@@ -24,6 +24,9 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
   const [fallbackMode, setFallbackMode] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [recentScans, setRecentScans] = useState<string[]>([]);
+  const [scanMode, setScanMode] = useState<'auto' | 'manual'>('auto');
+  const [selectedFormat, setSelectedFormat] = useState<'all' | 'barcode' | 'qr'>('all');
+  const [lastScannedResult, setLastScannedResult] = useState<{code: string, format: string} | null>(null);
   
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -55,6 +58,38 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
     }
     
     return validPatterns.some(pattern => pattern.test(cleanCode));
+  };
+
+  // Helper function to check if barcode format is valid
+  const isValidFormat = (code: string, format: string): boolean => {
+    if (selectedFormat === 'all') return true;
+    
+    // Barcode formats
+    if (selectedFormat === 'barcode') {
+      const barcodeFormats = ['EAN_13', 'EAN_8', 'CODE_128', 'CODE_39', 'UPC_A', 'UPC_E'];
+      return barcodeFormats.includes(format);
+    }
+    
+    // QR format
+    if (selectedFormat === 'qr') {
+      return format === 'QR_CODE';
+    }
+    
+    return true;
+  };
+
+  // Helper function to get barcode format
+  const getBarcodeFormat = (code: string): string => {
+    // Basic format detection based on length and patterns
+    if (code.length === 13 && /^\d{13}$/.test(code)) return 'EAN_13';
+    if (code.length === 8 && /^\d{8}$/.test(code)) return 'EAN_8';
+    if (code.length === 12 && /^\d{12}$/.test(code)) return 'UPC_A';
+    if (code.length === 8 && /^\d{8}$/.test(code)) return 'UPC_E';
+    if (/^[A-Z0-9-]{3,}$/.test(code)) return 'CODE_128';
+    if (/^[A-Z0-9]{3,}$/.test(code)) return 'CODE_39';
+    if (code.length > 20) return 'QR_CODE';
+    
+    return 'CODE_128'; // Default
   };
 
   // Helper function to check for recent duplicates
@@ -110,7 +145,7 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
     }
   };
 
-  const handleScan = (barcode: string) => {
+  const handleScan = (barcode: string, format?: string) => {
     // Prevent duplicate scans with better logic
     if (barcode === lastScannedCode || isPaused) {
       console.log('Ignoring duplicate scan or scanner is paused:', barcode);
@@ -122,18 +157,21 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
     // Play success sound
     playSuccessSound();
     
-    // Set the scanned code
+    // Set the scanned code and format
+    const detectedFormat = format || getBarcodeFormat(barcode);
     setLastScannedCode(barcode);
+    setLastScannedResult({ code: barcode, format: detectedFormat });
     
-    // Pause scanning for 5 minutes (300,000ms) as requested
+    // Pause scanning based on mode
+    const pauseTime = scanMode === 'auto' ? 2500 : 5000; // 2.5s for auto, 5min for manual
     setIsPaused(true);
-    console.log('Scanner paused for 5 minutes after successful scan');
+    console.log(`Scanner paused for ${pauseTime/1000}s after successful scan`);
     
     setTimeout(() => {
       setIsPaused(false);
       setLastScannedCode(''); // Clear the last scanned code after pause
-      console.log('Scanner resumed after 5-minute pause');
-    }, 300000); // 5 minutes = 300,000ms
+      console.log('Scanner resumed after pause');
+    }, pauseTime);
     
     // Call the onScan callback
     if (onScan) {
@@ -299,8 +337,9 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
             
             const code = result.codeResult.code;
             const confidence = result.codeResult.confidence || 0;
+            const format = result.codeResult.format;
             
-            console.log('Barcode detected:', code, 'Confidence:', confidence);
+            console.log('Barcode detected:', code, 'Confidence:', confidence, 'Format:', format);
             
             // Temporarily disable confidence check to debug
             // if (confidence < 0.6) {
@@ -320,8 +359,14 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
               return;
             }
             
+            // Validate format
+            if (!isValidFormat(code, format)) {
+              console.log('Invalid barcode format ignored:', code);
+              return;
+            }
+
             console.log('Barcode confirmed:', code, 'Confidence:', confidence);
-            handleScan(code);
+            handleScan(code, format);
           } catch (detectionError: any) {
             console.error('Error processing detected barcode:', detectionError);
           }
@@ -449,6 +494,64 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
 
         <div className="p-4">
             <div className="space-y-4">
+              {/* Scan Mode Toggle */}
+              <div className="flex items-center justify-between bg-gray-50 p-3 rounded-lg">
+                <span className="text-sm font-medium text-gray-700">Scan Mode:</span>
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={() => setScanMode('auto')}
+                    className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
+                      scanMode === 'auto'
+                        ? 'bg-blue-500 text-white'
+                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    }`}
+                  >
+                    Auto
+                  </button>
+                  <button
+                    onClick={() => setScanMode('manual')}
+                    className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
+                      scanMode === 'manual'
+                        ? 'bg-blue-500 text-white'
+                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    }`}
+                  >
+                    Manual
+                  </button>
+                </div>
+              </div>
+
+              {/* Format Selection */}
+              <div className="flex items-center justify-between bg-gray-50 p-3 rounded-lg">
+                <span className="text-sm font-medium text-gray-700">Format:</span>
+                <select
+                  value={selectedFormat}
+                  onChange={(e) => setSelectedFormat(e.target.value as 'all' | 'barcode' | 'qr')}
+                  className="px-3 py-1 rounded-md text-sm border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="all">All Formats</option>
+                  <option value="barcode">Barcodes Only</option>
+                  <option value="qr">QR Codes Only</option>
+                </select>
+              </div>
+
+              {/* Manual Scan Button */}
+              {scanMode === 'manual' && (
+                <div className="text-center">
+                  <button
+                    onClick={() => {
+                      if (!isScanning) {
+                        startScanning();
+                      }
+                    }}
+                    disabled={isScanning}
+                    className="bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isScanning ? 'Scanning...' : 'Start Scan'}
+                  </button>
+                </div>
+              )}
+
               {/* Status Display */}
               <div className="text-center">
                 <div className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
@@ -460,7 +563,7 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
                   {scanStatus === 'scanning' && isPaused && <div className="w-2 h-2 bg-yellow-500 rounded-full mr-2"></div>}
                   {scanStatus === 'error' && <div className="w-2 h-2 bg-red-500 rounded-full mr-2"></div>}
                   {scanStatus === 'idle' && <div className="w-2 h-2 bg-gray-500 rounded-full mr-2"></div>}
-                  {scanStatus === 'scanning' && (fallbackMode ? 'Camera Active (Manual Mode)' : (isPaused ? 'Paused (5min)' : 'Scanning...'))}
+                  {scanStatus === 'scanning' && (fallbackMode ? 'Camera Active (Manual Mode)' : (isPaused ? `Paused (${scanMode === 'auto' ? '2.5s' : '5min'})` : `${scanMode === 'auto' ? 'Auto Scanning' : 'Manual Mode'}`))}
                   {scanStatus === 'error' && 'Error'}
                   {scanStatus === 'idle' && 'Ready'}
                 </div>
@@ -473,10 +576,15 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
                 </div>
               )}
 
-              {/* Last Scanned Code */}
-              {lastScannedCode && (
+              {/* Last Scanned Result */}
+              {lastScannedResult && (
                 <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-                  <p className="text-green-700 text-sm font-medium">Last Scanned: {lastScannedCode}</p>
+                  <p className="text-green-700 text-sm font-medium">
+                    Last Scanned: {lastScannedResult.code}
+                  </p>
+                  <p className="text-green-600 text-xs mt-1">
+                    Format: {lastScannedResult.format}
+                  </p>
                 </div>
               )}
 
