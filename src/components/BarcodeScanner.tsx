@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 // @ts-ignore
 import Quagga from 'quagga';
-import { Camera, X, Search, QrCode, Volume2, VolumeX, AlertCircle } from 'lucide-react';
+import { Camera, X, Search, QrCode, Volume2, VolumeX, AlertCircle, Zap } from 'lucide-react';
 
 interface BarcodeScannerProps {
   onScan: (barcode: string) => void;
@@ -35,6 +35,10 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
   const [detectionCount, setDetectionCount] = useState(0);
   const [lastDetectedCode, setLastDetectedCode] = useState('');
   const [detectionHistory, setDetectionHistory] = useState<Array<{code: string, confidence: number, timestamp: number}>>([]);
+  const [lastFrameTime, setLastFrameTime] = useState(0);
+  const [isTorchEnabled, setIsTorchEnabled] = useState(false);
+  const [frameCount, setFrameCount] = useState(0);
+  const [sharpnessScore, setSharpnessScore] = useState(0);
   
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -42,6 +46,8 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
   const focusTimerRef = useRef<NodeJS.Timeout | null>(null);
   const scanLineRef = useRef<NodeJS.Timeout | null>(null);
   const validationTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const frameThrottleRef = useRef<NodeJS.Timeout | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   // Helper function to validate barcode format
   const isValidBarcode = (code: string): boolean => {
@@ -261,237 +267,296 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
     handleScan(code, result.codeResult.format);
   };
 
-  // Initialize scanner
-  useEffect(() => {
-    setIsInitialized(true);
-  }, []);
-
-  // Ensure video element is ready when scanning starts
-  useEffect(() => {
-    if (isScanning && videoRef.current) {
-      console.log('Video element is ready for scanning');
+  // Frame throttling: Process only 1 frame per 300ms
+  const throttleFrameProcessing = (callback: () => void) => {
+    const now = Date.now();
+    if (now - lastFrameTime < 300) {
+      return false; // Skip this frame
     }
-  }, [isScanning]);
+    setLastFrameTime(now);
+    return true; // Process this frame
+  };
 
-  // Initialize audio for success sound
-  useEffect(() => {
-    const audio = new Audio('/mixkit-correct-answer-tone-2870.wav');
-    audio.volume = 0.5;
-    audio.preload = 'auto'; // Preload the audio for immediate playback
-    audioRef.current = audio;
-  }, []);
-
-  const playSuccessSound = () => {
-    if (isSoundEnabled && audioRef.current) {
-      console.log('Playing success sound...');
-      try {
-        // Reset audio to start and play immediately
-        audioRef.current.currentTime = 0;
-        audioRef.current.play().catch((error) => {
-          console.error('Failed to play success sound:', error);
-        });
-        console.log('Success sound played successfully');
-      } catch (error) {
-        console.error('Failed to play success sound:', error);
+  // Sharpness check using canvas
+  const checkSharpness = (): number => {
+    if (!videoRef.current || !canvasRef.current) return 0;
+    
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext('2d');
+    
+    if (!ctx) return 0;
+    
+    // Set canvas size to video size
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    
+    // Draw video frame to canvas
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    
+    // Get image data from center area
+    const centerX = Math.floor(canvas.width / 2);
+    const centerY = Math.floor(canvas.height / 2);
+    const areaSize = Math.min(canvas.width, canvas.height) / 4;
+    
+    const imageData = ctx.getImageData(
+      centerX - areaSize / 2,
+      centerY - areaSize / 2,
+      areaSize,
+      areaSize
+    );
+    
+    // Calculate sharpness using Laplacian variance
+    let sharpness = 0;
+    const data = imageData.data;
+    
+    for (let y = 1; y < areaSize - 1; y++) {
+      for (let x = 1; x < areaSize - 1; x++) {
+        const idx = (y * areaSize + x) * 4;
+        const gray = (data[idx] + data[idx + 1] + data[idx + 2]) / 3;
+        
+        // Simple edge detection
+        const left = (data[idx - 4] + data[idx - 3] + data[idx - 2]) / 3;
+        const right = (data[idx + 4] + data[idx + 5] + data[idx + 6]) / 3;
+        const top = (data[(y - 1) * areaSize * 4 + x * 4] + data[(y - 1) * areaSize * 4 + x * 4 + 1] + data[(y - 1) * areaSize * 4 + x * 4 + 2]) / 3;
+        const bottom = (data[(y + 1) * areaSize * 4 + x * 4] + data[(y + 1) * areaSize * 4 + x * 4 + 1] + data[(y + 1) * areaSize * 4 + x * 4 + 2]) / 3;
+        
+        const edge = Math.abs(gray - left) + Math.abs(gray - right) + Math.abs(gray - top) + Math.abs(gray - bottom);
+        sharpness += edge;
       }
-    } else {
-      console.log('Success sound disabled');
+    }
+    
+    return sharpness / (areaSize * areaSize);
+  };
+
+  // Toggle torch/flashlight
+  const toggleTorch = async () => {
+    if (!streamRef.current) return;
+    
+    const track = streamRef.current.getVideoTracks()[0];
+    if (!track) return;
+    
+    try {
+      const newTorchState = !isTorchEnabled;
+      // Try to enable torch using a simpler approach
+      await track.applyConstraints({
+        advanced: [{ 
+          // @ts-ignore - torch is experimental but supported in modern browsers
+          torch: newTorchState 
+        }]
+      });
+      setIsTorchEnabled(newTorchState);
+      console.log('Torch toggled:', newTorchState);
+    } catch (error) {
+      console.log('Torch not supported on this device or failed to toggle');
     }
   };
 
-  const handleScan = (barcode: string, format?: string) => {
-    // Prevent duplicate scans with better logic
-    if (barcode === lastScannedCode || isPaused) {
-      console.log('Ignoring duplicate scan or scanner is paused:', barcode);
+  // Restart Quagga for autofocus
+  const restartQuaggaForAutofocus = async () => {
+    console.log('Restarting Quagga for autofocus...');
+    
+    try {
+      await Quagga.stop();
+      await new Promise(resolve => setTimeout(resolve, 500)); // Wait 500ms
+      await Quagga.start();
+      console.log('Quagga restarted successfully');
+    } catch (error) {
+      console.error('Failed to restart Quagga:', error);
+    }
+  };
+
+  // Play success sound
+  const playSuccessSound = () => {
+    if (!isSoundEnabled || !audioRef.current) return;
+    
+    try {
+      audioRef.current.currentTime = 0;
+      audioRef.current.play().catch(error => {
+        console.error('Failed to play sound:', error);
+      });
+    } catch (error) {
+      console.error('Error playing success sound:', error);
+    }
+  };
+
+  // Handle successful scan
+  const handleScan = (code: string, format?: string) => {
+    if (isPaused) return;
+    
+    console.log('Processing scan:', code, 'Format:', format);
+    
+    // Validate barcode format
+    if (!isValidBarcode(code)) {
+      console.log('Invalid barcode format:', code);
       return;
     }
     
-    console.log('Barcode detected:', barcode);
+    // Check for recent duplicates
+    if (isRecentDuplicate(code)) {
+      console.log('Recent duplicate detected:', code);
+      return;
+    }
     
-    // Immediately pause scanning to prevent rapid beeping
-    setIsPaused(true);
+    // Validate format if format filtering is enabled
+    if (selectedFormat !== 'all' && format && !isValidFormat(code, format)) {
+      console.log('Format validation failed:', code, format);
+      return;
+    }
+    
+    console.log('Barcode validated successfully:', code);
     
     // Play success sound
     playSuccessSound();
     
-    // Set the scanned code and format
-    const detectedFormat = format || getBarcodeFormat(barcode);
-    setLastScannedCode(barcode);
-    setLastScannedResult({ code: barcode, format: detectedFormat });
+    // Set pause state immediately to prevent rapid re-scans
+    setIsPaused(true);
+    setLastScannedCode(code);
+    setLastScannedResult({ code, format: format || 'unknown' });
     
-    // Stop scanning immediately after successful scan
-    console.log('Stopping scanner after successful scan');
+    // Stop scanning immediately
     stopScanning();
     
     // Call the onScan callback
-    if (onScan) {
-      onScan(barcode);
-    }
+    onScan(code);
+    
+    // Optionally restart Quagga for autofocus after successful scan
+    setTimeout(() => {
+      restartQuaggaForAutofocus();
+    }, 1000);
+    
+    // Reset pause after delay
+    setTimeout(() => {
+      setIsPaused(false);
+    }, scanMode === 'auto' ? 5000 : 300000); // 5s for auto, 5min for manual
   };
 
-  const handleError = useCallback((error: any) => {
-    console.error('Camera error:', error);
-    
-    if (error.name === 'NotAllowedError') {
-      setErrorMessage('Camera access denied. Please allow camera permissions and try again.');
-    } else if (error.name === 'NotFoundError') {
-      setErrorMessage('No camera found on this device.');
-    } else if (error.name === 'NotSupportedError') {
-      setErrorMessage('Camera not supported in this browser. Try using Chrome or Safari.');
-    } else if (error.name === 'NotReadableError') {
-      setErrorMessage('Camera is already in use by another application.');
-    } else {
-      setErrorMessage(`Camera error: ${error.message || error.name}`);
-    }
-    
-    setScanStatus('error');
-    setIsScanning(false);
-    setTimeout(() => {
-      setScanStatus('idle');
-      setErrorMessage('');
-    }, 5000);
-  }, []);
-
+  // Initialize scanner
   const startScanning = async () => {
-    if (!isInitialized) {
-      setErrorMessage('Scanner not initialized.');
+    if (!videoRef.current) {
+      console.log('Video element not ready. Please try again.');
       return;
     }
 
+    setIsInitializing(true);
+    setErrorMessage('');
+
     try {
-      setIsInitializing(true);
-      setScanStatus('scanning');
-      setIsScanning(true);
-      setErrorMessage('');
-      
-      console.log('Starting barcode scanner...');
-      
-      // Wait for video element to be properly mounted and ready
+      // Get camera stream first
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: 'environment',
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
+        }
+      });
+
+      streamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+      }
+
+      // Wait for video to be ready
       let attempts = 0;
-      while (!videoRef.current && attempts < 20) {
+      while (!videoRef.current?.videoWidth && attempts < 20) {
         await new Promise(resolve => setTimeout(resolve, 50));
         attempts++;
-        console.log(`Waiting for video element... attempt ${attempts}`);
       }
-      
-      if (!videoRef.current) {
-        setErrorMessage('Video element not ready. Please try again.');
-        setIsScanning(false);
-        setScanStatus('error');
-        setIsInitializing(false);
-        return;
+
+      if (!videoRef.current?.videoWidth) {
+        throw new Error('Video element not ready after multiple attempts');
       }
-      
-      console.log('Video element ready, getting camera stream...');
-      
-      // Get camera stream with zoom capabilities
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ 
-          video: { 
+
+      // Configure Quagga with enhanced accuracy settings
+      Quagga.init({
+        inputStream: {
+          name: "Live",
+          type: "LiveStream",
+          target: videoRef.current,
+          constraints: {
             facingMode: "environment",
-            width: { ideal: 1280 },
-            height: { ideal: 720 }
-          } 
-        });
-        
-        // Set the stream to video element
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          streamRef.current = stream;
-          
-          // Wait for video to be ready
-          await new Promise((resolve) => {
-            if (videoRef.current) {
-              videoRef.current.onloadedmetadata = resolve;
-            }
-          });
-          
-          console.log('Camera stream ready, initializing Quagga...');
+            width: { min: 640, ideal: 1280, max: 1920 },
+            height: { min: 480, ideal: 720, max: 1080 }
+          },
+          area: {
+            top: "25%",    // Scan only center 50% of the frame
+            right: "25%",
+            left: "25%",
+            bottom: "25%"
+          }
+        },
+        locator: {
+          patchSize: "small",
+          halfSample: false
+        },
+        numOfWorkers: 2,
+        frequency: 20,
+        decoder: {
+          readers: [
+            "code_128_reader",
+            "ean_reader",
+            "ean_8_reader",
+            "code_39_reader",
+            "upc_reader",
+            "upc_e_reader"
+          ]
+        },
+        locate: true
+      }, (err: any) => {
+        if (err) {
+          console.error('Quagga initialization failed:', err);
+          setErrorMessage('Failed to initialize scanner. Please refresh and try again.');
+          setIsInitializing(false);
+          return;
         }
-      } catch (error) {
-        console.error('Failed to get camera stream:', error);
-        setErrorMessage('Failed to access camera. Please check permissions.');
-        setIsScanning(false);
-        setScanStatus('error');
-        setIsInitializing(false);
-        return;
-      }
-      
-      // Initialize Quagga with optimized settings for faster detection
-      try {
-        await Quagga.init({
-          inputStream: {
-            name: "Live",
-            type: "LiveStream",
-            target: videoRef.current,
-            constraints: {
-              width: { ideal: 1280 },
-              height: { ideal: 720 },
-              facingMode: "environment"
-            },
-            area: { // Smaller scanning area for better focus
-              top: "25%",
-              right: "15%",
-              left: "15%",
-              bottom: "25%"
-            }
-          },
-          locator: {
-            patchSize: "small", // Smaller patches for faster processing
-            halfSample: false // Disable half sample for speed
-          },
-          numOfWorkers: 2, // Reduce workers for faster startup
-          frequency: 20, // Increase frequency for more responsive scanning
-          decoder: {
-            readers: [
-              "code_128_reader",
-              "ean_reader",
-              "ean_8_reader",
-              "code_39_reader",
-              "upc_reader",
-              "upc_e_reader"
-            ]
-          },
-          locate: true
-        });
-        
+
         console.log('Quagga initialized successfully');
-        
-        // Start Quagga
-        await Quagga.start();
-        console.log('Quagga started successfully');
-        
-        // Start focus timer and scanning line after successful initialization
+        setIsInitializing(false);
+        setIsScanning(true);
+
+        // Start focus timer
         startFocusTimer();
-        startScanLineAnimation();
-        
-        // Set up detection handler with validation
+
+        // Set up detection with frame throttling
         Quagga.onDetected((result: any) => {
-          if (isPaused) return;
+          // Apply frame throttling
+          if (!throttleFrameProcessing(() => {})) {
+            return; // Skip this frame
+          }
+
+          // Check sharpness before processing
+          const sharpness = checkSharpness();
+          setSharpnessScore(sharpness);
           
-          console.log('Raw Quagga detection:', result);
-          
-          // Use enhanced detection handler with validation
+          // Only process if sharpness is above threshold
+          if (sharpness < 10) { // Adjust threshold as needed
+            console.log('Frame too blurry, skipping detection');
+            return;
+          }
+
+          // Process detection with enhanced validation
           handleDetection(result);
         });
-        
-        setScanStatus('scanning');
-        setIsInitializing(false);
-        console.log('Scanner started successfully');
-        
-      } catch (error) {
-        console.error('Failed to initialize Quagga:', error);
-        setErrorMessage('Failed to initialize scanner. Please refresh and try again.');
-        setIsScanning(false);
-        setScanStatus('error');
-        setIsInitializing(false);
-      }
-      
-    } catch (error) {
-      console.error('Error starting scanner:', error);
+
+        // Set up error handling
+        Quagga.onError((error: any) => {
+          console.error('Quagga error:', error);
+          if (error.name === 'NotAllowedError') {
+            setErrorMessage('Camera access denied. Please allow camera permissions.');
+          } else if (error.name === 'NotFoundError') {
+            setErrorMessage('No camera found on this device.');
+          } else {
+            setErrorMessage('Scanner error: ' + error.message);
+          }
+        });
+
+        // Start Quagga
+        Quagga.start();
+      });
+
+    } catch (error: any) {
+      console.error('Failed to start scanner:', error);
       setErrorMessage('Failed to start scanner. Please try again.');
-      setIsScanning(false);
-      setScanStatus('error');
       setIsInitializing(false);
     }
   };
@@ -564,6 +629,13 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      {/* Hidden audio element for success sound */}
+      <audio
+        ref={audioRef}
+        preload="auto"
+        src="/mixkit-correct-answer-tone-2870.wav"
+      />
+      
       <div className="bg-white rounded-lg shadow-xl max-w-lg w-full mx-4">
         <div className="flex items-center justify-between p-4 border-b border-gray-200">
           <h2 className="text-lg font-semibold text-gray-900">Scan Barcode</h2>
@@ -748,76 +820,68 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
                       muted
                       style={{ display: isScanning ? 'block' : 'none' }}
                     />
+                    
+                    {/* Hidden canvas for sharpness analysis */}
+                    <canvas
+                      ref={canvasRef}
+                      className="hidden"
+                      style={{ display: 'none' }}
+                    />
+                    
+                    {/* Scanning overlay */}
+                    {isScanning && !fallbackMode && (
+                      <div className="absolute inset-0 pointer-events-none">
+                        {/* Scanning line */}
+                        <div 
+                          className="absolute left-0 right-0 h-0.5 bg-red-500 animate-pulse"
+                          style={{ 
+                            top: `${scanLinePosition}%`,
+                            transition: 'top 0.1s ease-out'
+                          }}
+                        />
+                        
+                        {/* Focus indicator */}
+                        {isFocused && (
+                          <div className="absolute inset-0 border-2 border-green-500 rounded-lg m-2 animate-pulse" />
+                        )}
+                        
+                        {/* Center scanning area indicator */}
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <div className="w-48 h-32 border-2 border-red-500 rounded-lg opacity-50" />
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Camera controls */}
+                    {isScanning && (
+                      <div className="absolute top-2 right-2 flex items-center space-x-2">
+                        {/* Torch button */}
+                        <button
+                          onClick={toggleTorch}
+                          className={`p-2 rounded-full transition-colors ${
+                            isTorchEnabled 
+                              ? 'bg-yellow-500 text-white' 
+                              : 'bg-gray-800 bg-opacity-50 text-white hover:bg-opacity-75'
+                          }`}
+                          title={isTorchEnabled ? 'Torch On' : 'Torch Off'}
+                        >
+                          <Zap className="w-4 h-4" />
+                        </button>
+                      </div>
+                    )}
+                    
+                    {/* Status overlay */}
                     {!isScanning && (
-                      <div className="text-center text-gray-500">
-                        <QrCode className="w-12 h-12 mx-auto mb-2" />
-                        <p>{isInitialized ? 'Click "Start Scanner" to begin' : 'Initializing...'}</p>
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="text-center">
+                          <Camera className="w-12 h-12 text-gray-400 mx-auto mb-2" />
+                          <p className="text-gray-500 text-sm">
+                            {isInitializing ? 'Initializing camera...' : 'Click Start to begin scanning'}
+                          </p>
+                        </div>
                       </div>
                     )}
                   </div>
-                  
-                  {/* Scanning overlay */}
-                  {isScanning && (
-                    <div className="absolute inset-0 border-2 border-blue-500 rounded-lg pointer-events-none">
-                      <div className="absolute top-0 left-0 w-8 h-8 border-l-2 border-t-2 border-blue-500"></div>
-                      <div className="absolute top-0 right-0 w-8 h-8 border-r-2 border-t-2 border-blue-500"></div>
-                      <div className="absolute bottom-0 left-0 w-8 h-8 border-l-2 border-b-2 border-blue-500"></div>
-                      <div className="absolute bottom-0 right-0 w-8 h-8 border-r-2 border-b-2 border-blue-500"></div>
-                      
-                      {/* Scanning line */}
-                      <div 
-                        className="absolute left-0 right-0 h-0.5 bg-red-500 animate-pulse"
-                        style={{ 
-                          top: `${scanLinePosition}%`,
-                          transition: 'top 0.05s linear'
-                        }}
-                      ></div>
-                      
-                      {/* Focus indicator */}
-                      <div className="absolute top-2 left-2">
-                        <div className={`px-2 py-1 rounded text-xs font-medium ${
-                          scanStatus === 'scanning' ? 'bg-blue-100 text-blue-800' :
-                          scanStatus === 'success' ? 'bg-green-100 text-green-800' :
-                          scanStatus === 'error' ? 'bg-red-100 text-red-800' :
-                          'bg-gray-100 text-gray-800'
-                        }`}>
-                          {scanStatus === 'scanning' ? 'Scanning...' :
-                           scanStatus === 'success' ? 'Detected!' :
-                           scanStatus === 'error' ? 'Error' : 'Ready'}
-                        </div>
-                      </div>
-                      
-                      {/* Focus status */}
-                      <div className="absolute top-2 right-2">
-                        <div className={`px-2 py-1 rounded text-xs font-medium ${
-                          isFocused ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
-                        }`}>
-                          {isFocused ? 'Focused' : `Focusing... (${2 - focusTime}s)`}
-                        </div>
-                      </div>
-                      
-                      {/* Validation status */}
-                      {detectionHistory.length > 0 && (
-                        <div className="absolute bottom-2 left-2">
-                          <div className="px-2 py-1 rounded text-xs font-medium bg-blue-100 text-blue-800">
-                            Detections: {detectionHistory.filter(d => Date.now() - d.timestamp < 3000).length}/3
-                          </div>
-                        </div>
-                      )}
-                      
-                      {/* Confidence indicator */}
-                      {detectionHistory.length > 0 && (
-                        <div className="absolute bottom-2 right-2">
-                          <div className="px-2 py-1 rounded text-xs font-medium bg-purple-100 text-purple-800">
-                            Confidence: {Math.round((detectionHistory[detectionHistory.length - 1]?.confidence || 0) * 100)}%
-                          </div>
-                        </div>
-                      )}
-                      
-                      {/* Scanning area indicator */}
-                      <div className="absolute inset-0 border-2 border-dashed border-red-400 opacity-50 m-4"></div>
-                    </div>
-                  )}
                 </div>
               </div>
 
@@ -845,6 +909,40 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
                   </button>
                 </form>
               </div>
+
+              {/* Accuracy Indicators */}
+              {isScanning && !fallbackMode && (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-gray-600">Detection Count:</span>
+                    <span className={`font-medium ${detectionCount >= 3 ? 'text-green-600' : 'text-yellow-600'}`}>
+                      {detectionCount}/3
+                    </span>
+                  </div>
+                  
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-gray-600">Sharpness:</span>
+                    <span className={`font-medium ${sharpnessScore > 10 ? 'text-green-600' : 'text-red-600'}`}>
+                      {sharpnessScore.toFixed(1)}
+                    </span>
+                  </div>
+                  
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-gray-600">Frame Rate:</span>
+                    <span className="font-medium text-blue-600">
+                      {frameCount} fps
+                    </span>
+                  </div>
+                  
+                  {lastDetectedCode && (
+                    <div className="bg-blue-50 border border-blue-200 rounded p-2">
+                      <p className="text-blue-700 text-xs">
+                        <strong>Last Detection:</strong> {lastDetectedCode}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Instructions */}
               <div className="mt-4 p-3 bg-blue-50 rounded-lg">
