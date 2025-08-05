@@ -23,10 +23,53 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
   const [lastScannedCode, setLastScannedCode] = useState('');
   const [fallbackMode, setFallbackMode] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
+  const [recentScans, setRecentScans] = useState<string[]>([]);
   
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  // Helper function to validate barcode format
+  const isValidBarcode = (code: string): boolean => {
+    if (!code || code.length < 3) return false;
+    
+    // Remove any non-alphanumeric characters except hyphens
+    const cleanCode = code.replace(/[^a-zA-Z0-9-]/g, '');
+    
+    // Check for common patterns like IDRC, IM-, etc.
+    const validPatterns = [
+      /^IDRC\d+$/,           // IDRC followed by numbers
+      /^IM-\d+-\d+-[A-Z]+$/, // IM-23-034-KSJ pattern
+      /^[A-Z]{2,}\d+$/,      // Letters followed by numbers
+      /^[A-Z]+\d+[A-Z]+$/,   // Letters-numbers-letters
+      /^\d+[A-Z]+\d+$/,      // Numbers-letters-numbers
+      /^[A-Z0-9-]{3,}$/      // General alphanumeric with hyphens
+    ];
+    
+    return validPatterns.some(pattern => pattern.test(cleanCode));
+  };
+
+  // Helper function to check for recent duplicates
+  const isRecentDuplicate = (code: string): boolean => {
+    const now = Date.now();
+    const threeSecondsAgo = now - 3000; // 3 seconds
+    
+    // Clean up old entries (older than 3 seconds)
+    setRecentScans(prev => prev.filter(scan => {
+      const [timestamp] = scan.split('|');
+      return parseInt(timestamp) > threeSecondsAgo;
+    }));
+    
+    // Check if this code was recently scanned
+    const recentScansList = recentScans.map(scan => scan.split('|')[1]);
+    if (recentScansList.includes(code)) {
+      return true;
+    }
+    
+    // Add this scan to recent list
+    setRecentScans(prev => [...prev, `${now}|${code}`]);
+    return false;
+  };
 
   // Initialize scanner
   useEffect(() => {
@@ -191,8 +234,8 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
             patchSize: "medium",
             halfSample: true
           },
-          numOfWorkers: 4,
-          frequency: 10,
+          numOfWorkers: 2,
+          frequency: 5,
           decoder: {
             readers: [
               "code_128_reader",
@@ -247,7 +290,29 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
             }
             
             const code = result.codeResult.code;
-            console.log('Barcode detected:', code);
+            const confidence = result.codeResult.confidence || 0;
+            
+            console.log('Barcode detected:', code, 'Confidence:', confidence);
+            
+            // Only process high-confidence readings (above 80%)
+            if (confidence < 0.8) {
+              console.log('Low confidence reading ignored:', confidence);
+              return;
+            }
+            
+            // Validate barcode format (basic checks)
+            if (!isValidBarcode(code)) {
+              console.log('Invalid barcode format ignored:', code);
+              return;
+            }
+            
+            // Check if this is a recent duplicate (within last 3 seconds)
+            if (isRecentDuplicate(code)) {
+              console.log('Recent duplicate ignored:', code);
+              return;
+            }
+            
+            console.log('High-confidence barcode confirmed:', code);
             handleScan(code);
           } catch (detectionError: any) {
             console.error('Error processing detected barcode:', detectionError);
