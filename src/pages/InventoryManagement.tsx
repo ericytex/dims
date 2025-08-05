@@ -225,20 +225,26 @@ export default function InventoryManagement() {
       // If found, set search term to the scanned barcode to filter the list
       setSearchTerm(barcode);
       
-      // Show the item details
-      handleViewItem(foundItem);
+      // Stop scanning immediately
+      setShowBarcodeScanner(false);
+      
+      // Show success notification
       showNotification(`Found item: ${foundItem.name} (SKU: ${foundItem.sku})`, 'success');
       console.log('Item found:', foundItem);
       
-      // Scroll to the item in the list (if needed)
+      // Show the item details after a brief delay to let the list update
       setTimeout(() => {
+        handleViewItem(foundItem);
+        
+        // Scroll to the item in the list
         const element = document.getElementById(`item-${foundItem.id}`);
         if (element) {
           element.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
-      }, 100);
+      }, 200);
     } else {
-      // If not found, pre-fill the add form with the barcode
+      // If not found, stop scanning and pre-fill the add form
+      setShowBarcodeScanner(false);
       setFormData(prev => ({
         ...prev,
         sku: barcode
@@ -247,7 +253,6 @@ export default function InventoryManagement() {
       showNotification(`Barcode ${barcode} not found. You can add a new item.`, 'info');
       console.log('Item not found, opening add modal');
     }
-    setShowBarcodeScanner(false);
   };
 
   const handleOpenBarcodeScanner = () => {
@@ -389,10 +394,24 @@ export default function InventoryManagement() {
                 type="text"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
+                className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
                 placeholder="Search items..."
               />
+              {searchTerm && (
+                <button
+                  onClick={() => setSearchTerm('')}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
             </div>
+            {searchTerm && (
+              <div className="mt-1 text-sm text-blue-600 flex items-center">
+                <QrCode className="w-3 h-3 mr-1" />
+                Filtered by barcode: {searchTerm}
+              </div>
+            )}
           </div>
           
           <div>
