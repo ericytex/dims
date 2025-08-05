@@ -3,6 +3,7 @@ import { useNotification } from '../contexts/NotificationContext';
 import { useOffline } from '../contexts/OfflineContext';
 import { useFirebaseDatabase } from '../hooks/useFirebaseDatabase';
 import { useFirebaseAuth } from '../hooks/useFirebaseAuth';
+import { BarcodeScannerComponent } from '../components/BarcodeScanner';
 import {
   Plus,
   Search,
@@ -17,7 +18,8 @@ import {
   Users,
   TrendingUp,
   TrendingDown,
-  X
+  X,
+  QrCode
 } from 'lucide-react';
 
 interface InventoryItem {
@@ -55,6 +57,7 @@ export default function InventoryManagement() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
+  const [showBarcodeScanner, setShowBarcodeScanner] = useState(false);
   const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCategory, setFilterCategory] = useState('');
@@ -211,6 +214,31 @@ export default function InventoryManagement() {
     }
   };
 
+  // Barcode scanning functionality
+  const handleBarcodeScan = (barcode: string) => {
+    // First, try to find an existing item with this barcode
+    const existingItem = inventoryItems.find(item => item.sku === barcode);
+    
+    if (existingItem) {
+      // If found, show the item details
+      handleViewItem(existingItem);
+      showNotification(`Found item: ${existingItem.name}`, 'success');
+    } else {
+      // If not found, pre-fill the add form with the barcode
+      setFormData(prev => ({
+        ...prev,
+        sku: barcode
+      }));
+      setShowAddModal(true);
+      showNotification(`Barcode ${barcode} not found. You can add a new item.`, 'info');
+    }
+    setShowBarcodeScanner(false);
+  };
+
+  const handleOpenBarcodeScanner = () => {
+    setShowBarcodeScanner(true);
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -310,7 +338,7 @@ export default function InventoryManagement() {
 
       {/* Filters */}
       <div className="bg-white rounded-lg shadow p-6">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Search</label>
             <div className="relative">
@@ -323,6 +351,17 @@ export default function InventoryManagement() {
                 placeholder="Search items..."
               />
             </div>
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Barcode Scanner</label>
+            <button
+              onClick={handleOpenBarcodeScanner}
+              className="w-full bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors flex items-center justify-center space-x-2"
+            >
+              <QrCode className="w-4 h-4" />
+              <span>Scan Barcode</span>
+            </button>
           </div>
           
           <div>
@@ -995,6 +1034,13 @@ export default function InventoryManagement() {
           </div>
         </div>
       )}
+
+      {/* Barcode Scanner Modal */}
+      <BarcodeScannerComponent
+        isOpen={showBarcodeScanner}
+        onScan={handleBarcodeScan}
+        onClose={() => setShowBarcodeScanner(false)}
+      />
     </div>
   );
 }
