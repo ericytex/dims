@@ -50,6 +50,7 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
   const validationTimerRef = useRef<NodeJS.Timeout | null>(null);
   const frameThrottleRef = useRef<NodeJS.Timeout | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const testIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Helper function to validate barcode format
   const isValidBarcode = (code: string): boolean => {
@@ -485,6 +486,17 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
         setIsInitializing(false);
         setIsScanning(true);
         setScanStatus('scanning');
+        
+        // Set up a simple frame counter for test mode
+        testIntervalRef.current = setInterval(() => {
+          setFrameCount(prev => prev + 1);
+          if (videoRef.current) {
+            const sharpness = checkSharpness();
+            setSharpnessScore(sharpness);
+            console.log('Test mode frame:', frameCount + 1, 'Sharpness:', sharpness);
+          }
+        }, 100);
+        
         return;
       }
 
@@ -592,6 +604,12 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
   const stopScanning = () => {
     console.log('Stopping barcode scanner...');
     
+    // Clear test interval if in test mode
+    if (testIntervalRef.current) {
+      clearInterval(testIntervalRef.current);
+      testIntervalRef.current = null;
+    }
+    
     // Stop focus timer
     if (focusTimerRef.current) {
       clearInterval(focusTimerRef.current);
@@ -606,12 +624,14 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
     setIsFocused(false);
     setScanLinePosition(0);
     
-    // Stop Quagga
-    try {
-      Quagga.stop();
-      console.log('Quagga stopped successfully');
-    } catch (error) {
-      console.error('Error stopping Quagga:', error);
+    // Stop Quagga (only if not in test mode)
+    if (!testMode) {
+      try {
+        Quagga.stop();
+        console.log('Quagga stopped successfully');
+      } catch (error) {
+        console.error('Error stopping Quagga:', error);
+      }
     }
     
     // Stop camera stream
@@ -641,6 +661,21 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
 
   const toggleSound = () => {
     setIsSoundEnabled(!isSoundEnabled);
+  };
+
+  // Toggle test mode
+  const toggleTestMode = () => {
+    const newTestMode = !testMode;
+    setTestMode(newTestMode);
+    console.log('Test mode toggled:', newTestMode);
+    
+    // If enabling test mode and scanner is running, restart it
+    if (newTestMode && isScanning) {
+      stopScanning();
+      setTimeout(() => {
+        startScanning();
+      }, 500);
+    }
   };
 
   // Cleanup on unmount
@@ -682,7 +717,7 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
             </button>
             {/* Test Mode Toggle */}
             <button
-              onClick={() => setTestMode(!testMode)}
+              onClick={toggleTestMode}
               className={`p-2 rounded-lg transition-colors ${
                 testMode 
                   ? 'bg-purple-100 text-purple-600 hover:bg-purple-200' 
@@ -970,6 +1005,30 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
                     Search
                   </button>
                 </form>
+                
+                {/* Manual Test Button */}
+                <div className="mt-2">
+                  <button
+                    onClick={() => {
+                      if (videoRef.current) {
+                        console.log('Manual test - Video element:', videoRef.current);
+                        console.log('Video dimensions:', videoRef.current.videoWidth, 'x', videoRef.current.videoHeight);
+                        console.log('Video ready state:', videoRef.current.readyState);
+                        console.log('Video paused:', videoRef.current.paused);
+                        console.log('Video current time:', videoRef.current.currentTime);
+                        
+                        const sharpness = checkSharpness();
+                        console.log('Manual sharpness check:', sharpness);
+                        setSharpnessScore(sharpness);
+                      } else {
+                        console.log('Video element not found');
+                      }
+                    }}
+                    className="px-3 py-1 bg-blue-100 text-blue-700 rounded text-xs hover:bg-blue-200"
+                  >
+                    Test Video Element
+                  </button>
+                </div>
               </div>
 
               {/* Accuracy Indicators */}
