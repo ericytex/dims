@@ -38,27 +38,11 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
       try {
         console.log('Initializing scanner...');
         
-        // Create new reader instance with specific formats
-        codeReaderRef.current = new BrowserMultiFormatReader({
-          formats: [
-            'QR_CODE',
-            'CODE_128',
-            'CODE_39',
-            'EAN_13',
-            'EAN_8',
-            'UPC_A',
-            'UPC_E',
-            'CODABAR',
-            'ITF',
-            'RSS_14',
-            'RSS_EXPANDED'
-          ]
-        });
+        // Create new reader instance - let it use default formats
+        codeReaderRef.current = new BrowserMultiFormatReader();
         
-        // Test camera access
-        await codeReaderRef.current.listVideoInputDevices();
-        
-        console.log('Scanner initialized successfully');
+        // Test camera access without requiring permissions first
+        console.log('Scanner created successfully');
         setIsInitialized(true);
       } catch (error) {
         console.error('Failed to initialize scanner:', error);
@@ -170,12 +154,6 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
               handleError(error);
             }
           }
-        },
-        {
-          // Scanner configuration for better detection
-          tryHarder: true,
-          tryInverted: true,
-          tryRotated: true
         }
       );
       
