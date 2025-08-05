@@ -42,53 +42,20 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
 
   const playSuccessSound = () => {
     if (isSoundEnabled) {
-      console.log('Playing bell sound...');
+      console.log('Playing success sound...');
       try {
-        // Create audio context for bell sound
-        const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-        
-        // Create multiple oscillators for bell-like sound
-        const oscillator1 = audioContext.createOscillator();
-        const oscillator2 = audioContext.createOscillator();
-        const oscillator3 = audioContext.createOscillator();
-        const gainNode = audioContext.createGain();
-        
-        // Connect all oscillators to gain node
-        oscillator1.connect(gainNode);
-        oscillator2.connect(gainNode);
-        oscillator3.connect(gainNode);
-        gainNode.connect(audioContext.destination);
-        
-        // Bell frequencies (fundamental + harmonics)
-        oscillator1.frequency.setValueAtTime(800, audioContext.currentTime); // Fundamental
-        oscillator2.frequency.setValueAtTime(1200, audioContext.currentTime); // First harmonic
-        oscillator3.frequency.setValueAtTime(1600, audioContext.currentTime); // Second harmonic
-        
-        oscillator1.type = 'sine';
-        oscillator2.type = 'sine';
-        oscillator3.type = 'sine';
-        
-        // Bell-like envelope (quick attack, longer decay)
-        gainNode.gain.setValueAtTime(0, audioContext.currentTime);
-        gainNode.gain.linearRampToValueAtTime(0.4, audioContext.currentTime + 0.01); // Quick attack
-        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3); // Longer decay
-        
-        // Start all oscillators
-        oscillator1.start(audioContext.currentTime);
-        oscillator2.start(audioContext.currentTime);
-        oscillator3.start(audioContext.currentTime);
-        
-        // Stop after 300ms for bell-like duration
-        oscillator1.stop(audioContext.currentTime + 0.3);
-        oscillator2.stop(audioContext.currentTime + 0.3);
-        oscillator3.stop(audioContext.currentTime + 0.3);
-        
-        console.log('Bell sound played successfully');
+        // Use the actual audio file
+        const audio = new Audio('/mixkit-correct-answer-tone-2870.wav');
+        audio.volume = 0.5; // 50% volume
+        audio.play().catch((error) => {
+          console.error('Failed to play success sound:', error);
+        });
+        console.log('Success sound played successfully');
       } catch (error) {
-        console.error('Failed to play bell sound:', error);
+        console.error('Failed to play success sound:', error);
       }
     } else {
-      console.log('Bell sound disabled');
+      console.log('Success sound disabled');
     }
   };
 
