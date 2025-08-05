@@ -42,31 +42,53 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
 
   const playSuccessSound = () => {
     if (isSoundEnabled) {
-      console.log('Playing beep sound...');
+      console.log('Playing bell sound...');
       try {
-        // Create audio context for beep sound
+        // Create audio context for bell sound
         const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-        const oscillator = audioContext.createOscillator();
+        
+        // Create multiple oscillators for bell-like sound
+        const oscillator1 = audioContext.createOscillator();
+        const oscillator2 = audioContext.createOscillator();
+        const oscillator3 = audioContext.createOscillator();
         const gainNode = audioContext.createGain();
         
-        oscillator.connect(gainNode);
+        // Connect all oscillators to gain node
+        oscillator1.connect(gainNode);
+        oscillator2.connect(gainNode);
+        oscillator3.connect(gainNode);
         gainNode.connect(audioContext.destination);
         
-        oscillator.frequency.setValueAtTime(800, audioContext.currentTime); // 800Hz beep
-        oscillator.type = 'sine';
+        // Bell frequencies (fundamental + harmonics)
+        oscillator1.frequency.setValueAtTime(800, audioContext.currentTime); // Fundamental
+        oscillator2.frequency.setValueAtTime(1200, audioContext.currentTime); // First harmonic
+        oscillator3.frequency.setValueAtTime(1600, audioContext.currentTime); // Second harmonic
         
-        gainNode.gain.setValueAtTime(0.3, audioContext.currentTime); // 30% volume
-        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+        oscillator1.type = 'sine';
+        oscillator2.type = 'sine';
+        oscillator3.type = 'sine';
         
-        oscillator.start(audioContext.currentTime);
-        oscillator.stop(audioContext.currentTime + 0.1); // 100ms beep
+        // Bell-like envelope (quick attack, longer decay)
+        gainNode.gain.setValueAtTime(0, audioContext.currentTime);
+        gainNode.gain.linearRampToValueAtTime(0.4, audioContext.currentTime + 0.01); // Quick attack
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3); // Longer decay
         
-        console.log('Beep sound played successfully');
+        // Start all oscillators
+        oscillator1.start(audioContext.currentTime);
+        oscillator2.start(audioContext.currentTime);
+        oscillator3.start(audioContext.currentTime);
+        
+        // Stop after 300ms for bell-like duration
+        oscillator1.stop(audioContext.currentTime + 0.3);
+        oscillator2.stop(audioContext.currentTime + 0.3);
+        oscillator3.stop(audioContext.currentTime + 0.3);
+        
+        console.log('Bell sound played successfully');
       } catch (error) {
-        console.error('Failed to play beep sound:', error);
+        console.error('Failed to play bell sound:', error);
       }
     } else {
-      console.log('Beep sound disabled');
+      console.log('Bell sound disabled');
     }
   };
 
