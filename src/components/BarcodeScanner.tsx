@@ -127,14 +127,21 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
     }
   }, [isScanning]);
 
+  // Initialize audio for success sound
+  useEffect(() => {
+    const audio = new Audio('/mixkit-correct-answer-tone-2870.wav');
+    audio.volume = 0.5;
+    audio.preload = 'auto'; // Preload the audio for immediate playback
+    audioRef.current = audio;
+  }, []);
+
   const playSuccessSound = () => {
-    if (isSoundEnabled) {
+    if (isSoundEnabled && audioRef.current) {
       console.log('Playing success sound...');
       try {
-        // Use the actual audio file
-        const audio = new Audio('/mixkit-correct-answer-tone-2870.wav');
-        audio.volume = 0.5; // 50% volume
-        audio.play().catch((error) => {
+        // Reset audio to start and play immediately
+        audioRef.current.currentTime = 0;
+        audioRef.current.play().catch((error) => {
           console.error('Failed to play success sound:', error);
         });
         console.log('Success sound played successfully');
@@ -164,7 +171,7 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
     setLastScannedResult({ code: barcode, format: detectedFormat });
     
     // Pause scanning based on mode
-    const pauseTime = scanMode === 'auto' ? 2500 : 5000; // 2.5s for auto, 5min for manual
+    const pauseTime = scanMode === 'auto' ? 5000 : 300000; // 5s for auto, 5min for manual
     setIsPaused(true);
     console.log(`Scanner paused for ${pauseTime/1000}s after successful scan`);
     
@@ -564,7 +571,7 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
                   {scanStatus === 'scanning' && isPaused && <div className="w-2 h-2 bg-yellow-500 rounded-full mr-2"></div>}
                   {scanStatus === 'error' && <div className="w-2 h-2 bg-red-500 rounded-full mr-2"></div>}
                   {scanStatus === 'idle' && <div className="w-2 h-2 bg-gray-500 rounded-full mr-2"></div>}
-                  {scanStatus === 'scanning' && (fallbackMode ? 'Camera Active (Manual Mode)' : (isPaused ? `Paused (${scanMode === 'auto' ? '2.5s' : '5min'})` : `${scanMode === 'auto' ? 'Auto Scanning' : 'Manual Mode'}`))}
+                  {scanStatus === 'scanning' && (fallbackMode ? 'Camera Active (Manual Mode)' : (isPaused ? `Paused (${scanMode === 'auto' ? '5s' : '5min'})` : `${scanMode === 'auto' ? 'Auto Scanning' : 'Manual Mode'}`))}
                   {scanStatus === 'error' && 'Error'}
                   {scanStatus === 'idle' && 'Ready'}
                 </div>
