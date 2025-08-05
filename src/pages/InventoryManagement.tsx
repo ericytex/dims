@@ -261,9 +261,13 @@ export default function InventoryManagement() {
 
   // Enhanced barcode search function
   const searchByBarcode = (barcode: string) => {
+    console.log('Searching for barcode:', barcode);
+    console.log('Available inventory items:', inventoryItems.map(item => ({ name: item.name, sku: item.sku })));
+    
     // Search by SKU (barcode)
     const foundBySku = inventoryItems.find(item => item.sku === barcode);
     if (foundBySku) {
+      console.log('Found by SKU:', foundBySku);
       return foundBySku;
     }
 
@@ -272,6 +276,7 @@ export default function InventoryManagement() {
       item.name.toLowerCase().includes(barcode.toLowerCase())
     );
     if (foundByName) {
+      console.log('Found by name:', foundByName);
       return foundByName;
     }
 
@@ -280,10 +285,38 @@ export default function InventoryManagement() {
       item.description?.toLowerCase().includes(barcode.toLowerCase())
     );
     if (foundByDescription) {
+      console.log('Found by description:', foundByDescription);
       return foundByDescription;
     }
 
+    console.log('No item found for barcode:', barcode);
     return null;
+  };
+
+  // Function to add a test item for barcode scanning
+  const addTestItemForScanning = async () => {
+    const testItem = {
+      name: 'Test Product - Barcode Scanner',
+      description: 'Test item for barcode scanning functionality',
+      category: 'Test',
+      sku: '072782051600', // The dummy barcode
+      unit: 'pieces',
+      currentStock: 50,
+      minStock: 10,
+      maxStock: 100,
+      cost: 1500,
+      supplier: 'Test Supplier',
+      facility: 'main-warehouse',
+      location: 'A1-B2-C3',
+      status: 'active' as const
+    };
+
+    try {
+      await addInventoryItem(testItem);
+      showNotification('Test item added successfully!', 'success');
+    } catch (error) {
+      showNotification('Failed to add test item', 'error');
+    }
   };
 
   if (loading) {
@@ -422,6 +455,13 @@ export default function InventoryManagement() {
             >
               <QrCode className="w-4 h-4" />
               <span>Scan Barcode</span>
+            </button>
+            <button
+              onClick={addTestItemForScanning}
+              className="w-full mt-2 bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-colors flex items-center justify-center space-x-2 text-sm"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Add Test Item (072782051600)</span>
             </button>
           </div>
           
