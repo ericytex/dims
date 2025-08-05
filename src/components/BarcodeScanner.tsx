@@ -21,7 +21,7 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
   const [errorMessage, setErrorMessage] = useState('');
   const [isInitialized, setIsInitialized] = useState(false);
   
-  const videoRef = useRef<HTMLVideoElement>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
   const codeReaderRef = useRef<BrowserMultiFormatReader | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
@@ -32,38 +32,27 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
     }
   }, []);
 
-  // Initialize ZXing reader and get available cameras
+  // Initialize scanner
   useEffect(() => {
-    const initializeScanner = async () => {
-      try {
-        console.log('Initializing scanner...');
-        
-        // Create new reader instance - let it use default formats
-        codeReaderRef.current = new BrowserMultiFormatReader();
-        
-        // Test camera access without requiring permissions first
-        console.log('Scanner created successfully');
-        setIsInitialized(true);
-      } catch (error) {
-        console.error('Failed to initialize scanner:', error);
-        setErrorMessage('Failed to initialize scanner. Please refresh and try again.');
-        setIsInitialized(false);
-      }
-    };
+    codeReaderRef.current = new BrowserMultiFormatReader();
+    setIsInitialized(true);
+  }, []);
 
-    if (isOpen && !codeReaderRef.current) {
-      initializeScanner();
+  // Start scanning when modal opens
+  useEffect(() => {
+    if (isOpen && isInitialized) {
+      startScanning();
     }
-    
+  }, [isOpen, isInitialized]);
+
+  // Cleanup
+  useEffect(() => {
     return () => {
       if (codeReaderRef.current) {
-        console.log('Cleaning up scanner...');
         codeReaderRef.current.reset();
-        codeReaderRef.current = null;
       }
-      setIsInitialized(false);
     };
-  }, [isOpen]);
+  }, []);
 
   const playSuccessSound = () => {
     if (isSoundEnabled && audioRef.current) {
@@ -118,20 +107,11 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
   }, []);
 
   const startScanning = async () => {
-    console.log('Starting scanner...');
-    console.log('Initialized:', isInitialized);
-    console.log('CodeReader:', codeReaderRef.current);
-    
-    if (!isInitialized) {
-      setErrorMessage('Scanner not initialized. Please wait or refresh the page.');
+    if (!isInitialized || !codeReaderRef.current) {
+      setErrorMessage('Scanner not initialized.');
       return;
     }
-    
-    if (!codeReaderRef.current) {
-      setErrorMessage('Scanner not initialized. Please refresh the page.');
-      return;
-    }
-    
+
     try {
       setScanStatus('scanning');
       setIsScanning(true);
@@ -140,11 +120,11 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
       console.log('Starting scanner with default camera');
       
       await codeReaderRef.current.decodeFromVideoDevice(
-        undefined, // Use default camera
+        null,
         videoRef.current,
         (result, error) => {
           if (result) {
-            console.log('Barcode detected:', result.getText());
+            console.log('Scanned:', result.getText());
             handleScan(result);
           }
           if (error) {
@@ -159,7 +139,7 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
       
       console.log('Scanner started successfully');
     } catch (error: any) {
-      console.error('Failed to start scanner:', error);
+      console.error('Camera failed to start', error);
       handleError(error);
     }
   };
@@ -221,16 +201,6 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
               <div className="flex items-center space-x-2">
                 <AlertCircle className="w-4 h-4 text-red-500" />
                 <span className="text-sm text-red-700">{errorMessage}</span>
-              </div>
-            </div>
-          )}
-
-          {/* Initialization Status */}
-          {!isInitialized && (
-            <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-              <div className="flex items-center space-x-2">
-                <AlertCircle className="w-4 h-4 text-yellow-500" />
-                <span className="text-sm text-yellow-700">Initializing scanner...</span>
               </div>
             </div>
           )}
