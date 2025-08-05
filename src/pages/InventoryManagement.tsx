@@ -78,7 +78,8 @@ export default function InventoryManagement() {
     facility: '',
     location: '',
     expiryDate: '',
-    status: 'active' as const
+    status: 'active' as const,
+    _scanningForSku: false // Flag to indicate if scanning for SKU
   });
 
   // Filter inventory items
@@ -107,7 +108,8 @@ export default function InventoryManagement() {
       facility: '',
       location: '',
       expiryDate: '',
-      status: 'active'
+      status: 'active',
+      _scanningForSku: false
     });
     setShowAddModal(true);
   };
@@ -128,7 +130,8 @@ export default function InventoryManagement() {
       facility: item.facility,
       location: item.location,
       expiryDate: item.expiryDate || '',
-      status: item.status
+      status: item.status,
+      _scanningForSku: false
     });
     setShowEditModal(true);
   };
@@ -218,7 +221,20 @@ export default function InventoryManagement() {
   const handleBarcodeScan = (barcode: string) => {
     console.log('Searching for barcode:', barcode);
     
-    // Use enhanced search function
+    // Check if we're scanning for SKU in Add Item modal
+    if (formData._scanningForSku) {
+      console.log('Scanning for SKU in Add Item modal');
+      setFormData(prev => ({ 
+        ...prev, 
+        sku: barcode,
+        _scanningForSku: false // Reset the flag
+      }));
+      setShowBarcodeScanner(false);
+      showNotification(`SKU scanned: ${barcode}`, 'success');
+      return;
+    }
+    
+    // Use enhanced search function for inventory search
     const foundItem = searchByBarcode(barcode);
     
     if (foundItem) {
@@ -695,13 +711,28 @@ export default function InventoryManagement() {
                 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">SKU *</label>
-                  <input
-                    type="text"
-                    value={formData.sku}
-                    onChange={(e) => setFormData({...formData, sku: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
-                    placeholder="Enter SKU"
-                  />
+                  <div className="flex space-x-2">
+                    <input
+                      type="text"
+                      value={formData.sku}
+                      onChange={(e) => setFormData({...formData, sku: e.target.value})}
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
+                      placeholder="Enter SKU or scan barcode"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowBarcodeScanner(true);
+                        // Set a flag to indicate this is for SKU scanning
+                        setFormData(prev => ({ ...prev, _scanningForSku: true }));
+                      }}
+                      className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors flex items-center space-x-2"
+                      title="Scan barcode for SKU"
+                    >
+                      <QrCode className="w-4 h-4" />
+                      <span className="hidden sm:inline">Scan</span>
+                    </button>
+                  </div>
                 </div>
                 
                 <div>
@@ -907,13 +938,28 @@ export default function InventoryManagement() {
                 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">SKU *</label>
-                  <input
-                    type="text"
-                    value={formData.sku}
-                    onChange={(e) => setFormData({...formData, sku: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
-                    placeholder="Enter SKU"
-                  />
+                  <div className="flex space-x-2">
+                    <input
+                      type="text"
+                      value={formData.sku}
+                      onChange={(e) => setFormData({...formData, sku: e.target.value})}
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
+                      placeholder="Enter SKU or scan barcode"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowBarcodeScanner(true);
+                        // Set a flag to indicate this is for SKU scanning
+                        setFormData(prev => ({ ...prev, _scanningForSku: true }));
+                      }}
+                      className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors flex items-center space-x-2"
+                      title="Scan barcode for SKU"
+                    >
+                      <QrCode className="w-4 h-4" />
+                      <span className="hidden sm:inline">Scan</span>
+                    </button>
+                  </div>
                 </div>
                 
                 <div>
