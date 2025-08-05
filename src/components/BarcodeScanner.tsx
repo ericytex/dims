@@ -541,11 +541,11 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
             }
           },
           locator: {
-            patchSize: "small",
-            halfSample: false
+            patchSize: "medium", // Changed from small to medium
+            halfSample: true     // Changed from false to true
           },
           numOfWorkers: 0, // Disable workers completely to avoid browser compatibility issues
-          frequency: 10,   // Reduced from 20 to 10 for better performance
+          frequency: 5,    // Reduced frequency for better compatibility
           decoder: {
             readers: [
               "code_128_reader",
@@ -566,8 +566,57 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
               stack: err.stack
             });
             
-            setErrorMessage('Failed to initialize scanner. Please refresh and try again.');
-            setIsInitializing(false);
+            // Try with even simpler configuration
+            console.log('Trying alternative Quagga configuration...');
+            Quagga.init({
+              inputStream: {
+                name: "Live",
+                type: "LiveStream",
+                target: videoRef.current,
+                constraints: {
+                  facingMode: "environment"
+                }
+              },
+              locator: {
+                patchSize: "large",
+                halfSample: true
+              },
+              numOfWorkers: 0,
+              frequency: 3,
+              decoder: {
+                readers: ["code_128_reader", "ean_reader"]
+              },
+              locate: false
+            }, (err2: any) => {
+              if (err2) {
+                console.error('Alternative Quagga configuration also failed:', err2);
+                setErrorMessage('Failed to initialize scanner. Please refresh and try again.');
+                setIsInitializing(false);
+                return;
+              }
+              
+              console.log('Alternative Quagga configuration succeeded');
+              setIsInitializing(false);
+              setIsScanning(true);
+              startFocusTimer();
+              
+              Quagga.onDetected((result: any) => {
+                console.log('Raw Quagga detection (alternative):', result);
+                handleDetection(result);
+              });
+              
+              Quagga.onError((error: any) => {
+                console.error('Quagga error (alternative):', error);
+              });
+              
+              try {
+                Quagga.start();
+                console.log('Alternative Quagga started successfully');
+              } catch (startError) {
+                console.error('Error starting alternative Quagga:', startError);
+              }
+            });
+            
             return;
           }
 
