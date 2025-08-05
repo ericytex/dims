@@ -222,13 +222,13 @@ export default function InventoryManagement() {
     const foundItem = searchByBarcode(barcode);
     
     if (foundItem) {
-      // If found, show the item details and highlight in list
+      // If found, set search term to the scanned barcode to filter the list
+      setSearchTerm(barcode);
+      
+      // Show the item details
       handleViewItem(foundItem);
       showNotification(`Found item: ${foundItem.name} (SKU: ${foundItem.sku})`, 'success');
       console.log('Item found:', foundItem);
-      
-      // Set search term to highlight the found item in the list
-      setSearchTerm(foundItem.sku);
       
       // Scroll to the item in the list (if needed)
       setTimeout(() => {
