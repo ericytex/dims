@@ -27,10 +27,15 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
   const [scanMode, setScanMode] = useState<'auto' | 'manual'>('auto');
   const [selectedFormat, setSelectedFormat] = useState<'all' | 'barcode' | 'qr'>('all');
   const [lastScannedResult, setLastScannedResult] = useState<{code: string, format: string} | null>(null);
+  const [focusTime, setFocusTime] = useState(0);
+  const [isFocused, setIsFocused] = useState(false);
+  const [scanLinePosition, setScanLinePosition] = useState(0);
   
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const focusTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const scanLineRef = useRef<NodeJS.Timeout | null>(null);
 
   // Helper function to validate barcode format
   const isValidBarcode = (code: string): boolean => {
@@ -105,14 +110,52 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
     }));
     
     // Check if this code was recently scanned
-    const recentScansList = recentScans.map(scan => scan.split('|')[1]);
-    if (recentScansList.includes(code)) {
-      return true;
-    }
+    return recentScans.some(scan => {
+      const [, scannedCode] = scan.split('|');
+      return scannedCode === code;
+    });
+  };
+
+  // Start focus timer when scanning begins
+  const startFocusTimer = () => {
+    setFocusTime(0);
+    setIsFocused(false);
     
-    // Add this scan to recent list
-    setRecentScans(prev => [...prev, `${now}|${code}`]);
-    return false;
+    focusTimerRef.current = setInterval(() => {
+      setFocusTime(prev => {
+        const newTime = prev + 1;
+        if (newTime >= 3) { // 3 seconds focus time
+          setIsFocused(true);
+          if (focusTimerRef.current) {
+            clearInterval(focusTimerRef.current);
+          }
+        }
+        return newTime;
+      });
+    }, 1000);
+  };
+
+  // Start scanning line animation
+  const startScanLineAnimation = () => {
+    setScanLinePosition(0);
+    
+    scanLineRef.current = setInterval(() => {
+      setScanLinePosition(prev => {
+        const newPosition = prev + 2;
+        if (newPosition >= 100) {
+          setScanLinePosition(0);
+        }
+        return newPosition;
+      });
+    }, 50); // Move line every 50ms for smooth animation
+  };
+
+  // Stop scanning line animation
+  const stopScanLineAnimation = () => {
+    if (scanLineRef.current) {
+      clearInterval(scanLineRef.current);
+      scanLineRef.current = null;
+    }
   };
 
   // Initialize scanner
@@ -219,6 +262,10 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
       
       console.log('Starting barcode scanner...');
       
+      // Start focus timer and scanning line animation
+      startFocusTimer();
+      startScanLineAnimation();
+      
       // Wait for video element to be properly mounted and ready
       let attempts = 0;
       while (!videoRef.current && attempts < 20) {
@@ -236,7 +283,7 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
       
       console.log('Video element ready, getting camera stream...');
       
-      // First, try to get camera permissions
+      // First, try to get camera permissions with enhanced settings
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ 
           video: { 
@@ -250,42 +297,49 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
           streamRef.current = stream;
+          
+          // Wait for video to be ready
+          await new Promise((resolve) => {
+            if (videoRef.current) {
+              videoRef.current.onloadedmetadata = resolve;
+            }
+          });
+          
+          console.log('Camera stream ready, initializing Quagga...');
         }
-        
-        console.log('Camera stream obtained successfully');
-      } catch (cameraError: any) {
-        console.error('Camera access failed:', cameraError);
-        setErrorMessage('Camera access denied. Please allow camera permissions.');
+      } catch (error) {
+        console.error('Failed to get camera stream:', error);
+        setErrorMessage('Failed to access camera. Please check permissions.');
         setIsScanning(false);
         setScanStatus('error');
         return;
       }
       
-      // Wait a bit more for video to be ready
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      // Try Quagga first, fallback to just camera if it fails
+      // Initialize Quagga with enhanced settings for better image processing
       try {
-        console.log('Attempting Quagga initialization...');
-        
-        // Configure Quagga for barcode detection
-        Quagga.init({
+        await Quagga.init({
           inputStream: {
             name: "Live",
             type: "LiveStream",
             target: videoRef.current,
             constraints: {
-              facingMode: "environment",
               width: { min: 640, ideal: 1280, max: 1920 },
-              height: { min: 480, ideal: 720, max: 1080 }
+              height: { min: 480, ideal: 720, max: 1080 },
+              facingMode: "environment"
             },
+            area: { // Define scanning area for better focus
+              top: "20%",
+              right: "10%",
+              left: "10%",
+              bottom: "20%"
+            }
           },
           locator: {
             patchSize: "medium",
             halfSample: true
           },
-          numOfWorkers: 2,
-          frequency: 5,
+          numOfWorkers: 4, // Increase workers for better processing
+          frequency: 10, // Increase frequency for more responsive scanning
           decoder: {
             readers: [
               "code_128_reader",
@@ -297,111 +351,43 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
             ]
           },
           locate: true
-        }, (err: any) => {
-          if (err) {
-            console.error('Quagga initialization failed:', err);
-            console.log('Error details:', {
-              name: err.name,
-              message: err.message,
-              stack: err.stack
-            });
-            console.log('Falling back to camera-only mode...');
-            setFallbackMode(true);
-            setErrorMessage('Barcode detection not available. Camera is ready for manual entry.');
-            return;
-          }
-          
-          console.log('Quagga initialized successfully');
-          
-          try {
-            Quagga.start();
-            console.log('Barcode scanner started successfully');
-            setFallbackMode(false);
-          } catch (startError: any) {
-            console.error('Failed to start Quagga:', startError);
-            console.log('Start error details:', {
-              name: startError.name,
-              message: startError.message,
-              stack: startError.stack
-            });
-            console.log('Falling back to camera-only mode...');
-            setFallbackMode(true);
-            setErrorMessage('Barcode detection not available. Camera is ready for manual entry.');
-          }
         });
-
-        // Listen for barcode detection
+        
+        console.log('Quagga initialized successfully');
+        
+        // Start Quagga
+        await Quagga.start();
+        console.log('Quagga started successfully');
+        
+        // Set up detection handler
         Quagga.onDetected((result: any) => {
-          try {
-            // Don't process if scanning is paused
-            if (isPaused) {
-              console.log('Scanning paused, ignoring barcode');
-              return;
-            }
-            
-            const code = result.codeResult.code;
-            const confidence = result.codeResult.confidence || 0;
-            const format = result.codeResult.format || getBarcodeFormat(code);
-            
-            console.log('Barcode detected:', code, 'Confidence:', confidence, 'Format:', format);
-            
-            // Check if this is a recent duplicate (within last 5 seconds)
-            if (isRecentDuplicate(code)) {
-              console.log('Recent duplicate ignored:', code);
-              return;
-            }
-            
-            // Temporarily disable confidence check to debug
-            // if (confidence < 0.6) {
-            //   console.log('Low confidence reading ignored:', confidence);
-            //   return;
-            // }
-            
-            // Temporarily disable validation to debug
-            // if (!isValidBarcode(code)) {
-            //   console.log('Invalid barcode format ignored:', code);
-            //   return;
-            // }
-            
-            // Validate format
-            // if (!isValidFormat(code, format)) {
-            //   console.log('Invalid barcode format ignored:', code);
-            //   return;
-            // }
-
-            console.log('Barcode confirmed:', code, 'Confidence:', confidence);
+          if (isPaused) return;
+          
+          const code = result.codeResult.code;
+          const format = result.codeResult.format;
+          
+          console.log('Barcode detected:', code, 'Format:', format);
+          
+          // Only process if camera is focused (after 3 seconds)
+          if (isFocused) {
             handleScan(code, format);
-          } catch (detectionError: any) {
-            console.error('Error processing detected barcode:', detectionError);
-          }
-        });
-
-        // Listen for processing
-        Quagga.onProcessed((result: any) => {
-          if (result) {
-            console.log('Processing barcode...');
-          }
-        });
-
-        // Listen for errors
-        Quagga.onError((error: any) => {
-          console.error('Quagga error:', error);
-          if (error.name !== 'NotFoundError') {
-            console.log('Falling back to camera-only mode...');
-            setFallbackMode(true);
-            setErrorMessage('Barcode detection not available. Camera is ready for manual entry.');
+          } else {
+            console.log('Camera not focused yet, ignoring scan');
           }
         });
         
-      } catch (quaggaError: any) {
-        console.error('Quagga failed completely:', quaggaError);
-        console.log('Falling back to camera-only mode...');
-        setFallbackMode(true);
-        setErrorMessage('Barcode detection not available. Camera is ready for manual entry.');
+        setScanStatus('scanning');
+        console.log('Scanner started successfully');
+        
+      } catch (error) {
+        console.error('Failed to initialize Quagga:', error);
+        setErrorMessage('Failed to initialize scanner. Please refresh and try again.');
+        setIsScanning(false);
+        setScanStatus('error');
       }
       
-    } catch (error: any) {
-      console.error('Scanner failed to start', error);
+    } catch (error) {
+      console.error('Error starting scanner:', error);
       setErrorMessage('Failed to start scanner. Please try again.');
       setIsScanning(false);
       setScanStatus('error');
@@ -409,41 +395,45 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
   };
 
   const stopScanning = () => {
-    console.log('Stopping scanner...');
+    console.log('Stopping barcode scanner...');
     
+    // Stop focus timer
+    if (focusTimerRef.current) {
+      clearInterval(focusTimerRef.current);
+      focusTimerRef.current = null;
+    }
+    
+    // Stop scanning line animation
+    stopScanLineAnimation();
+    
+    // Reset focus states
+    setFocusTime(0);
+    setIsFocused(false);
+    setScanLinePosition(0);
+    
+    // Stop Quagga
     try {
-      // Stop Quagga (only if not in fallback mode)
-      if (!fallbackMode) {
-        Quagga.stop();
-      }
+      Quagga.stop();
+      console.log('Quagga stopped successfully');
     } catch (error) {
       console.error('Error stopping Quagga:', error);
     }
     
     // Stop camera stream
     if (streamRef.current) {
-      try {
-        streamRef.current.getTracks().forEach(track => track.stop());
-      } catch (error) {
-        console.error('Error stopping camera stream:', error);
-      }
+      streamRef.current.getTracks().forEach(track => track.stop());
       streamRef.current = null;
     }
     
+    // Clear video element
     if (videoRef.current) {
-      try {
-        videoRef.current.srcObject = null;
-      } catch (error) {
-        console.error('Error clearing video element:', error);
-      }
+      videoRef.current.srcObject = null;
     }
     
     setIsScanning(false);
     setScanStatus('idle');
     setErrorMessage('');
-    setFallbackMode(false);
-    setIsPaused(false);
-    setLastScannedCode('');
+    console.log('Scanner stopped successfully');
   };
 
   const handleManualSubmit = (e: React.FormEvent) => {
@@ -648,7 +638,16 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
                       <div className="absolute bottom-0 left-0 w-8 h-8 border-l-2 border-b-2 border-blue-500"></div>
                       <div className="absolute bottom-0 right-0 w-8 h-8 border-r-2 border-b-2 border-blue-500"></div>
                       
-                      {/* Status indicator */}
+                      {/* Scanning line */}
+                      <div 
+                        className="absolute left-0 right-0 h-0.5 bg-red-500 animate-pulse"
+                        style={{ 
+                          top: `${scanLinePosition}%`,
+                          transition: 'top 0.05s linear'
+                        }}
+                      ></div>
+                      
+                      {/* Focus indicator */}
                       <div className="absolute top-2 left-2">
                         <div className={`px-2 py-1 rounded text-xs font-medium ${
                           scanStatus === 'scanning' ? 'bg-blue-100 text-blue-800' :
@@ -661,6 +660,18 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
                            scanStatus === 'error' ? 'Error' : 'Ready'}
                         </div>
                       </div>
+                      
+                      {/* Focus status */}
+                      <div className="absolute top-2 right-2">
+                        <div className={`px-2 py-1 rounded text-xs font-medium ${
+                          isFocused ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+                        }`}>
+                          {isFocused ? 'Focused' : `Focusing... (${3 - focusTime}s)`}
+                        </div>
+                      </div>
+                      
+                      {/* Scanning area indicator */}
+                      <div className="absolute inset-0 border-2 border-dashed border-red-400 opacity-50 m-4"></div>
                     </div>
                   )}
                 </div>
