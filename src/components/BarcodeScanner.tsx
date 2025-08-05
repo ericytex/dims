@@ -504,10 +504,18 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
       if (videoRef.current) {
         videoRef.current.style.display = 'block';
         console.log('Video element display set to block');
+        console.log('Video element style after setting:', videoRef.current.style.display);
+        console.log('Video element classList:', videoRef.current.classList.toString());
       }
 
       // Small delay to ensure video is properly displayed
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise(resolve => setTimeout(resolve, 200)); // Increased delay
+      
+      // Double-check video is visible
+      if (videoRef.current) {
+        console.log('Video element final state - display:', videoRef.current.style.display);
+        console.log('Video element final state - classList:', videoRef.current.classList.toString());
+      }
 
       // Configure Quagga with enhanced accuracy settings
       console.log('Starting Quagga initialization...');
@@ -937,7 +945,7 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
                   <div className="aspect-video bg-gray-100 flex items-center justify-center">
                     <video
                       ref={videoRef}
-                      className={`w-full h-full object-cover ${isScanning ? 'block' : 'hidden'}`}
+                      className="w-full h-full object-cover"
                       autoPlay
                       playsInline
                       muted
