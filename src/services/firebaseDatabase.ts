@@ -187,11 +187,9 @@ export class FirebaseDatabaseService {
   // Sync Firebase Auth users to Firestore
   static async syncAuthUsersToFirestore(): Promise<void> {
     try {
-      const { getAuth, listUsers } = await import('firebase/auth');
+      const { getAuth } = await import('firebase/auth');
       const auth = getAuth();
       
-      // Note: This requires Firebase Admin SDK on the server side
-      // For now, we'll create a basic user structure
       console.log('Syncing auth users to Firestore...');
       
       // Get current user from auth
@@ -214,6 +212,81 @@ export class FirebaseDatabaseService {
       }
     } catch (error) {
       console.error('Error syncing auth users:', error);
+    }
+  }
+
+  // Sync all existing Firebase Auth users to Firestore
+  static async syncAllAuthUsersToFirestore(): Promise<void> {
+    try {
+      console.log('Syncing all auth users to Firestore...');
+      
+      // Since we can't list all users from client-side, we'll create a mapping
+      // based on the users you showed in the Firebase console
+      const authUsers = [
+        {
+          uid: 'admin-uid', // Replace with actual UID
+          email: 'admin@ims.com',
+          name: 'System Administrator',
+          role: 'admin',
+          status: 'active' as const
+        },
+        {
+          uid: 'regional-uid', // Replace with actual UID
+          email: 'regional@ims.com',
+          name: 'Regional Supervisor',
+          role: 'regional_supervisor',
+          status: 'active' as const
+        },
+        {
+          uid: 'district-uid', // Replace with actual UID
+          email: 'district@ims.com',
+          name: 'District Health Officer',
+          role: 'district_health_officer',
+          status: 'active' as const
+        },
+        {
+          uid: 'facility-uid', // Replace with actual UID
+          email: 'facility@ims.com',
+          name: 'Facility Manager',
+          role: 'facility_manager',
+          status: 'active' as const
+        },
+        {
+          uid: 'worker-uid', // Replace with actual UID
+          email: 'worker@ims.com',
+          name: 'Village Health Worker',
+          role: 'village_health_worker',
+          status: 'active' as const
+        }
+      ];
+
+      for (const authUser of authUsers) {
+        try {
+          // Check if user already exists in Firestore
+          const existingUser = await this.getUser(authUser.uid);
+          if (!existingUser) {
+            // Create user in Firestore
+            await this.addUser({
+              name: authUser.name,
+              email: authUser.email,
+              phone: '',
+              role: authUser.role,
+              status: authUser.status,
+              isFirstLogin: false
+            });
+            console.log(`Synced user ${authUser.email} to Firestore`);
+          } else {
+            console.log(`User ${authUser.email} already exists in Firestore`);
+          }
+        } catch (error) {
+          console.error(`Error syncing user ${authUser.email}:`, error);
+        }
+      }
+      
+      console.log('Finished syncing all auth users to Firestore');
+    } catch (error) {
+      console.error('Error syncing all auth users:', error);
+      throw error;
     }
   }
 

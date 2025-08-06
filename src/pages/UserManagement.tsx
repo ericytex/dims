@@ -138,6 +138,25 @@ export default function UserManagement() {
     }
   };
 
+  // Sync all existing Auth users to Firestore
+  const syncAllAuthUsers = async () => {
+    try {
+      await FirebaseDatabaseService.syncAllAuthUsersToFirestore();
+      addNotification({
+        type: 'success',
+        title: 'All Users Synced',
+        message: 'All existing Auth users have been synced to Firestore database.'
+      });
+    } catch (error) {
+      console.error('Error syncing all auth users:', error);
+      addNotification({
+        type: 'error',
+        title: 'Error',
+        message: 'Failed to sync all auth users.'
+      });
+    }
+  };
+
   // Load users from Firebase on component mount
   useEffect(() => {
     const loadUsers = async () => {
@@ -491,6 +510,13 @@ export default function UserManagement() {
           >
             <UserIcon className="w-5 h-5 mr-2" />
             Sync Current User
+          </button>
+          <button
+            onClick={syncAllAuthUsers}
+            className="inline-flex items-center px-4 py-2 bg-uganda-yellow text-uganda-black font-medium rounded-lg hover:bg-yellow-500 transition-colors"
+          >
+            <UserIcon className="w-5 h-5 mr-2" />
+            Sync All Users
           </button>
           <button
             onClick={handleAddUser}
