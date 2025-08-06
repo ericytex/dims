@@ -41,8 +41,8 @@ const navigation: NavItem[] = [
       roles: ['admin', 'regional_supervisor', 'district_health_officer', 'facility_manager']
     },
     {
-      name: 'Role Permissions',
-      href: '/role-permissions',
+      name: 'Roles Management',
+      href: '/roles-management',
       icon: Shield,
       roles: ['admin', 'regional_supervisor', 'district_health_officer']
     },
