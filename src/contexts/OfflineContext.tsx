@@ -147,17 +147,80 @@ export const OfflineProvider: React.FC<OfflineProviderProps> = ({ children }) =>
         total: totalItems,
       }));
 
-      // For now, we'll just mark items as synced
-      // In a real implementation, you'd sync with Firebase
-      await offlineDB.clearSyncedData();
-      
+      let completedItems = 0;
+
+      // Sync inventory items to Firebase
+      for (const item of pendingItems.inventory) {
+        try {
+          setSyncProgress(prev => ({
+            ...prev,
+            current: `Syncing inventory item: ${item.name}`,
+            completed: completedItems,
+          }));
+
+          // Import Firebase functions dynamically to avoid SSR issues
+          const { FirebaseDatabaseService } = await import('../services/firebaseDatabase');
+          
+          if (item.type === 'add') {
+            // Add new item to Firebase
+            await FirebaseDatabaseService.addInventoryItem({
+              name: item.name,
+              description: item.description,
+              category: item.category,
+              sku: item.sku,
+              unit: item.unit,
+              currentStock: item.currentStock,
+              minStock: item.minStock,
+              maxStock: item.maxStock,
+              cost: item.cost,
+              supplier: item.supplier,
+              facilityId: item.facility,
+              location: item.location,
+              expiryDate: item.expiryDate,
+              status: item.status
+            });
+          } else if (item.type === 'update') {
+            // Update existing item in Firebase
+            await FirebaseDatabaseService.updateInventoryItem(item.id, {
+              name: item.name,
+              description: item.description,
+              category: item.category,
+              sku: item.sku,
+              unit: item.unit,
+              currentStock: item.currentStock,
+              minStock: item.minStock,
+              maxStock: item.maxStock,
+              cost: item.cost,
+              supplier: item.supplier,
+              facilityId: item.facility,
+              location: item.location,
+              expiryDate: item.expiryDate,
+              status: item.status
+            });
+          }
+
+          // Mark as synced in offline database
+          await offlineDB.updateInventorySyncStatus(item.id, 'synced');
+          completedItems++;
+        } catch (error) {
+          console.error(`Failed to sync inventory item ${item.id}:`, error);
+          await offlineDB.updateInventorySyncStatus(item.id, 'failed');
+          completedItems++;
+        }
+      }
+
+      // For now, skip transactions and transfers (implement later)
+      // TODO: Implement sync for transactions and transfers
+
       setSyncProgress({
         total: totalItems,
-        completed: totalItems,
+        completed: completedItems,
         current: 'Sync completed',
         status: 'completed',
       });
 
+      // Update last sync time
+      await offlineDB.setLastSyncTime();
       await updateStats();
       console.log('Offline data synced successfully');
     } catch (error) {

@@ -43,7 +43,7 @@ interface InventoryItem {
 
 export default function InventoryManagement() {
   const { showNotification } = useNotification();
-  const { isOnline, addOfflineInventoryUpdate } = useOffline();
+  const { isOnline, addOfflineInventoryUpdate, syncOfflineData, isSyncing, pendingCount } = useOffline();
   const { user } = useFirebaseAuth();
   const { 
     inventoryItems, 
@@ -452,14 +452,43 @@ export default function InventoryManagement() {
       {/* Offline Status Indicator */}
       {!isOnline && (
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-          <div className="flex items-center space-x-2">
-            <AlertTriangle className="w-5 h-5 text-yellow-600" />
-            <div>
-              <h3 className="text-sm font-medium text-yellow-800">Offline Mode</h3>
-              <p className="text-sm text-yellow-700">
-                You're currently offline. Items will be saved locally and synced when you're back online.
-              </p>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <AlertTriangle className="w-5 h-5 text-yellow-600" />
+              <div>
+                <h3 className="text-sm font-medium text-yellow-800">Offline Mode</h3>
+                <p className="text-sm text-yellow-700">
+                  You're currently offline. Items will be saved locally and synced when you're back online.
+                </p>
+              </div>
             </div>
+            <div className="text-sm text-yellow-700">
+              Pending: {pendingCount} items
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Online Sync Status */}
+      {isOnline && pendingCount > 0 && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <AlertTriangle className="w-5 h-5 text-blue-600" />
+              <div>
+                <h3 className="text-sm font-medium text-blue-800">Sync Available</h3>
+                <p className="text-sm text-blue-700">
+                  You have {pendingCount} offline items ready to sync.
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={syncOfflineData}
+              disabled={isSyncing}
+              className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+            >
+              {isSyncing ? 'Syncing...' : 'Sync Now'}
+            </button>
           </div>
         </div>
       )}
