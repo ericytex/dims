@@ -412,8 +412,12 @@ export default function UserManagement() {
           isFirstLogin: true
         };
 
+        console.log('Attempting to add user with data:', newUserData);
+
         // Add user to Firebase
         const userId = await FirebaseDatabaseService.addUser(newUserData);
+        
+        console.log('User added successfully with ID:', userId);
         
         // Show password to admin
         addNotification({
@@ -444,12 +448,17 @@ export default function UserManagement() {
       }
 
       setShowModal(false);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving user:', error);
+      console.error('Error details:', {
+        message: error.message,
+        code: error.code,
+        stack: error.stack
+      });
       addNotification({
         type: 'error',
         title: 'Error',
-        message: 'Failed to save user. Please try again.'
+        message: `Failed to save user: ${error.message || 'Unknown error'}. Please try again.`
       });
     }
   };

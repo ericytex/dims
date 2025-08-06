@@ -325,14 +325,23 @@ export class FirebaseDatabaseService {
 
   static async addDocument<T>(collectionName: string, data: Omit<T, 'id'>): Promise<string> {
     try {
+      console.log(`Adding document to ${collectionName}:`, data);
+      
       const docRef = await addDoc(collection(db, collectionName), {
         ...data,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp()
       });
+      
+      console.log(`Document added successfully to ${collectionName} with ID:`, docRef.id);
       return docRef.id;
-    } catch (error) {
+    } catch (error: any) {
       console.error(`Error adding document to ${collectionName}:`, error);
+      console.error('Error details:', {
+        message: error.message,
+        code: error.code,
+        stack: error.stack
+      });
       throw error;
     }
   }
