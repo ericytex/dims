@@ -38,7 +38,7 @@ export default function UserManagement() {
     district: '',
     status: 'active' as 'active' | 'inactive',
     password: '',
-    sendCredentials: true
+    sendCredentials: false // Changed to false since we're not using email
   });
 
   const { addNotification } = useNotification();
@@ -322,7 +322,7 @@ export default function UserManagement() {
       district: '',
       status: 'active',
       password: '',
-      sendCredentials: true
+      sendCredentials: false
     });
     setShowModal(true);
   };
@@ -384,51 +384,48 @@ export default function UserManagement() {
   };
 
   const handleSaveUser = async () => {
-    if (!formData.name || !formData.email || !formData.phone) {
+    if (!formData.name || !formData.phone) {
       addNotification({
         type: 'error',
         title: 'Validation Error',
-        message: 'Please fill in all required fields.'
+        message: 'Please fill in name and phone number (email is optional).'
       });
       return;
     }
 
     try {
       if (modalType === 'add') {
-        // Generate temporary password for new user
-        const tempPassword = generateTempPassword();
+        // Generate password if not provided
+        const userPassword = formData.password || generateTempPassword();
         
         const newUserData = {
           name: formData.name,
-          email: formData.email,
+          email: formData.email || '', // Email is optional
           phone: formData.phone,
           role: formData.role,
           facilityName: formData.facilityName || undefined,
           region: formData.region || undefined,
           district: formData.district || undefined,
           status: formData.status,
-          tempPassword: tempPassword,
+          password: userPassword, // Store the password
+          tempPassword: userPassword,
           isFirstLogin: true
         };
 
         // Add user to Firebase
         const userId = await FirebaseDatabaseService.addUser(newUserData);
         
-        // Send credentials if requested
-        if (formData.sendCredentials) {
-          await sendCredentialsEmail({ ...newUserData, id: userId }, tempPassword);
-        } else {
-          addNotification({
-            type: 'success',
-            title: 'User Added',
-            message: `${formData.name} has been added. Temporary password: ${tempPassword}`
-          });
-        }
+        // Show password to admin
+        addNotification({
+          type: 'success',
+          title: 'User Added Successfully',
+          message: `User "${formData.name}" added. Password: ${userPassword} - Please share this password with the user.`
+        });
       } else {
         // Update existing user
         const updateData = {
           name: formData.name,
-          email: formData.email,
+          email: formData.email || '',
           phone: formData.phone,
           role: formData.role,
           facilityName: formData.facilityName || undefined,
@@ -866,14 +863,14 @@ export default function UserManagement() {
                     
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Email Address *
+                        Email Address (Optional)
                       </label>
                       <input
                         type="email"
                         value={formData.email}
                         onChange={(e) => setFormData({...formData, email: e.target.value})}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
-                        placeholder="user@dims.go.ug"
+                        placeholder="user@dims.go.ug (optional)"
                       />
                     </div>
                     
@@ -889,6 +886,21 @@ export default function UserManagement() {
                         placeholder="+256700000000"
                       />
                     </div>
+
+                    {modalType === 'add' && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Password (Optional - will generate if empty)
+                        </label>
+                        <input
+                          type="text"
+                          value={formData.password}
+                          onChange={(e) => setFormData({...formData, password: e.target.value})}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
+                          placeholder="Leave empty to auto-generate"
+                        />
+                      </div>
+                    )}
                     
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
