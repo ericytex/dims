@@ -30,50 +30,50 @@ const navigation: NavItem[] = [
     {
       name: 'Dashboard',
       href: '/dashboard',
-    icon: LayoutDashboard,
-    roles: ['admin', 'regional_manager', 'district_manager', 'facility_manager', 'inventory_worker']
+      icon: LayoutDashboard,
+      roles: ['admin', 'regional_supervisor', 'district_health_officer', 'facility_manager', 'village_health_worker']
     },
     {
-    name: 'Users',
+      name: 'Users',
       href: '/users',
       icon: Users,
-    roles: ['admin', 'regional_manager', 'district_manager', 'facility_manager', 'inventory_worker']
+      roles: ['admin', 'regional_supervisor', 'district_health_officer', 'facility_manager']
     },
     {
       name: 'Facilities',
       href: '/facilities',
       icon: Building,
-    roles: ['admin', 'regional_manager', 'district_manager', 'facility_manager']
+      roles: ['admin', 'regional_supervisor', 'district_health_officer', 'facility_manager']
     },
     {
       name: 'Inventory',
       href: '/inventory',
       icon: Package,
-    roles: ['admin', 'regional_manager', 'district_manager', 'facility_manager']
+      roles: ['admin', 'regional_supervisor', 'district_health_officer', 'facility_manager', 'village_health_worker']
     },
     {
-    name: 'Transactions',
+      name: 'Transactions',
       href: '/transactions',
-    icon: FileText,
-    roles: ['admin', 'regional_manager', 'district_manager', 'facility_manager']
+      icon: FileText,
+      roles: ['admin', 'regional_supervisor', 'district_health_officer', 'facility_manager', 'village_health_worker']
     },
     {
       name: 'Transfers',
       href: '/transfers',
-    icon: ArrowLeftRight,
-    roles: ['admin', 'regional_manager', 'district_manager', 'facility_manager']
+      icon: ArrowLeftRight,
+      roles: ['admin', 'regional_supervisor', 'district_health_officer', 'facility_manager']
     },
     {
       name: 'Reports',
       href: '/reports',
       icon: BarChart3,
-    roles: ['admin', 'regional_manager', 'district_manager', 'facility_manager']
+      roles: ['admin', 'regional_supervisor', 'district_health_officer', 'facility_manager']
     },
     {
       name: 'Database Test',
       href: '/database-test',
       icon: Database,
-    roles: ['admin']
+      roles: ['admin']
     }
   ];
 
@@ -82,6 +82,12 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
   const location = useLocation();
 
   const filteredNavigation = navigation.filter(item => user && item.roles.includes(user.role));
+  
+  // Debug logging
+  console.log('Current user:', user);
+  console.log('User role:', user?.role);
+  console.log('Available navigation items:', navigation.map(item => ({ name: item.name, roles: item.roles })));
+  console.log('Filtered navigation items:', filteredNavigation.map(item => item.name));
 
   return (
     <>
