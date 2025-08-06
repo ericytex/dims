@@ -1,16 +1,22 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNotification } from '../contexts/NotificationContext';
+import { useFirebaseAuth } from '../hooks/useFirebaseAuth';
 import {
   Plus,
   Search,
   Edit,
-  Trash2,
   Eye,
-  X,
+  Trash2,
   User,
   Mail,
   Phone,
-  MapPin
+  Building,
+  MapPin,
+  Lock,
+  Key,
+  Send,
+  RefreshCw,
+  X
 } from 'lucide-react';
 
 interface User {
@@ -24,24 +30,28 @@ interface User {
   lastLogin?: string;
   region?: string;
   district?: string;
+  password?: string;
+  isFirstLogin?: boolean;
+  tempPassword?: string;
 }
 
 export default function UserManagement() {
   const [users, setUsers] = useState<User[]>([
     {
       id: '1',
-      name: 'DIMS Administrator',
-      email: 'admin@dims.go.ug',
-      phone: '+256700000001',
+      name: 'John Mukasa',
+      email: 'john.mukasa@ims.com',
+      phone: '+256 701 234 567',
       role: 'admin',
+      facilityName: 'Main Office',
       status: 'active',
       lastLogin: '2025-01-09 14:30'
     },
     {
       id: '2',
-      name: 'Regional Supervisor',
-      email: 'regional@dims.go.ug',
-      phone: '+256700000002',
+      name: 'Mary Nambi',
+      email: 'mary.nambi@ims.com',
+      phone: '+256 702 345 678',
       role: 'regional_supervisor',
       region: 'Central Region',
       status: 'active',
@@ -49,38 +59,37 @@ export default function UserManagement() {
     },
     {
       id: '3',
-      name: 'Dr. Sarah Nakato',
-      email: 'sarah.nakato@dims.go.ug',
-      phone: '+256700000003',
-      role: 'district_health_officer',
-      district: 'Kampala District',
+      name: 'James Ssebunya',
+      email: 'james.ssebunya@ims.com',
+      phone: '+256 703 456 789',
+      role: 'facility_manager',
+      facilityName: 'Kampala Hospital',
       status: 'active',
-      lastLogin: '2025-01-09 11:45'
+      lastLogin: '2025-01-09 12:45'
     },
     {
       id: '4',
-      name: 'John Mukasa',
-      email: 'john.mukasa@dims.go.ug',
-      phone: '+256700000004',
-      role: 'facility_manager',
-      facilityName: 'Mulago National Referral Hospital',
+      name: 'Sarah Nakato',
+      email: 'sarah.nakato@ims.com',
+      phone: '+256 704 567 890',
+      role: 'district_health_officer',
+      district: 'Kampala District',
       status: 'active',
-      lastLogin: '2025-01-09 10:20'
+      lastLogin: '2025-01-09 11:30'
     },
     {
       id: '5',
-      name: 'Mary Nambi',
-      email: 'mary.nambi@dims.go.ug',
-      phone: '+256700000005',
+      name: 'David Ochieng',
+      email: 'david.ochieng@ims.com',
+      phone: '+256 705 678 901',
       role: 'village_health_worker',
-      facilityName: 'Kawempe Health Center IV',
+      district: 'Wakiso District',
       status: 'inactive',
-      lastLogin: '2025-01-08 16:30'
+      lastLogin: '2025-01-08 16:20'
     }
   ]);
 
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedRole, setSelectedRole] = useState('all');
   const [showModal, setShowModal] = useState(false);
   const [modalType, setModalType] = useState<'add' | 'edit' | 'view'>('add');
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
@@ -88,29 +97,83 @@ export default function UserManagement() {
     name: '',
     email: '',
     phone: '',
-    role: 'facility_manager' as const,
+    role: 'village_health_worker',
     facilityName: '',
     region: '',
     district: '',
-    status: 'active' as const
+    status: 'active' as const,
+    password: '',
+    sendCredentials: true
   });
+
   const { addNotification } = useNotification();
+  const { user: currentUser } = useFirebaseAuth();
 
   const roles = [
-    { value: 'all', label: 'All Roles' },
-    { value: 'admin', label: 'Administrator' },
+    { value: 'admin', label: 'System Administrator' },
     { value: 'regional_supervisor', label: 'Regional Supervisor' },
     { value: 'district_health_officer', label: 'District Health Officer' },
     { value: 'facility_manager', label: 'Facility Manager' },
     { value: 'village_health_worker', label: 'Village Health Worker' }
   ];
 
-  const filteredUsers = users.filter(user => {
-    const matchesSearch = user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         user.email.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesRole = selectedRole === 'all' || user.role === selectedRole;
-    return matchesSearch && matchesRole;
-  });
+  const facilities = [
+    { value: '', label: 'Select Facility' },
+    { value: 'Main Office', label: 'Main Office' },
+    { value: 'Kampala Hospital', label: 'Kampala Hospital' },
+    { value: 'Mulago Hospital', label: 'Mulago Hospital' },
+    { value: 'Jinja Hospital', label: 'Jinja Hospital' }
+  ];
+
+  const regions = [
+    { value: '', label: 'Select Region' },
+    { value: 'Central Region', label: 'Central Region' },
+    { value: 'Eastern Region', label: 'Eastern Region' },
+    { value: 'Northern Region', label: 'Northern Region' },
+    { value: 'Western Region', label: 'Western Region' }
+  ];
+
+  const districts = [
+    { value: '', label: 'Select District' },
+    { value: 'Kampala District', label: 'Kampala District' },
+    { value: 'Wakiso District', label: 'Wakiso District' },
+    { value: 'Jinja District', label: 'Jinja District' },
+    { value: 'Gulu District', label: 'Gulu District' }
+  ];
+
+  const filteredUsers = users.filter(user =>
+    user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    user.phone.includes(searchTerm)
+  );
+
+  // Generate temporary password
+  const generateTempPassword = () => {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    let password = '';
+    for (let i = 0; i < 8; i++) {
+      password += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return password;
+  };
+
+  // Send credentials via email (simulated)
+  const sendCredentialsEmail = async (user: User, tempPassword: string) => {
+    // In a real implementation, this would send an actual email
+    console.log(`Sending credentials to ${user.email}:`);
+    console.log(`Email: ${user.email}`);
+    console.log(`Temporary Password: ${tempPassword}`);
+    console.log('User must change password on first login');
+    
+    // Simulate email sending
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    addNotification({
+      type: 'success',
+      title: 'Credentials Sent',
+      message: `Login credentials have been sent to ${user.email}`
+    });
+  };
 
   const handleAddUser = () => {
     setModalType('add');
@@ -119,11 +182,13 @@ export default function UserManagement() {
       name: '',
       email: '',
       phone: '',
-      role: 'facility_manager',
+      role: 'village_health_worker',
       facilityName: '',
       region: '',
       district: '',
-      status: 'active'
+      status: 'active',
+      password: '',
+      sendCredentials: true
     });
     setShowModal(true);
   };
@@ -135,11 +200,13 @@ export default function UserManagement() {
       name: user.name,
       email: user.email,
       phone: user.phone,
-      role: user.role as any,
+      role: user.role,
       facilityName: user.facilityName || '',
       region: user.region || '',
       district: user.district || '',
-      status: user.status
+      status: user.status,
+      password: '',
+      sendCredentials: false
     });
     setShowModal(true);
   };
@@ -147,6 +214,18 @@ export default function UserManagement() {
   const handleViewUser = (user: User) => {
     setModalType('view');
     setSelectedUser(user);
+    setFormData({
+      name: user.name,
+      email: user.email,
+      phone: user.phone,
+      role: user.role,
+      facilityName: user.facilityName || '',
+      region: user.region || '',
+      district: user.district || '',
+      status: user.status,
+      password: '',
+      sendCredentials: false
+    });
     setShowModal(true);
   };
 
@@ -161,7 +240,7 @@ export default function UserManagement() {
     }
   };
 
-  const handleSaveUser = () => {
+  const handleSaveUser = async () => {
     if (!formData.name || !formData.email || !formData.phone) {
       addNotification({
         type: 'error',
@@ -171,28 +250,50 @@ export default function UserManagement() {
       return;
     }
 
-    const newUser: User = {
-      id: modalType === 'add' ? (users.length + 1).toString() : selectedUser!.id,
-      name: formData.name,
-      email: formData.email,
-      phone: formData.phone,
-      role: formData.role,
-      facilityName: formData.facilityName || undefined,
-      region: formData.region || undefined,
-      district: formData.district || undefined,
-      status: formData.status,
-      lastLogin: modalType === 'add' ? undefined : selectedUser!.lastLogin
-    };
-
     if (modalType === 'add') {
+      // Generate temporary password for new user
+      const tempPassword = generateTempPassword();
+      
+      const newUser: User = {
+        id: (users.length + 1).toString(),
+        name: formData.name,
+        email: formData.email,
+        phone: formData.phone,
+        role: formData.role,
+        facilityName: formData.facilityName || undefined,
+        region: formData.region || undefined,
+        district: formData.district || undefined,
+        status: formData.status,
+        tempPassword: tempPassword,
+        isFirstLogin: true
+      };
+
       setUsers([...users, newUser]);
-      addNotification({
-        type: 'success',
-        title: 'User Added',
-        message: `${formData.name} has been successfully added.`
-      });
+      
+      // Send credentials if requested
+      if (formData.sendCredentials) {
+        await sendCredentialsEmail(newUser, tempPassword);
+      } else {
+        addNotification({
+          type: 'success',
+          title: 'User Added',
+          message: `${formData.name} has been added. Temporary password: ${tempPassword}`
+        });
+      }
     } else {
-      setUsers(users.map(user => user.id === selectedUser!.id ? newUser : user));
+      const updatedUser: User = {
+        ...selectedUser!,
+        name: formData.name,
+        email: formData.email,
+        phone: formData.phone,
+        role: formData.role,
+        facilityName: formData.facilityName || undefined,
+        region: formData.region || undefined,
+        district: formData.district || undefined,
+        status: formData.status
+      };
+
+      setUsers(users.map(user => user.id === selectedUser!.id ? updatedUser : user));
       addNotification({
         type: 'success',
         title: 'User Updated',
@@ -201,6 +302,26 @@ export default function UserManagement() {
     }
 
     setShowModal(false);
+  };
+
+  const handleResetPassword = async (user: User) => {
+    const tempPassword = generateTempPassword();
+    
+    const updatedUser = {
+      ...user,
+      tempPassword: tempPassword,
+      isFirstLogin: true
+    };
+
+    setUsers(users.map(u => u.id === user.id ? updatedUser : u));
+    
+    await sendCredentialsEmail(updatedUser, tempPassword);
+    
+    addNotification({
+      type: 'success',
+      title: 'Password Reset',
+      message: `New temporary password has been sent to ${user.email}`
+    });
   };
 
   const getRoleColor = (role: string) => {
@@ -260,8 +381,8 @@ export default function UserManagement() {
           </div>
           <div className="sm:w-48">
             <select
-              value={selectedRole}
-              onChange={(e) => setSelectedRole(e.target.value)}
+              value={formData.role}
+              onChange={(e) => setFormData({...formData, role: e.target.value as any})}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
             >
               {roles.map(role => (
@@ -356,6 +477,13 @@ export default function UserManagement() {
                         <Edit className="w-4 h-4" />
                       </button>
                       <button
+                        onClick={() => handleResetPassword(user)}
+                        className="text-yellow-600 hover:text-yellow-900"
+                        title="Reset password"
+                      >
+                        <RefreshCw className="w-4 h-4" />
+                      </button>
+                      <button
                         onClick={() => handleDeleteUser(user)}
                         className="text-uganda-red hover:text-red-900"
                         title="Delete user"
@@ -410,6 +538,13 @@ export default function UserManagement() {
                   title="Edit User"
                 >
                   <Edit className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => handleResetPassword(user)}
+                  className="text-yellow-400 hover:text-yellow-600 transition-colors p-2 rounded-md hover:bg-yellow-50"
+                  title="Reset Password"
+                >
+                  <RefreshCw className="w-4 h-4" />
                 </button>
                 <button
                   onClick={() => handleDeleteUser(user)}
@@ -626,6 +761,59 @@ export default function UserManagement() {
                       </div>
                     )}
                   </div>
+                  
+                  {/* Password Management Section - Only for new users */}
+                  {modalType === 'add' && (
+                    <div className="border-t border-gray-200 pt-4 mt-4">
+                      <h4 className="text-sm font-medium text-gray-900 mb-3 flex items-center">
+                        <Lock className="w-4 h-4 mr-2" />
+                        Password Management
+                      </h4>
+                      
+                      <div className="space-y-3">
+                        <div className="flex items-center space-x-3">
+                          <input
+                            type="checkbox"
+                            id="sendCredentials"
+                            checked={formData.sendCredentials}
+                            onChange={(e) => setFormData({...formData, sendCredentials: e.target.checked})}
+                            className="h-4 w-4 text-uganda-yellow focus:ring-uganda-yellow border-gray-300 rounded"
+                          />
+                          <label htmlFor="sendCredentials" className="text-sm text-gray-700">
+                            Send login credentials via email
+                          </label>
+                        </div>
+                        
+                        {formData.sendCredentials && (
+                          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                            <div className="flex items-start space-x-2">
+                              <Send className="w-4 h-4 text-blue-600 mt-0.5" />
+                              <div className="text-sm text-blue-800">
+                                <p className="font-medium">Credentials will be sent to: {formData.email}</p>
+                                <p className="text-blue-700 mt-1">
+                                  User will receive a temporary password and must change it on first login.
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                        
+                        {!formData.sendCredentials && (
+                          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                            <div className="flex items-start space-x-2">
+                              <Key className="w-4 h-4 text-yellow-600 mt-0.5" />
+                              <div className="text-sm text-yellow-800">
+                                <p className="font-medium">Manual Password Setup</p>
+                                <p className="text-yellow-700 mt-1">
+                                  You'll need to manually provide the temporary password to the user.
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
                   
                   <div className="flex space-x-3 pt-4">
                     <button
