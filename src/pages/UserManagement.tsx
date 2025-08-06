@@ -122,12 +122,45 @@ export default function UserManagement() {
   // Sync current auth user to Firestore
   const syncCurrentUser = async () => {
     try {
-      await FirebaseDatabaseService.syncAuthUsersToFirestore();
-      addNotification({
-        type: 'success',
-        title: 'User Synced',
-        message: 'Current user has been synced to Firestore database.'
-      });
+      const { getAuth } = await import('firebase/auth');
+      const auth = getAuth();
+      const currentUser = auth.currentUser;
+      
+      if (currentUser) {
+        // Check if user already exists in Firestore
+        const existingUsers = await FirebaseDatabaseService.getUsers();
+        const existingUser = existingUsers.find(u => u.email === currentUser.email);
+        
+        if (!existingUser) {
+          // Create user in Firestore
+          await FirebaseDatabaseService.addUser({
+            name: currentUser.displayName || 'Admin User',
+            email: currentUser.email || '',
+            phone: '',
+            role: 'admin',
+            status: 'active',
+            isFirstLogin: false
+          });
+          
+          addNotification({
+            type: 'success',
+            title: 'User Synced',
+            message: `Current user ${currentUser.email} has been synced to Firestore database.`
+          });
+        } else {
+          addNotification({
+            type: 'info',
+            title: 'User Already Exists',
+            message: `User ${currentUser.email} already exists in Firestore database.`
+          });
+        }
+      } else {
+        addNotification({
+          type: 'error',
+          title: 'No User Logged In',
+          message: 'Please log in first to sync your user account.'
+        });
+      }
     } catch (error) {
       console.error('Error syncing current user:', error);
       addNotification({

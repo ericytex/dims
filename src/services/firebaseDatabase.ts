@@ -220,50 +220,51 @@ export class FirebaseDatabaseService {
     try {
       console.log('Syncing all auth users to Firestore...');
       
-      // Since we can't list all users from client-side, we'll create a mapping
-      // based on the users you showed in the Firebase console
+      // Based on your Firebase Auth console, here are the actual users
       const authUsers = [
         {
-          uid: 'admin-uid', // Replace with actual UID
-          email: 'admin@ims.com',
-          name: 'System Administrator',
-          role: 'admin',
+          uid: 'KoFcXnoXfFQR...', // Replace with actual UID from console
+          email: 'worker@ims.com',
+          name: 'Village Health Worker',
+          role: 'village_health_worker',
           status: 'active' as const
         },
         {
-          uid: 'regional-uid', // Replace with actual UID
-          email: 'regional@ims.com',
-          name: 'Regional Supervisor',
-          role: 'regional_supervisor',
-          status: 'active' as const
-        },
-        {
-          uid: 'district-uid', // Replace with actual UID
-          email: 'district@ims.com',
-          name: 'District Health Officer',
-          role: 'district_health_officer',
-          status: 'active' as const
-        },
-        {
-          uid: 'facility-uid', // Replace with actual UID
+          uid: 'facility-uid', // Replace with actual UID from console
           email: 'facility@ims.com',
           name: 'Facility Manager',
           role: 'facility_manager',
           status: 'active' as const
         },
         {
-          uid: 'worker-uid', // Replace with actual UID
-          email: 'worker@ims.com',
-          name: 'Village Health Worker',
-          role: 'village_health_worker',
+          uid: 'district-uid', // Replace with actual UID from console
+          email: 'district@ims.com',
+          name: 'District Health Officer',
+          role: 'district_health_officer',
+          status: 'active' as const
+        },
+        {
+          uid: 'regional-uid', // Replace with actual UID from console
+          email: 'regional@ims.com',
+          name: 'Regional Supervisor',
+          role: 'regional_supervisor',
+          status: 'active' as const
+        },
+        {
+          uid: 'admin-uid', // Replace with actual UID from console
+          email: 'admin@ims.com',
+          name: 'System Administrator',
+          role: 'admin',
           status: 'active' as const
         }
       ];
 
       for (const authUser of authUsers) {
         try {
-          // Check if user already exists in Firestore
-          const existingUser = await this.getUser(authUser.uid);
+          // Check if user already exists in Firestore by email
+          const existingUsers = await this.getUsers();
+          const existingUser = existingUsers.find(u => u.email === authUser.email);
+          
           if (!existingUser) {
             // Create user in Firestore
             await this.addUser({
