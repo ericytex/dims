@@ -79,6 +79,18 @@ export const OfflineProvider: React.FC<OfflineProviderProps> = ({ children }) =>
     const handleOnline = async () => {
       setIsOnline(true);
       await updateStats();
+      
+      // Auto-sync when coming back online
+      try {
+        const stats = await getSyncStats();
+        if (stats.pendingItems > 0) {
+          console.log('Auto-syncing offline data...');
+          await syncOfflineData();
+        }
+      } catch (error) {
+        console.error('Auto-sync failed:', error);
+        // Don't throw error for auto-sync, just log it
+      }
     };
 
     const handleOffline = () => {

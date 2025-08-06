@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNotification } from '../contexts/NotificationContext';
 import { useOffline } from '../contexts/OfflineContext';
 import { useFirebaseDatabase } from '../hooks/useFirebaseDatabase';
@@ -54,6 +54,45 @@ export default function InventoryManagement() {
     deleteInventoryItem 
   } = useFirebaseDatabase();
 
+  // State for offline items
+  const [offlineItems, setOfflineItems] = useState<InventoryItem[]>([]);
+
+  // Load offline items
+  useEffect(() => {
+    const loadOfflineItems = async () => {
+      try {
+        const { offlineDB } = await import('../services/OfflineDatabase');
+        const pendingItems = await offlineDB.getAllPendingItems();
+        const offlineInventoryItems = pendingItems.inventory.map(item => ({
+          id: item.id,
+          name: item.name,
+          description: item.description,
+          category: item.category,
+          sku: item.sku,
+          unit: item.unit,
+          currentStock: item.currentStock,
+          minStock: item.minStock,
+          maxStock: item.maxStock,
+          cost: item.cost,
+          supplier: item.supplier,
+          facility: item.facility,
+          location: item.location,
+          expiryDate: item.expiryDate,
+          lastUpdated: item.lastUpdated,
+          status: item.status
+        }));
+        setOfflineItems(offlineInventoryItems);
+      } catch (error) {
+        console.error('Failed to load offline items:', error);
+      }
+    };
+
+    loadOfflineItems();
+  }, [pendingCount]); // Reload when pending count changes
+
+  // Combine Firebase and offline items
+  const allInventoryItems = [...inventoryItems, ...offlineItems];
+
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
@@ -83,7 +122,7 @@ export default function InventoryManagement() {
   });
 
   // Filter inventory items
-  const filteredInventory = inventoryItems
+  const filteredInventory = allInventoryItems
     .filter(item => {
       const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           item.sku.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -188,11 +227,6 @@ export default function InventoryManagement() {
           });
           showNotification(`✅ Item "${formData.name}" added offline! Will sync when online.`, 'success');
         }
-        
-        // Also show a more prominent notification with longer duration
-        setTimeout(() => {
-          showNotification(`🎉 Item "${formData.name}" has been added to inventory. You can now add another item.`, 'success');
-        }, 100);
         
         // Clear all form fields for next item
         clearFormFields();
@@ -362,6 +396,11 @@ export default function InventoryManagement() {
     } catch (error) {
       showNotification('Failed to add test item', 'error');
     }
+  };
+
+  // Helper function to check if an item is offline
+  const isOfflineItem = (item: InventoryItem) => {
+    return offlineItems.some(offlineItem => offlineItem.id === item.id);
   };
 
   // Helper function to clear form fields
@@ -659,11 +698,20 @@ export default function InventoryManagement() {
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredInventory.map((item) => {
                 const stockStatus = getStockStatus(item.currentStock, item.minStock);
+                const isOffline = isOfflineItem(item);
                 return (
-                  <tr key={item.id} className="hover:bg-gray-50" id={`item-${item.id}`}>
+                  <tr key={item.id} className={`hover:bg-gray-50 ${isOffline ? 'bg-yellow-50' : ''}`} id={`item-${item.id}`}>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div>
-                        <div className="text-sm font-medium text-gray-900">{item.name}</div>
+                        <div className="flex items-center space-x-2">
+                          <div className="text-sm font-medium text-gray-900">{item.name}</div>
+                          {isOffline && (
+                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                              <AlertTriangle className="w-3 h-3 mr-1" />
+                              Offline
+                            </span>
+                          )}
+                        </div>
                         <div className="text-sm text-gray-500">{item.description}</div>
                       </div>
                     </td>
