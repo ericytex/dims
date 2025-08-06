@@ -42,14 +42,14 @@ function AppContent() {
           </ProtectedRoute>
         } />
         <Route path="/users" element={
-          <ProtectedRoute allowedRoles={['admin']}>
+          <ProtectedRoute allowedRoles={['admin', 'regional_supervisor', 'district_health_officer', 'facility_manager']}>
             <Layout>
               <UserManagement />
             </Layout>
           </ProtectedRoute>
         } />
         <Route path="/facilities" element={
-          <ProtectedRoute allowedRoles={['admin', 'regional_manager']}>
+          <ProtectedRoute allowedRoles={['admin', 'regional_supervisor', 'district_health_officer', 'facility_manager']}>
             <Layout>
               <FacilityManagement />
             </Layout>
@@ -70,14 +70,14 @@ function AppContent() {
           </ProtectedRoute>
         } />
         <Route path="/transfers" element={
-          <ProtectedRoute>
+          <ProtectedRoute allowedRoles={['admin', 'regional_supervisor', 'district_health_officer', 'facility_manager']}>
             <Layout>
               <TransferManagement />
             </Layout>
           </ProtectedRoute>
         } />
         <Route path="/reports" element={
-          <ProtectedRoute>
+          <ProtectedRoute allowedRoles={['admin', 'regional_supervisor', 'district_health_officer', 'facility_manager']}>
             <Layout>
               <Reports />
             </Layout>
