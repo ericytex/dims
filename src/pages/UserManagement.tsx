@@ -414,16 +414,44 @@ export default function UserManagement() {
 
         console.log('Attempting to add user with data:', newUserData);
 
-        // Add user to Firebase
+        // Add user to Firebase Firestore
         const userId = await FirebaseDatabaseService.addUser(newUserData);
+        
+        // Also create user in Firebase Authentication for login
+        try {
+          const { getAuth, createUserWithEmailAndPassword } = await import('firebase/auth');
+          const auth = getAuth();
+          
+          // Create user in Firebase Auth
+          const userCredential = await createUserWithEmailAndPassword(
+            auth,
+            formData.email || `${formData.name.toLowerCase().replace(/\s+/g, '.')}@dims.go.ug`,
+            userPassword
+          );
+          
+          console.log('User created in Firebase Auth with UID:', userCredential.user.uid);
+          
+          // Update the Firestore document with the Auth UID
+          await FirebaseDatabaseService.updateUser(userId, {
+            id: userCredential.user.uid
+          });
+          
+        } catch (authError: any) {
+          console.error('Error creating user in Firebase Auth:', authError);
+          // If email already exists, we can still use the user
+          if (authError.code === 'auth/email-already-in-use') {
+            console.log('User email already exists in Auth, but user created in Firestore');
+          }
+        }
         
         console.log('User added successfully with ID:', userId);
         
         // Show password to admin
+        const loginEmail = formData.email || `${formData.name.toLowerCase().replace(/\s+/g, '.')}@dims.go.ug`;
         addNotification({
           type: 'success',
           title: 'User Added Successfully',
-          message: `User "${formData.name}" added. Password: ${userPassword} - Please share this password with the user.`
+          message: `User "${formData.name}" added. Login: ${loginEmail} | Password: ${userPassword} - Please share these credentials with the user.`
         });
       } else {
         // Update existing user
