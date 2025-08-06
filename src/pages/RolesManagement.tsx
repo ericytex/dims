@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useFirebaseAuth } from '../hooks/useFirebaseAuth';
 import { useNotification } from '../contexts/NotificationContext';
-import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { 
   Shield, 
   Users, 
@@ -505,9 +504,9 @@ export default function RolesManagement() {
         /* Overview Mode */
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {roles.map((role) => (
-            <Card key={role.value} className="hover:shadow-lg transition-shadow">
-              <CardHeader>
-                <CardTitle className="flex items-center justify-between">
+            <div key={role.value} className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow p-6">
+              <div className="border-b border-gray-200 pb-4 mb-4">
+                <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-2">
                     <Shield className="w-5 h-5 text-uganda-yellow" />
                     <span>{role.label}</span>
@@ -515,9 +514,9 @@ export default function RolesManagement() {
                   <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getRoleColor(role.value)}`}>
                     {role.value.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
                   </span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
+                </div>
+              </div>
+              <div className="space-y-4">
                 <p className="text-sm text-gray-600 mb-4">{role.description}</p>
                 
                 <div className="space-y-3">
@@ -590,48 +589,41 @@ export default function RolesManagement() {
                     <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           ))}
         </div>
       ) : viewMode === 'detailed' ? (
         /* Detailed Mode */
         <div className="space-y-6">
           {/* Role Selector */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <Shield className="w-5 h-5 mr-2" />
-                Select Role to View Details
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {roles.map((role) => (
-                  <button
-                    key={role.value}
-                    onClick={() => setSelectedRole(role.value)}
-                    className={`p-4 rounded-lg border-2 transition-all ${
-                      selectedRole === role.value
-                        ? 'border-uganda-yellow bg-yellow-50'
-                        : 'border-gray-200 hover:border-gray-300'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="font-medium text-gray-900">{role.label}</span>
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getRoleColor(role.value)}`}>
-                        {role.value.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                      </span>
-                    </div>
-                    <p className="text-sm text-gray-600">{role.description}</p>
-                    <div className="mt-2 text-xs text-gray-500">
-                      {role.totalPermissions} permissions • {role.allowedAreas}/7 areas • {role.userCount} users
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">Select Role to View Details</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {roles.map((role) => (
+                <button
+                  key={role.value}
+                  onClick={() => setSelectedRole(role.value)}
+                  className={`p-4 rounded-lg border-2 transition-all ${
+                    selectedRole === role.value
+                      ? 'border-uganda-yellow bg-yellow-50'
+                      : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="font-medium text-gray-900">{role.label}</span>
+                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getRoleColor(role.value)}`}>
+                      {role.value.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                    </span>
+                  </div>
+                  <p className="text-sm text-gray-600">{role.description}</p>
+                  <div className="mt-2 text-xs text-gray-500">
+                    {role.totalPermissions} permissions • {role.allowedAreas}/7 areas • {role.userCount} users
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
 
           {/* Detailed Permissions Display */}
           {selectedRoleConfig && (
@@ -644,45 +636,38 @@ export default function RolesManagement() {
       ) : (
         /* Users by Role Mode */
         <div className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <Users className="w-5 h-5 mr-2" />
-                Users by Role
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {roles.map((role) => (
-                  <div key={role.value} className="border border-gray-200 rounded-lg p-4">
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center space-x-3">
-                        <Shield className="w-5 h-5 text-uganda-yellow" />
-                        <div>
-                          <h3 className="font-medium text-gray-900">{role.label}</h3>
-                          <p className="text-sm text-gray-600">{role.description}</p>
-                        </div>
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">Users by Role</h3>
+            <div className="space-y-4">
+              {roles.map((role) => (
+                <div key={role.value} className="border border-gray-200 rounded-lg p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center space-x-3">
+                      <Shield className="w-5 h-5 text-uganda-yellow" />
+                      <div>
+                        <h3 className="font-medium text-gray-900">{role.label}</h3>
+                        <p className="text-sm text-gray-600">{role.description}</p>
                       </div>
-                      <span className={`inline-flex px-3 py-1 text-sm font-semibold rounded-full ${getRoleColor(role.value)}`}>
-                        {role.userCount} users
-                      </span>
                     </div>
-                    
-                    <div className="bg-gray-50 rounded-lg p-3">
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-gray-600">Total Permissions:</span>
-                        <span className="font-medium">{role.totalPermissions}</span>
-                      </div>
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-gray-600">System Areas:</span>
-                        <span className="font-medium">{role.allowedAreas}/7</span>
-                      </div>
+                    <span className={`inline-flex px-3 py-1 text-sm font-semibold rounded-full ${getRoleColor(role.value)}`}>
+                      {role.userCount} users
+                    </span>
+                  </div>
+                  
+                  <div className="bg-gray-50 rounded-lg p-3">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-gray-600">Total Permissions:</span>
+                      <span className="font-medium">{role.totalPermissions}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-gray-600">System Areas:</span>
+                      <span className="font-medium">{role.allowedAreas}/7</span>
                     </div>
                   </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       )}
     </div>
