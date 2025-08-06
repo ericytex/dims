@@ -9,7 +9,8 @@ import {
   AlertTriangle,
   User,
   Shield,
-  Eye
+  Eye,
+  Building
 } from 'lucide-react';
 import RoleDebugger from '../components/RoleDebugger';
 
