@@ -481,8 +481,8 @@ export default function StockTransactions() {
         </div>
       </div>
 
-      {/* Transactions Table */}
-      <div className="bg-white rounded-lg shadow overflow-hidden">
+      {/* Transactions Table - Desktop */}
+      <div className="hidden lg:block bg-white rounded-lg shadow overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
@@ -514,7 +514,7 @@ export default function StockTransactions() {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-          {filteredTransactions.map((transaction) => (
+              {filteredTransactions.map((transaction) => (
                 <tr key={transaction.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
@@ -533,10 +533,10 @@ export default function StockTransactions() {
                     {transaction.quantity} {transaction.unit}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {transaction.facility}
+                    {transaction.facility}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {transaction.user}
+                    {transaction.user}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     <div>{transaction.date}</div>
@@ -545,7 +545,7 @@ export default function StockTransactions() {
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(transaction.status)}`}>
                       {transaction.status}
-                      </span>
+                    </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <div className="flex items-center space-x-2">
@@ -574,6 +574,115 @@ export default function StockTransactions() {
             </tbody>
           </table>
         </div>
+      </div>
+
+      {/* Mobile Cards View */}
+      <div className="lg:hidden space-y-4">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-medium text-gray-900">Transactions</h3>
+          <div className="text-sm text-gray-500">
+            {filteredTransactions.length} transactions
+          </div>
+        </div>
+        
+        {filteredTransactions.map((transaction) => (
+          <div key={transaction.id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+            {/* Header with Transaction Type */}
+            <div className="flex items-start justify-between mb-3">
+              <div className="flex items-center space-x-3">
+                <span className={`px-3 py-1 rounded-full text-sm font-medium ${getTransactionTypeColor(transaction.type)}`}>
+                  {getTransactionTypeLabel(transaction.type)}
+                </span>
+                <div>
+                  <h4 className="text-base font-semibold text-gray-900">{transaction.item}</h4>
+                  <p className="text-sm text-gray-600 mt-1">{transaction.reason}</p>
+                </div>
+              </div>
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={() => handleViewTransaction(transaction)}
+                  className="text-gray-400 hover:text-gray-600 transition-colors p-2 rounded-md hover:bg-gray-100"
+                  title="View Details"
+                >
+                  <Eye className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => handleEditTransaction(transaction)}
+                  className="text-gray-400 hover:text-gray-600 transition-colors p-2 rounded-md hover:bg-gray-100"
+                  title="Edit Transaction"
+                >
+                  <Edit className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => handleDeleteTransaction(transaction)}
+                  className="text-red-400 hover:text-red-600 transition-colors p-2 rounded-md hover:bg-red-50"
+                  title="Delete Transaction"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+            {/* Transaction Details */}
+            <div className="space-y-3">
+              {/* Quantity and Status */}
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="text-sm font-medium text-gray-900">
+                    {transaction.quantity} {transaction.unit}
+                  </span>
+                </div>
+                <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(transaction.status)}`}>
+                  {transaction.status}
+                </span>
+              </div>
+
+              {/* Additional Info Grid */}
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <span className="text-gray-500">Facility:</span>
+                  <span className="text-gray-900 ml-1">{transaction.facility}</span>
+                </div>
+                <div>
+                  <span className="text-gray-500">User:</span>
+                  <span className="text-gray-900 ml-1">{transaction.user}</span>
+                </div>
+                {transaction.source && (
+                  <div>
+                    <span className="text-gray-500">Source:</span>
+                    <span className="text-gray-900 ml-1">{transaction.source}</span>
+                  </div>
+                )}
+                {transaction.destination && (
+                  <div>
+                    <span className="text-gray-500">Destination:</span>
+                    <span className="text-gray-900 ml-1">{transaction.destination}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Date and Time */}
+              <div className="flex items-center justify-between text-sm">
+                <div>
+                  <span className="text-gray-500">Date:</span>
+                  <span className="text-gray-900 ml-1">{transaction.date}</span>
+                </div>
+                <div>
+                  <span className="text-gray-500">Time:</span>
+                  <span className="text-gray-900 ml-1">{transaction.time}</span>
+                </div>
+              </div>
+
+              {/* Notes */}
+              {transaction.notes && (
+                <div className="text-sm">
+                  <span className="text-gray-500">Notes:</span>
+                  <span className="text-gray-900 ml-1">{transaction.notes}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        ))}
       </div>
 
       {/* Modal */}

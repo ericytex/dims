@@ -347,7 +347,9 @@ export default function Reports() {
       <div className="p-6 border-b border-gray-200">
         <h3 className="text-lg font-semibold text-uganda-black">Items Expiring Soon</h3>
       </div>
-      <div className="overflow-x-auto">
+      
+      {/* Desktop Table */}
+      <div className="hidden lg:block overflow-x-auto">
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
@@ -393,6 +395,51 @@ export default function Reports() {
           </tbody>
         </table>
       </div>
+
+      {/* Mobile Cards View */}
+      <div className="lg:hidden p-4 space-y-4">
+        {reportData.expiryReport.map((item, index) => (
+          <div key={index} className={`bg-white border rounded-lg p-4 shadow-sm ${
+            item.daysLeft <= 7 ? 'border-red-200' : 
+            item.daysLeft <= 30 ? 'border-yellow-200' : 'border-gray-200'
+          }`}>
+            <div className="flex items-start justify-between mb-3">
+              <div className="flex-1">
+                <h4 className="text-base font-semibold text-uganda-black">{item.item}</h4>
+                <p className="text-sm text-gray-600">{item.facility}</p>
+              </div>
+              <button
+                onClick={() => handleViewDetails(item, 'expiry')}
+                className="text-gray-400 hover:text-gray-600 transition-colors p-2 rounded-md hover:bg-gray-100"
+                title="View expiry details"
+              >
+                <Eye className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-gray-500">Quantity:</span>
+                <span className="text-gray-900 font-medium">
+                  {item.quantity.toLocaleString()}
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-gray-500">Expiry Date:</span>
+                <span className="text-gray-900">
+                  {item.expiryDate}
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-gray-500">Days Left:</span>
+                <span className={`font-medium ${getExpiryColor(item.daysLeft)}`}>
+                  {item.daysLeft} days
+                </span>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 
@@ -401,7 +448,9 @@ export default function Reports() {
       <div className="p-6 border-b border-gray-200">
         <h3 className="text-lg font-semibold text-uganda-black">Low Stock Alerts</h3>
       </div>
-      <div className="overflow-x-auto">
+      
+      {/* Desktop Table */}
+      <div className="hidden lg:block overflow-x-auto">
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
@@ -448,6 +497,48 @@ export default function Reports() {
             ))}
           </tbody>
         </table>
+      </div>
+
+      {/* Mobile Cards View */}
+      <div className="lg:hidden p-4 space-y-4">
+        {reportData.lowStockReport.map((item, index) => (
+          <div key={index} className="bg-white border border-red-200 rounded-lg p-4 shadow-sm">
+            <div className="flex items-start justify-between mb-3">
+              <div className="flex-1">
+                <h4 className="text-base font-semibold text-uganda-black">{item.item}</h4>
+                <p className="text-sm text-gray-600">{item.facility}</p>
+              </div>
+              <button
+                onClick={() => handleViewDetails(item, 'low_stock')}
+                className="text-gray-400 hover:text-gray-600 transition-colors p-2 rounded-md hover:bg-gray-100"
+                title="View low stock details"
+              >
+                <Eye className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-gray-500">Current Stock:</span>
+                <span className="text-uganda-red font-medium">
+                  {item.currentStock.toLocaleString()}
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-gray-500">Reorder Level:</span>
+                <span className="text-gray-900">
+                  {item.reorderLevel.toLocaleString()}
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-gray-500">Shortage:</span>
+                <span className="text-uganda-red font-medium">
+                  -{item.shortage.toLocaleString()}
+                </span>
+              </div>
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );

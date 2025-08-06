@@ -274,8 +274,8 @@ export default function UserManagement() {
         </div>
       </div>
 
-      {/* Users Table */}
-      <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+      {/* Users Table - Desktop */}
+      <div className="hidden lg:block bg-white rounded-lg shadow overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
@@ -287,7 +287,7 @@ export default function UserManagement() {
                   Role
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Facility/Location
+                  Location
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Status
@@ -295,7 +295,7 @@ export default function UserManagement() {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Last Login
                 </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Actions
                 </th>
               </tr>
@@ -369,6 +369,84 @@ export default function UserManagement() {
             </tbody>
           </table>
         </div>
+      </div>
+
+      {/* Mobile Cards View */}
+      <div className="lg:hidden space-y-4">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-medium text-gray-900">Users</h3>
+          <div className="text-sm text-gray-500">
+            {filteredUsers.length} users
+          </div>
+        </div>
+        
+        {filteredUsers.map((user) => (
+          <div key={user.id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+            {/* Header with User Info */}
+            <div className="flex items-start justify-between mb-3">
+              <div className="flex items-center space-x-3">
+                <div className="w-12 h-12 bg-uganda-yellow rounded-full flex items-center justify-center">
+                  <span className="text-sm font-medium text-uganda-black">
+                    {user.name.split(' ').map(n => n[0]).join('')}
+                  </span>
+                </div>
+                <div>
+                  <h4 className="text-base font-semibold text-gray-900">{user.name}</h4>
+                  <p className="text-sm text-gray-600">{user.email}</p>
+                  <p className="text-sm text-gray-500">{user.phone}</p>
+                </div>
+              </div>
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={() => handleViewUser(user)}
+                  className="text-gray-400 hover:text-gray-600 transition-colors p-2 rounded-md hover:bg-gray-100"
+                  title="View Details"
+                >
+                  <Eye className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => handleEditUser(user)}
+                  className="text-blue-400 hover:text-blue-600 transition-colors p-2 rounded-md hover:bg-blue-50"
+                  title="Edit User"
+                >
+                  <Edit className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => handleDeleteUser(user)}
+                  className="text-red-400 hover:text-red-600 transition-colors p-2 rounded-md hover:bg-red-50"
+                  title="Delete User"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+            {/* User Details */}
+            <div className="space-y-3">
+              {/* Role and Status */}
+              <div className="flex items-center justify-between">
+                <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getRoleColor(user.role)}`}>
+                  {user.role.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                </span>
+                <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(user.status)}`}>
+                  {user.status}
+                </span>
+              </div>
+
+              {/* Location */}
+              <div className="text-sm">
+                <span className="text-gray-500">Location:</span>
+                <span className="text-gray-900 ml-1">{user.facilityName || user.region || user.district || 'Not assigned'}</span>
+              </div>
+
+              {/* Last Login */}
+              <div className="text-sm">
+                <span className="text-gray-500">Last Login:</span>
+                <span className="text-gray-900 ml-1">{user.lastLogin || 'Never'}</span>
+              </div>
+            </div>
+          </div>
+        ))}
       </div>
 
       {/* Modal */}
