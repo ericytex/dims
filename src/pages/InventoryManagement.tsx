@@ -257,10 +257,48 @@ export default function InventoryManagement() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'active': return 'bg-green-100 text-green-800';
-      case 'inactive': return 'bg-gray-100 text-gray-800';
-      case 'discontinued': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'active':
+        return 'text-green-600 bg-green-100';
+      case 'inactive':
+        return 'text-gray-600 bg-gray-100';
+      case 'discontinued':
+        return 'text-red-600 bg-red-100';
+      default:
+        return 'text-gray-600 bg-gray-100';
+    }
+  };
+
+  const getStockLevelIndicator = (current: number, min: number, max: number) => {
+    const percentage = max > 0 ? (current / max) * 100 : 0;
+    
+    if (current <= min) {
+      return {
+        color: 'bg-red-500',
+        progressColor: 'bg-red-500',
+        percentage: Math.min(percentage, 100),
+        level: 'critical'
+      };
+    } else if (current <= min * 1.5) {
+      return {
+        color: 'bg-yellow-500',
+        progressColor: 'bg-yellow-500',
+        percentage: Math.min(percentage, 100),
+        level: 'low'
+      };
+    } else if (current >= max * 0.8) {
+      return {
+        color: 'bg-green-500',
+        progressColor: 'bg-green-500',
+        percentage: Math.min(percentage, 100),
+        level: 'high'
+      };
+    } else {
+      return {
+        color: 'bg-blue-500',
+        progressColor: 'bg-blue-500',
+        percentage: Math.min(percentage, 100),
+        level: 'normal'
+      };
     }
   };
 
@@ -730,49 +768,83 @@ export default function InventoryManagement() {
                 {filteredInventory.map((item) => {
                   const stockStatus = getStockStatus(item.currentStock, item.minStock);
                   const isOffline = isOfflineItem(item);
+                  const stockLevel = getStockLevelIndicator(item.currentStock, item.minStock, item.maxStock);
+                  
                   return (
                     <tr key={item.id} className={`hover:bg-gray-50 ${isOffline ? 'bg-yellow-50' : ''}`} id={`item-${item.id}`}>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div>
-                          <div className="flex items-center space-x-2">
-                            <div className="text-sm font-medium text-gray-900">{item.name}</div>
-                            {isOffline && (
-                              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                                <AlertTriangle className="w-3 h-3 mr-1" />
-                                Offline
-                              </span>
-                            )}
+                        <div className="flex items-start space-x-3">
+                          <div className="flex-shrink-0">
+                            <div className={`w-3 h-3 rounded-full ${stockLevel.color}`}></div>
                           </div>
-                          <div className="text-sm text-gray-500">{item.description}</div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center space-x-2">
+                              <div className="text-sm font-medium text-gray-900">{item.name}</div>
+                              {isOffline && (
+                                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                                  <AlertTriangle className="w-3 h-3 mr-1" />
+                                  Offline
+                                </span>
+                              )}
+                            </div>
+                            <div className="text-sm text-gray-500 mt-1">{item.description}</div>
+                            <div className="flex items-center space-x-2 mt-1">
+                              <span className="text-xs text-gray-400">Supplier: {item.supplier}</span>
+                              {item.location && (
+                                <span className="text-xs text-gray-400">• Location: {item.location}</span>
+                              )}
+                            </div>
+                          </div>
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-mono">
-                        {item.sku}
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm font-mono text-gray-900">{item.sku}</div>
+                        <div className="text-xs text-gray-500 mt-1">Last updated: {new Date(item.lastUpdated).toLocaleDateString()}</div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {item.category}
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                          {item.category}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center space-x-3">
+                          <div className="flex-1">
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="text-sm font-medium text-gray-900">
+                                {item.currentStock} {item.unit}
+                              </span>
+                              <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStockStatusColor(stockStatus)}`}>
+                                {stockStatus}
+                              </span>
+                            </div>
+                            <div className="w-full bg-gray-200 rounded-full h-2">
+                              <div 
+                                className={`h-2 rounded-full ${stockLevel.progressColor}`}
+                                style={{ width: `${stockLevel.percentage}%` }}
+                              ></div>
+                            </div>
+                            <div className="flex justify-between text-xs text-gray-500 mt-1">
+                              <span>Min: {item.minStock}</span>
+                              <span>Max: {item.maxStock}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm font-mono text-gray-900">UGX {item.cost.toLocaleString()}</div>
+                        <div className="text-xs text-gray-500 mt-1">Per {item.unit}</div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center space-x-2">
-                          <span className="text-sm font-medium text-gray-900">
-                            {item.currentStock} {item.unit}
-                          </span>
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStockStatusColor(stockStatus)}`}>
-                            {stockStatus}
-                          </span>
+                          <div className="w-2 h-2 bg-green-400 rounded-full"></div>
+                          <span className="text-sm text-gray-900">{item.facility}</span>
                         </div>
-                        <div className="text-xs text-gray-500">
-                          Min: {item.minStock} | Max: {item.maxStock}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-mono">
-                        UGX {item.cost.toLocaleString()}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {item.facility}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(item.status)}`}>
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(item.status)}`}>
+                          {item.status === 'active' && <div className="w-1.5 h-1.5 bg-green-400 rounded-full mr-1.5"></div>}
+                          {item.status === 'inactive' && <div className="w-1.5 h-1.5 bg-gray-400 rounded-full mr-1.5"></div>}
+                          {item.status === 'discontinued' && <div className="w-1.5 h-1.5 bg-red-400 rounded-full mr-1.5"></div>}
                           {item.status}
                         </span>
                       </td>
@@ -780,21 +852,21 @@ export default function InventoryManagement() {
                         <div className="flex items-center space-x-2">
                           <button
                             onClick={() => handleViewItem(item)}
-                            className="text-gray-400 hover:text-gray-600 transition-colors"
+                            className="text-gray-400 hover:text-gray-600 transition-colors p-1 rounded-md hover:bg-gray-100"
                             title="View Details"
                           >
                             <Eye className="w-4 h-4" />
                           </button>
                           <button
                             onClick={() => handleEditItem(item)}
-                            className="text-gray-400 hover:text-gray-600 transition-colors"
+                            className="text-gray-400 hover:text-gray-600 transition-colors p-1 rounded-md hover:bg-gray-100"
                             title="Edit Item"
                           >
                             <Edit className="w-4 h-4" />
                           </button>
                           <button
                             onClick={() => handleDeleteItem(item)}
-                            className="text-red-400 hover:text-red-600 transition-colors"
+                            className="text-red-400 hover:text-red-600 transition-colors p-1 rounded-md hover:bg-red-50"
                             title="Delete Item"
                           >
                             <Trash2 className="w-4 h-4" />
