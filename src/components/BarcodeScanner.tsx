@@ -690,30 +690,67 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
     setIsFocused(false);
     setScanLinePosition(0);
     
-    // Stop Quagga (only if not in test mode)
+    // Stop Quagga with proper error handling
     if (!testMode) {
       try {
-        Quagga.stop();
-        console.log('Quagga stopped successfully');
+        if (typeof Quagga !== 'undefined' && Quagga.stop) {
+          Quagga.stop();
+          console.log('Quagga stopped successfully');
+        }
       } catch (error) {
-        console.error('Error stopping Quagga:', error);
+        console.log('Error stopping Quagga (expected):', error);
       }
     }
     
-    // Stop camera stream
+    // Stop camera stream with error handling
     if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => track.stop());
-      streamRef.current = null;
+      try {
+        streamRef.current.getTracks().forEach(track => {
+          track.stop();
+        });
+        streamRef.current = null;
+        console.log('Camera stream stopped successfully');
+      } catch (error) {
+        console.log('Error stopping camera stream:', error);
+      }
     }
     
-    // Clear video element
+    // Clear video element with error handling
     if (videoRef.current) {
-      videoRef.current.srcObject = null;
+      try {
+        videoRef.current.srcObject = null;
+        console.log('Video element cleared successfully');
+      } catch (error) {
+        console.log('Error clearing video element:', error);
+      }
     }
     
+    // Reset all scanner states
     setIsScanning(false);
     setScanStatus('idle');
     setErrorMessage('');
+    setIsInitialized(false);
+    setFallbackMode(false);
+    setIsPaused(false);
+    setLastScannedCode('');
+    setRecentScans([]);
+    setLastScannedResult(null);
+    setFocusTime(0);
+    setIsFocused(false);
+    setScanLinePosition(0);
+    setZoomLevel(1);
+    setIsInitializing(false);
+    setDetectionCount(0);
+    setLastDetectedCode('');
+    setDetectionHistory([]);
+    setLastFrameTime(0);
+    setIsTorchEnabled(false);
+    setFrameCount(0);
+    setSharpnessScore(0);
+    setDebugMode(false);
+    setTestMode(false);
+    setSimpleCameraMode(false);
+    
     console.log('Scanner stopped successfully');
   };
 
@@ -747,12 +784,102 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
   // Cleanup on unmount
   useEffect(() => {
     return () => {
-      Quagga.stop();
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach(track => track.stop());
+      console.log('BarcodeScanner cleanup - component unmounting');
+      
+      // Clear all timers and intervals
+      if (testIntervalRef.current) {
+        clearInterval(testIntervalRef.current);
+        testIntervalRef.current = null;
       }
+      
+      if (focusTimerRef.current) {
+        clearInterval(focusTimerRef.current);
+        focusTimerRef.current = null;
+      }
+      
+      if (scanLineRef.current) {
+        clearInterval(scanLineRef.current);
+        scanLineRef.current = null;
+      }
+      
+      if (validationTimerRef.current) {
+        clearTimeout(validationTimerRef.current);
+        validationTimerRef.current = null;
+      }
+      
+      if (frameThrottleRef.current) {
+        clearTimeout(frameThrottleRef.current);
+        frameThrottleRef.current = null;
+      }
+      
+      // Stop Quagga with proper error handling
+      try {
+        if (typeof Quagga !== 'undefined' && Quagga.stop) {
+          Quagga.stop();
+          console.log('Quagga stopped during cleanup');
+        }
+      } catch (error) {
+        console.log('Quagga cleanup error (expected):', error);
+      }
+      
+      // Stop camera stream
+      if (streamRef.current) {
+        try {
+          streamRef.current.getTracks().forEach(track => {
+            track.stop();
+          });
+          streamRef.current = null;
+        } catch (error) {
+          console.log('Stream cleanup error:', error);
+        }
+      }
+      
+      // Clear video element
+      if (videoRef.current) {
+        try {
+          videoRef.current.srcObject = null;
+        } catch (error) {
+          console.log('Video cleanup error:', error);
+        }
+      }
+      
+      // Reset all states
+      setIsScanning(false);
+      setScanStatus('idle');
+      setErrorMessage('');
+      setIsInitialized(false);
+      setFallbackMode(false);
+      setIsPaused(false);
+      setLastScannedCode('');
+      setRecentScans([]);
+      setLastScannedResult(null);
+      setFocusTime(0);
+      setIsFocused(false);
+      setScanLinePosition(0);
+      setZoomLevel(1);
+      setIsInitializing(false);
+      setDetectionCount(0);
+      setLastDetectedCode('');
+      setDetectionHistory([]);
+      setLastFrameTime(0);
+      setIsTorchEnabled(false);
+      setFrameCount(0);
+      setSharpnessScore(0);
+      setDebugMode(false);
+      setTestMode(false);
+      setSimpleCameraMode(false);
+      
+      console.log('BarcodeScanner cleanup completed');
     };
   }, []);
+
+  // Cleanup when scanner is closed
+  useEffect(() => {
+    if (!isOpen && isScanning) {
+      console.log('Scanner closed - cleaning up...');
+      stopScanning();
+    }
+  }, [isOpen, isScanning]);
 
   if (!isOpen) return null;
 
