@@ -44,12 +44,89 @@ export default function UserManagement() {
   const { addNotification } = useNotification();
   const { user: currentUser } = useFirebaseAuth();
 
+  // Add sample users for testing
+  const addSampleUsers = async () => {
+    try {
+      const sampleUsers = [
+        {
+          name: 'John Mukasa',
+          email: 'john.mukasa@ims.com',
+          phone: '+256 701 234 567',
+          role: 'admin',
+          facilityName: 'Main Office',
+          status: 'active' as const,
+          tempPassword: 'temp123',
+          isFirstLogin: true
+        },
+        {
+          name: 'Mary Nambi',
+          email: 'mary.nambi@ims.com',
+          phone: '+256 702 345 678',
+          role: 'regional_supervisor',
+          region: 'Central Region',
+          status: 'active' as const,
+          tempPassword: 'temp123',
+          isFirstLogin: true
+        },
+        {
+          name: 'James Ssebunya',
+          email: 'james.ssebunya@ims.com',
+          phone: '+256 703 456 789',
+          role: 'facility_manager',
+          facilityName: 'Kampala Hospital',
+          status: 'active' as const,
+          tempPassword: 'temp123',
+          isFirstLogin: true
+        },
+        {
+          name: 'Sarah Nakato',
+          email: 'sarah.nakato@ims.com',
+          phone: '+256 704 567 890',
+          role: 'district_health_officer',
+          district: 'Kampala District',
+          status: 'active' as const,
+          tempPassword: 'temp123',
+          isFirstLogin: true
+        },
+        {
+          name: 'David Ochieng',
+          email: 'david.ochieng@ims.com',
+          phone: '+256 705 678 901',
+          role: 'village_health_worker',
+          district: 'Wakiso District',
+          status: 'inactive' as const,
+          tempPassword: 'temp123',
+          isFirstLogin: true
+        }
+      ];
+
+      for (const userData of sampleUsers) {
+        await FirebaseDatabaseService.addUser(userData);
+      }
+
+      addNotification({
+        type: 'success',
+        title: 'Sample Data Added',
+        message: '5 sample users have been added to the database.'
+      });
+    } catch (error) {
+      console.error('Error adding sample users:', error);
+      addNotification({
+        type: 'error',
+        title: 'Error',
+        message: 'Failed to add sample users.'
+      });
+    }
+  };
+
   // Load users from Firebase on component mount
   useEffect(() => {
     const loadUsers = async () => {
       try {
         setLoading(true);
+        console.log('Loading users from Firebase...');
         const usersData = await FirebaseDatabaseService.getUsers();
+        console.log('Users loaded from Firebase:', usersData);
         setUsers(usersData);
       } catch (error) {
         console.error('Error loading users:', error);
@@ -68,11 +145,16 @@ export default function UserManagement() {
 
   // Real-time listener for users changes
   useEffect(() => {
+    console.log('Setting up real-time listener for users...');
     const unsubscribe = FirebaseDatabaseService.onUsersChange((usersData) => {
+      console.log('Real-time users update:', usersData);
       setUsers(usersData);
     });
 
-    return () => unsubscribe();
+    return () => {
+      console.log('Cleaning up real-time listener...');
+      unsubscribe();
+    };
   }, []);
 
   const roles = [
@@ -376,13 +458,22 @@ export default function UserManagement() {
           <h1 className="text-2xl font-bold text-uganda-black">User Management</h1>
           <p className="text-gray-600 mt-1">Manage system users and their permissions</p>
         </div>
-        <button
-          onClick={handleAddUser}
-          className="mt-4 sm:mt-0 inline-flex items-center px-4 py-2 bg-uganda-yellow text-uganda-black font-medium rounded-lg hover:bg-yellow-500 transition-colors"
-        >
-          <Plus className="w-5 h-5 mr-2" />
-          Add User
-        </button>
+        <div className="mt-4 sm:mt-0 flex gap-2">
+          <button
+            onClick={addSampleUsers}
+            className="inline-flex items-center px-4 py-2 bg-gray-500 text-white font-medium rounded-lg hover:bg-gray-600 transition-colors"
+          >
+            <RefreshCw className="w-5 h-5 mr-2" />
+            Add Sample Data
+          </button>
+          <button
+            onClick={handleAddUser}
+            className="inline-flex items-center px-4 py-2 bg-uganda-yellow text-uganda-black font-medium rounded-lg hover:bg-yellow-500 transition-colors"
+          >
+            <Plus className="w-5 h-5 mr-2" />
+            Add User
+          </button>
+        </div>
       </div>
 
       {/* Loading State */}
