@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useFirebaseAuth } from '../hooks/useFirebaseAuth';
 import { useNotification } from '../contexts/NotificationContext';
+import { FirebaseDatabaseService } from '../services/firebaseDatabase';
 import { 
   Shield, 
   Users, 
@@ -22,7 +23,10 @@ import {
   Lock,
   UserPlus,
   UserCheck,
-  UserX
+  UserX,
+  User,
+  Mail,
+  Phone
 } from 'lucide-react';
 import RolePermissionsDisplay from '../components/RolePermissionsDisplay';
 
@@ -36,6 +40,20 @@ interface Role {
   userCount: number;
 }
 
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  role: string;
+  facilityName: string;
+  status: 'active' | 'inactive';
+  region: string;
+  district: string;
+  createdAt: any;
+  updatedAt: any;
+}
+
 export default function RolesManagement() {
   const { user: currentUser } = useFirebaseAuth();
   const { addNotification } = useNotification();
@@ -43,6 +61,11 @@ export default function RolesManagement() {
   const [viewMode, setViewMode] = useState<'overview' | 'detailed' | 'users'>('overview');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showAssignRoleModal, setShowAssignRoleModal] = useState(false);
+  const [selectedUserForRole, setSelectedUserForRole] = useState<User | null>(null);
+  const [newRole, setNewRole] = useState<string>('');
+  const [users, setUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(false);
 
   // Comprehensive role permissions mapping
   const rolePermissions = {
@@ -343,6 +366,66 @@ export default function RolesManagement() {
     }
   };
 
+  // Load users from Firebase
+  useEffect(() => {
+    const loadUsers = async () => {
+      setLoading(true);
+      try {
+        const usersData = await FirebaseDatabaseService.getUsers();
+        setUsers(usersData);
+        console.log('Users loaded for role management:', usersData.length);
+      } catch (error) {
+        console.error('Error loading users:', error);
+        addNotification('Failed to load users', 'error');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadUsers();
+  }, []);
+
+  // Get users by role
+  const getUsersByRole = (roleValue: string) => {
+    return users.filter(user => user.role === roleValue);
+  };
+
+  // Handle role assignment
+  const handleAssignRole = (user: User) => {
+    setSelectedUserForRole(user);
+    setNewRole(user.role);
+    setShowAssignRoleModal(true);
+  };
+
+  // Save role assignment
+  const handleSaveRoleAssignment = async () => {
+    if (!selectedUserForRole || !newRole) {
+      addNotification('Please select a user and role', 'error');
+      return;
+    }
+
+    try {
+      await FirebaseDatabaseService.updateUser(selectedUserForRole.id, { role: newRole });
+      addNotification(`Role updated successfully for ${selectedUserForRole.name}`, 'success');
+      
+      // Update local state
+      setUsers(prevUsers => 
+        prevUsers.map(user => 
+          user.id === selectedUserForRole.id 
+            ? { ...user, role: newRole }
+            : user
+        )
+      );
+      
+      setShowAssignRoleModal(false);
+      setSelectedUserForRole(null);
+      setNewRole('');
+    } catch (error) {
+      console.error('Error updating user role:', error);
+      addNotification('Failed to update user role', 'error');
+    }
+  };
+
   const roles: Role[] = [
     {
       value: 'admin',
@@ -638,34 +721,158 @@ export default function RolesManagement() {
         <div className="space-y-6">
           <div className="bg-white rounded-lg shadow-md p-6">
             <h3 className="text-lg font-medium text-gray-900 mb-4">Users by Role</h3>
-            <div className="space-y-4">
-              {roles.map((role) => (
-                <div key={role.value} className="border border-gray-200 rounded-lg p-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center space-x-3">
-                      <Shield className="w-5 h-5 text-uganda-yellow" />
-                      <div>
-                        <h3 className="font-medium text-gray-900">{role.label}</h3>
-                        <p className="text-sm text-gray-600">{role.description}</p>
+            {loading ? (
+              <div className="text-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-uganda-yellow mx-auto"></div>
+                <p className="text-gray-600 mt-2">Loading users...</p>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {roles.map((role) => {
+                  const roleUsers = getUsersByRole(role.value);
+                  return (
+                    <div key={role.value} className="border border-gray-200 rounded-lg p-4">
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center space-x-3">
+                          <Shield className="w-5 h-5 text-uganda-yellow" />
+                          <div>
+                            <h3 className="font-medium text-gray-900">{role.label}</h3>
+                            <p className="text-sm text-gray-600">{role.description}</p>
+                          </div>
+                        </div>
+                        <span className={`inline-flex px-3 py-1 text-sm font-semibold rounded-full ${getRoleColor(role.value)}`}>
+                          {roleUsers.length} users
+                        </span>
                       </div>
+                      
+                      <div className="bg-gray-50 rounded-lg p-3 mb-4">
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-gray-600">Total Permissions:</span>
+                          <span className="font-medium">{role.totalPermissions}</span>
+                        </div>
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-gray-600">System Areas:</span>
+                          <span className="font-medium">{role.allowedAreas}/7</span>
+                        </div>
+                      </div>
+
+                      {/* Users List */}
+                      {roleUsers.length > 0 ? (
+                        <div className="space-y-3">
+                          <h4 className="text-sm font-medium text-gray-700">Users with this role:</h4>
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                            {roleUsers.map((user) => (
+                              <div key={user.id} className="bg-white border border-gray-200 rounded-lg p-3">
+                                <div className="flex items-center justify-between mb-2">
+                                  <div className="flex items-center space-x-2">
+                                    <User className="w-4 h-4 text-gray-500" />
+                                    <span className="font-medium text-sm">{user.name}</span>
+                                  </div>
+                                  <button
+                                    onClick={() => handleAssignRole(user)}
+                                    className="p-1 text-blue-600 hover:text-blue-800 transition-colors"
+                                    title="Change Role"
+                                  >
+                                    <Edit className="w-3 h-3" />
+                                  </button>
+                                </div>
+                                <div className="space-y-1 text-xs text-gray-600">
+                                  <div className="flex items-center space-x-1">
+                                    <Mail className="w-3 h-3" />
+                                    <span>{user.email}</span>
+                                  </div>
+                                  {user.phone && (
+                                    <div className="flex items-center space-x-1">
+                                      <Phone className="w-3 h-3" />
+                                      <span>{user.phone}</span>
+                                    </div>
+                                  )}
+                                  <div className="flex items-center space-x-1">
+                                    <Building className="w-3 h-3" />
+                                    <span>{user.facilityName || 'N/A'}</span>
+                                  </div>
+                                  <div className="flex items-center">
+                                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                                      user.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                                    }`}>
+                                      {user.status}
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="text-center py-4 text-gray-500">
+                          <UserX className="w-8 h-8 mx-auto mb-2 text-gray-400" />
+                          <p className="text-sm">No users assigned to this role</p>
+                        </div>
+                      )}
                     </div>
-                    <span className={`inline-flex px-3 py-1 text-sm font-semibold rounded-full ${getRoleColor(role.value)}`}>
-                      {role.userCount} users
-                    </span>
-                  </div>
-                  
-                  <div className="bg-gray-50 rounded-lg p-3">
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-gray-600">Total Permissions:</span>
-                      <span className="font-medium">{role.totalPermissions}</span>
-                    </div>
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-gray-600">System Areas:</span>
-                      <span className="font-medium">{role.allowedAreas}/7</span>
-                    </div>
-                  </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Role Assignment Modal */}
+      {showAssignRoleModal && selectedUserForRole && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md mx-4">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-medium text-gray-900">Assign Role to User</h3>
+              <button
+                onClick={() => setShowAssignRoleModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="mb-4">
+              <div className="bg-gray-50 rounded-lg p-3 mb-4">
+                <h4 className="font-medium text-gray-900 mb-2">User Information</h4>
+                <div className="space-y-1 text-sm text-gray-600">
+                  <p><strong>Name:</strong> {selectedUserForRole.name}</p>
+                  <p><strong>Email:</strong> {selectedUserForRole.email}</p>
+                  <p><strong>Current Role:</strong> {selectedUserForRole.role}</p>
                 </div>
-              ))}
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  New Role
+                </label>
+                <select
+                  value={newRole}
+                  onChange={(e) => setNewRole(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-uganda-yellow focus:border-transparent"
+                >
+                  {roles.map((role) => (
+                    <option key={role.value} value={role.value}>
+                      {role.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            
+            <div className="flex space-x-3">
+              <button
+                onClick={() => setShowAssignRoleModal(false)}
+                className="flex-1 px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveRoleAssignment}
+                className="flex-1 px-4 py-2 bg-uganda-yellow text-white rounded-lg hover:bg-yellow-600 transition-colors"
+              >
+                Save Changes
+              </button>
             </div>
           </div>
         </div>
