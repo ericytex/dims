@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNotification } from '../contexts/NotificationContext';
 import { useFirebaseAuth } from '../hooks/useFirebaseAuth';
+import { emailService } from '../services/emailService';
 import {
   Plus,
   Search,
@@ -157,22 +158,37 @@ export default function UserManagement() {
     return password;
   };
 
-  // Send credentials via email (simulated)
+  // Send credentials via email using real email service
   const sendCredentialsEmail = async (user: User, tempPassword: string) => {
-    // In a real implementation, this would send an actual email
-    console.log(`Sending credentials to ${user.email}:`);
-    console.log(`Email: ${user.email}`);
-    console.log(`Temporary Password: ${tempPassword}`);
-    console.log('User must change password on first login');
-    
-    // Simulate email sending
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    addNotification({
-      type: 'success',
-      title: 'Credentials Sent',
-      message: `Login credentials have been sent to ${user.email}`
-    });
+    try {
+      const success = await emailService.sendUserCredentials({
+        name: user.name,
+        email: user.email,
+        tempPassword: tempPassword,
+        role: user.role
+      });
+
+      if (success) {
+        addNotification({
+          type: 'success',
+          title: 'Credentials Sent',
+          message: `Login credentials have been sent to ${user.email}`
+        });
+      } else {
+        addNotification({
+          type: 'error',
+          title: 'Email Failed',
+          message: `Failed to send credentials to ${user.email}. Please try again.`
+        });
+      }
+    } catch (error) {
+      console.error('Email sending error:', error);
+      addNotification({
+        type: 'error',
+        title: 'Email Error',
+        message: `Failed to send credentials to ${user.email}. Please try again.`
+      });
+    }
   };
 
   const handleAddUser = () => {
@@ -315,13 +331,35 @@ export default function UserManagement() {
 
     setUsers(users.map(u => u.id === user.id ? updatedUser : u));
     
-    await sendCredentialsEmail(updatedUser, tempPassword);
-    
-    addNotification({
-      type: 'success',
-      title: 'Password Reset',
-      message: `New temporary password has been sent to ${user.email}`
-    });
+    try {
+      const success = await emailService.sendPasswordReset({
+        name: user.name,
+        email: user.email,
+        tempPassword: tempPassword,
+        role: user.role
+      });
+
+      if (success) {
+        addNotification({
+          type: 'success',
+          title: 'Password Reset',
+          message: `New temporary password has been sent to ${user.email}`
+        });
+      } else {
+        addNotification({
+          type: 'error',
+          title: 'Password Reset Failed',
+          message: `Failed to send new password to ${user.email}. Please try again.`
+        });
+      }
+    } catch (error) {
+      console.error('Password reset email error:', error);
+      addNotification({
+        type: 'error',
+        title: 'Password Reset Error',
+        message: `Failed to send new password to ${user.email}. Please try again.`
+      });
+    }
   };
 
   const getRoleColor = (role: string) => {
