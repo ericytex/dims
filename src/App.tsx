@@ -6,6 +6,7 @@ import { OfflineProvider } from './contexts/OfflineContext';
 import LoginPage from './pages/LoginPage';
 import Dashboard from './pages/Dashboard';
 import UserManagement from './pages/UserManagement';
+import RolePermissions from './pages/RolePermissions';
 import FacilityManagement from './pages/FacilityManagement';
 import InventoryManagement from './pages/InventoryManagement';
 import StockTransactions from './pages/StockTransactions';
@@ -45,6 +46,13 @@ function AppContent() {
           <ProtectedRoute allowedRoles={['admin', 'regional_supervisor', 'district_health_officer', 'facility_manager']}>
             <Layout>
               <UserManagement />
+            </Layout>
+          </ProtectedRoute>
+        } />
+        <Route path="/role-permissions" element={
+          <ProtectedRoute allowedRoles={['admin', 'regional_supervisor', 'district_health_officer']}>
+            <Layout>
+              <RolePermissions />
             </Layout>
           </ProtectedRoute>
         } />

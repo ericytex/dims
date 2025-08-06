@@ -11,7 +11,8 @@ import {
   BarChart3,
   Database,
   LogOut,
-  X
+  X,
+  Shield
 } from 'lucide-react';
 
 interface NavItem {
@@ -38,6 +39,12 @@ const navigation: NavItem[] = [
       href: '/users',
       icon: Users,
       roles: ['admin', 'regional_supervisor', 'district_health_officer', 'facility_manager']
+    },
+    {
+      name: 'Role Permissions',
+      href: '/role-permissions',
+      icon: Shield,
+      roles: ['admin', 'regional_supervisor', 'district_health_officer']
     },
     {
       name: 'Facilities',
