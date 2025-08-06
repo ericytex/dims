@@ -403,13 +403,13 @@ export default function UserManagement() {
           email: formData.email || '', // Email is optional
           phone: formData.phone,
           role: formData.role,
-          facilityName: formData.facilityName || undefined,
-          region: formData.region || undefined,
-          district: formData.district || undefined,
           status: formData.status,
           password: userPassword, // Store the password
           tempPassword: userPassword,
-          isFirstLogin: true
+          isFirstLogin: true,
+          ...(formData.facilityName && { facilityName: formData.facilityName }),
+          ...(formData.region && { region: formData.region }),
+          ...(formData.district && { district: formData.district })
         };
 
         console.log('Attempting to add user with data:', newUserData);
@@ -432,10 +432,10 @@ export default function UserManagement() {
           email: formData.email || '',
           phone: formData.phone,
           role: formData.role,
-          facilityName: formData.facilityName || undefined,
-          region: formData.region || undefined,
-          district: formData.district || undefined,
-          status: formData.status
+          status: formData.status,
+          ...(formData.facilityName && { facilityName: formData.facilityName }),
+          ...(formData.region && { region: formData.region }),
+          ...(formData.district && { district: formData.district })
         };
 
         await FirebaseDatabaseService.updateUser(selectedUser!.id!, updateData);
