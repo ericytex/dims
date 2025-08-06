@@ -2,13 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { useNotification } from '../contexts/NotificationContext';
 import { useFirebaseAuth } from '../hooks/useFirebaseAuth';
 import { emailService } from '../services/emailService';
+import { FirebaseDatabaseService, User } from '../services/firebaseDatabase';
 import {
   Plus,
   Search,
   Edit,
   Eye,
   Trash2,
-  User,
+  User as UserIcon,
   Mail,
   Phone,
   Building,
@@ -20,76 +21,9 @@ import {
   X
 } from 'lucide-react';
 
-interface User {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-  role: string;
-  facilityName?: string;
-  status: 'active' | 'inactive';
-  lastLogin?: string;
-  region?: string;
-  district?: string;
-  password?: string;
-  isFirstLogin?: boolean;
-  tempPassword?: string;
-}
-
 export default function UserManagement() {
-  const [users, setUsers] = useState<User[]>([
-    {
-      id: '1',
-      name: 'John Mukasa',
-      email: 'john.mukasa@ims.com',
-      phone: '+256 701 234 567',
-      role: 'admin',
-      facilityName: 'Main Office',
-      status: 'active',
-      lastLogin: '2025-01-09 14:30'
-    },
-    {
-      id: '2',
-      name: 'Mary Nambi',
-      email: 'mary.nambi@ims.com',
-      phone: '+256 702 345 678',
-      role: 'regional_supervisor',
-      region: 'Central Region',
-      status: 'active',
-      lastLogin: '2025-01-09 13:15'
-    },
-    {
-      id: '3',
-      name: 'James Ssebunya',
-      email: 'james.ssebunya@ims.com',
-      phone: '+256 703 456 789',
-      role: 'facility_manager',
-      facilityName: 'Kampala Hospital',
-      status: 'active',
-      lastLogin: '2025-01-09 12:45'
-    },
-    {
-      id: '4',
-      name: 'Sarah Nakato',
-      email: 'sarah.nakato@ims.com',
-      phone: '+256 704 567 890',
-      role: 'district_health_officer',
-      district: 'Kampala District',
-      status: 'active',
-      lastLogin: '2025-01-09 11:30'
-    },
-    {
-      id: '5',
-      name: 'David Ochieng',
-      email: 'david.ochieng@ims.com',
-      phone: '+256 705 678 901',
-      role: 'village_health_worker',
-      district: 'Wakiso District',
-      status: 'inactive',
-      lastLogin: '2025-01-08 16:20'
-    }
-  ]);
-
+  const [users, setUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [modalType, setModalType] = useState<'add' | 'edit' | 'view'>('add');
@@ -109,6 +43,37 @@ export default function UserManagement() {
 
   const { addNotification } = useNotification();
   const { user: currentUser } = useFirebaseAuth();
+
+  // Load users from Firebase on component mount
+  useEffect(() => {
+    const loadUsers = async () => {
+      try {
+        setLoading(true);
+        const usersData = await FirebaseDatabaseService.getUsers();
+        setUsers(usersData);
+      } catch (error) {
+        console.error('Error loading users:', error);
+        addNotification({
+          type: 'error',
+          title: 'Error',
+          message: 'Failed to load users from database.'
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadUsers();
+  }, [addNotification]);
+
+  // Real-time listener for users changes
+  useEffect(() => {
+    const unsubscribe = FirebaseDatabaseService.onUsersChange((usersData) => {
+      setUsers(usersData);
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   const roles = [
     { value: 'admin', label: 'System Administrator' },
@@ -245,14 +210,23 @@ export default function UserManagement() {
     setShowModal(true);
   };
 
-  const handleDeleteUser = (user: User) => {
+  const handleDeleteUser = async (user: User) => {
     if (window.confirm(`Are you sure you want to delete ${user.name}?`)) {
-      setUsers(users.filter(u => u.id !== user.id));
-      addNotification({
-        type: 'success',
-        title: 'User Deleted',
-        message: `${user.name} has been successfully deleted.`
-      });
+      try {
+        await FirebaseDatabaseService.deleteUser(user.id!);
+        addNotification({
+          type: 'success',
+          title: 'User Deleted',
+          message: `${user.name} has been successfully deleted.`
+        });
+      } catch (error) {
+        console.error('Error deleting user:', error);
+        addNotification({
+          type: 'error',
+          title: 'Error',
+          message: 'Failed to delete user. Please try again.'
+        });
+      }
     }
   };
 
@@ -266,72 +240,81 @@ export default function UserManagement() {
       return;
     }
 
-    if (modalType === 'add') {
-      // Generate temporary password for new user
-      const tempPassword = generateTempPassword();
-      
-      const newUser: User = {
-        id: (users.length + 1).toString(),
-        name: formData.name,
-        email: formData.email,
-        phone: formData.phone,
-        role: formData.role,
-        facilityName: formData.facilityName || undefined,
-        region: formData.region || undefined,
-        district: formData.district || undefined,
-        status: formData.status,
-        tempPassword: tempPassword,
-        isFirstLogin: true
-      };
+    try {
+      if (modalType === 'add') {
+        // Generate temporary password for new user
+        const tempPassword = generateTempPassword();
+        
+        const newUserData = {
+          name: formData.name,
+          email: formData.email,
+          phone: formData.phone,
+          role: formData.role,
+          facilityName: formData.facilityName || undefined,
+          region: formData.region || undefined,
+          district: formData.district || undefined,
+          status: formData.status,
+          tempPassword: tempPassword,
+          isFirstLogin: true
+        };
 
-      setUsers([...users, newUser]);
-      
-      // Send credentials if requested
-      if (formData.sendCredentials) {
-        await sendCredentialsEmail(newUser, tempPassword);
+        // Add user to Firebase
+        const userId = await FirebaseDatabaseService.addUser(newUserData);
+        
+        // Send credentials if requested
+        if (formData.sendCredentials) {
+          await sendCredentialsEmail({ ...newUserData, id: userId }, tempPassword);
+        } else {
+          addNotification({
+            type: 'success',
+            title: 'User Added',
+            message: `${formData.name} has been added. Temporary password: ${tempPassword}`
+          });
+        }
       } else {
+        // Update existing user
+        const updateData = {
+          name: formData.name,
+          email: formData.email,
+          phone: formData.phone,
+          role: formData.role,
+          facilityName: formData.facilityName || undefined,
+          region: formData.region || undefined,
+          district: formData.district || undefined,
+          status: formData.status
+        };
+
+        await FirebaseDatabaseService.updateUser(selectedUser!.id!, updateData);
+        
         addNotification({
           type: 'success',
-          title: 'User Added',
-          message: `${formData.name} has been added. Temporary password: ${tempPassword}`
+          title: 'User Updated',
+          message: `${formData.name} has been successfully updated.`
         });
       }
-    } else {
-      const updatedUser: User = {
-        ...selectedUser!,
-        name: formData.name,
-        email: formData.email,
-        phone: formData.phone,
-        role: formData.role,
-        facilityName: formData.facilityName || undefined,
-        region: formData.region || undefined,
-        district: formData.district || undefined,
-        status: formData.status
-      };
 
-      setUsers(users.map(user => user.id === selectedUser!.id ? updatedUser : user));
+      setShowModal(false);
+    } catch (error) {
+      console.error('Error saving user:', error);
       addNotification({
-        type: 'success',
-        title: 'User Updated',
-        message: `${formData.name} has been successfully updated.`
+        type: 'error',
+        title: 'Error',
+        message: 'Failed to save user. Please try again.'
       });
     }
-
-    setShowModal(false);
   };
 
   const handleResetPassword = async (user: User) => {
     const tempPassword = generateTempPassword();
     
-    const updatedUser = {
-      ...user,
-      tempPassword: tempPassword,
-      isFirstLogin: true
-    };
-
-    setUsers(users.map(u => u.id === user.id ? updatedUser : u));
-    
     try {
+      // Update user in Firebase
+      await FirebaseDatabaseService.updateUser(user.id!, {
+        tempPassword: tempPassword,
+        isFirstLogin: true
+      });
+      
+      // Send password reset email
       const success = await emailService.sendPasswordReset({
         name: user.name,
         email: user.email,
@@ -353,11 +336,11 @@ export default function UserManagement() {
         });
       }
     } catch (error) {
-      console.error('Password reset email error:', error);
+      console.error('Password reset error:', error);
       addNotification({
         type: 'error',
         title: 'Password Reset Error',
-        message: `Failed to send new password to ${user.email}. Please try again.`
+        message: `Failed to reset password for ${user.email}. Please try again.`
       });
     }
   };
@@ -402,36 +385,48 @@ export default function UserManagement() {
         </button>
       </div>
 
-      {/* Filters */}
-      <div className="bg-white rounded-lg shadow-sm p-6">
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="flex-1">
-            <div className="relative">
-              <Search className="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Search users..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
-              />
-            </div>
-          </div>
-          <div className="sm:w-48">
-            <select
-              value={formData.role}
-              onChange={(e) => setFormData({...formData, role: e.target.value as any})}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
-            >
-              {roles.map(role => (
-                <option key={role.value} value={role.value}>
-                  {role.label}
-                </option>
-              ))}
-            </select>
+      {/* Loading State */}
+      {loading && (
+        <div className="bg-white rounded-lg shadow-sm p-6">
+          <div className="flex items-center justify-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-uganda-yellow"></div>
+            <span className="ml-3 text-gray-600">Loading users...</span>
           </div>
         </div>
-      </div>
+      )}
+
+      {/* Filters */}
+      {!loading && (
+        <div className="bg-white rounded-lg shadow-sm p-6">
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="flex-1">
+              <div className="relative">
+                <Search className="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Search users..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
+                />
+              </div>
+            </div>
+            <div className="sm:w-48">
+              <select
+                value={formData.role}
+                onChange={(e) => setFormData({...formData, role: e.target.value as any})}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
+              >
+                {roles.map(role => (
+                  <option key={role.value} value={role.value}>
+                    {role.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Users Table - Desktop */}
       <div className="hidden lg:block bg-white rounded-lg shadow overflow-hidden">

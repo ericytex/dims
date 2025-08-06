@@ -19,6 +19,24 @@ import {
 } from 'firebase/firestore';
 import { db } from './firebase';
 
+export interface User {
+  id?: string;
+  name: string;
+  email: string;
+  phone: string;
+  role: string;
+  facilityName?: string;
+  status: 'active' | 'inactive';
+  lastLogin?: string;
+  region?: string;
+  district?: string;
+  password?: string;
+  isFirstLogin?: boolean;
+  tempPassword?: string;
+  createdAt?: any;
+  updatedAt?: any;
+}
+
 export interface InventoryItem {
   id?: string;
   name: string;
@@ -92,6 +110,58 @@ export interface Transfer {
 }
 
 export class FirebaseDatabaseService {
+  // User Management Methods
+  static async getUsers(): Promise<User[]> {
+    return this.getCollection<User>('users');
+  }
+
+  static async getUser(id: string): Promise<User | null> {
+    return this.getDocument<User>('users', id);
+  }
+
+  static async addUser(user: Omit<User, 'id'>): Promise<string> {
+    return this.addDocument<User>('users', user);
+  }
+
+  static async updateUser(id: string, user: Partial<User>): Promise<void> {
+    return this.updateDocument<User>('users', id, user);
+  }
+
+  static async deleteUser(id: string): Promise<void> {
+    return this.deleteDocument('users', id);
+  }
+
+  static onUsersChange(callback: (users: User[]) => void): () => void {
+    const q = query(collection(db, 'users'), orderBy('createdAt', 'desc'));
+    
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      const users = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as User[];
+      callback(users);
+    });
+
+    return unsubscribe;
+  }
+
+  static async searchUsers(searchTerm: string): Promise<User[]> {
+    try {
+      const users = await this.getUsers();
+      const lowerSearchTerm = searchTerm.toLowerCase();
+      
+      return users.filter(user => 
+        user.name.toLowerCase().includes(lowerSearchTerm) ||
+        user.email.toLowerCase().includes(lowerSearchTerm) ||
+        user.phone.toLowerCase().includes(lowerSearchTerm) ||
+        user.role.toLowerCase().includes(lowerSearchTerm)
+      );
+    } catch (error) {
+      console.error('Error searching users:', error);
+      throw error;
+    }
+  }
+
   // Generic CRUD operations
   static async getCollection<T>(collectionName: string): Promise<T[]> {
     try {
