@@ -20,6 +20,8 @@ import {
   RefreshCw,
   X
 } from 'lucide-react';
+import RoleDebugger from '../components/RoleDebugger';
+import RolePermissionsDisplay from '../components/RolePermissionsDisplay';
 
 export default function UserManagement() {
   const [users, setUsers] = useState<User[]>([]);
@@ -266,27 +268,309 @@ export default function UserManagement() {
     }
   ];
 
-  // Role permissions mapping
+  // Comprehensive role permissions mapping
   const rolePermissions = {
     admin: {
       pages: ['dashboard', 'users', 'facilities', 'inventory', 'transactions', 'transfers', 'reports', 'database-test'],
-      actions: ['create', 'read', 'update', 'delete', 'assign_roles', 'view_reports', 'manage_system']
+      actions: ['create', 'read', 'update', 'delete', 'assign_roles', 'view_reports', 'manage_system'],
+      permissions: {
+        // User Management
+        users: {
+          view: true,
+          create: true,
+          edit: true,
+          delete: true,
+          assign_roles: true,
+          reset_passwords: true
+        },
+        // Facility Management
+        facilities: {
+          view: true,
+          create: true,
+          edit: true,
+          delete: true,
+          manage_users: true
+        },
+        // Inventory Management
+        inventory: {
+          view: true,
+          create: true,
+          edit: true,
+          delete: true,
+          barcode_scan: true,
+          bulk_operations: true,
+          export_data: true
+        },
+        // Transactions
+        transactions: {
+          view: true,
+          create: true,
+          edit: true,
+          delete: true,
+          approve: true,
+          void: true
+        },
+        // Transfers
+        transfers: {
+          view: true,
+          create: true,
+          edit: true,
+          delete: true,
+          approve: true,
+          reject: true,
+          track: true
+        },
+        // Reports
+        reports: {
+          view: true,
+          generate: true,
+          export: true,
+          schedule: true
+        },
+        // System
+        system: {
+          database_test: true,
+          backup: true,
+          restore: true,
+          settings: true
+        }
+      }
     },
     regional_supervisor: {
       pages: ['dashboard', 'users', 'facilities', 'inventory', 'transactions', 'transfers', 'reports'],
-      actions: ['create', 'read', 'update', 'delete', 'view_reports']
+      actions: ['create', 'read', 'update', 'delete', 'view_reports'],
+      permissions: {
+        users: {
+          view: true,
+          create: true,
+          edit: true,
+          delete: false,
+          assign_roles: true,
+          reset_passwords: true
+        },
+        facilities: {
+          view: true,
+          create: true,
+          edit: true,
+          delete: false,
+          manage_users: true
+        },
+        inventory: {
+          view: true,
+          create: true,
+          edit: true,
+          delete: false,
+          barcode_scan: true,
+          bulk_operations: true,
+          export_data: true
+        },
+        transactions: {
+          view: true,
+          create: true,
+          edit: true,
+          delete: false,
+          approve: true,
+          void: false
+        },
+        transfers: {
+          view: true,
+          create: true,
+          edit: true,
+          delete: false,
+          approve: true,
+          reject: true,
+          track: true
+        },
+        reports: {
+          view: true,
+          generate: true,
+          export: true,
+          schedule: false
+        },
+        system: {
+          database_test: false,
+          backup: false,
+          restore: false,
+          settings: false
+        }
+      }
     },
     district_health_officer: {
       pages: ['dashboard', 'users', 'facilities', 'inventory', 'transactions', 'transfers', 'reports'],
-      actions: ['create', 'read', 'update', 'delete', 'view_reports']
+      actions: ['create', 'read', 'update', 'delete', 'view_reports'],
+      permissions: {
+        users: {
+          view: true,
+          create: true,
+          edit: true,
+          delete: false,
+          assign_roles: true,
+          reset_passwords: true
+        },
+        facilities: {
+          view: true,
+          create: true,
+          edit: true,
+          delete: false,
+          manage_users: true
+        },
+        inventory: {
+          view: true,
+          create: true,
+          edit: true,
+          delete: false,
+          barcode_scan: true,
+          bulk_operations: true,
+          export_data: true
+        },
+        transactions: {
+          view: true,
+          create: true,
+          edit: true,
+          delete: false,
+          approve: true,
+          void: false
+        },
+        transfers: {
+          view: true,
+          create: true,
+          edit: true,
+          delete: false,
+          approve: true,
+          reject: true,
+          track: true
+        },
+        reports: {
+          view: true,
+          generate: true,
+          export: true,
+          schedule: false
+        },
+        system: {
+          database_test: false,
+          backup: false,
+          restore: false,
+          settings: false
+        }
+      }
     },
     facility_manager: {
       pages: ['dashboard', 'users', 'facilities', 'inventory', 'transactions', 'transfers', 'reports'],
-      actions: ['create', 'read', 'update', 'delete', 'view_reports']
+      actions: ['create', 'read', 'update', 'delete', 'view_reports'],
+      permissions: {
+        users: {
+          view: true,
+          create: true,
+          edit: true,
+          delete: false,
+          assign_roles: false,
+          reset_passwords: true
+        },
+        facilities: {
+          view: true,
+          create: false,
+          edit: true,
+          delete: false,
+          manage_users: true
+        },
+        inventory: {
+          view: true,
+          create: true,
+          edit: true,
+          delete: false,
+          barcode_scan: true,
+          bulk_operations: true,
+          export_data: true
+        },
+        transactions: {
+          view: true,
+          create: true,
+          edit: true,
+          delete: false,
+          approve: true,
+          void: false
+        },
+        transfers: {
+          view: true,
+          create: true,
+          edit: true,
+          delete: false,
+          approve: false,
+          reject: false,
+          track: true
+        },
+        reports: {
+          view: true,
+          generate: true,
+          export: true,
+          schedule: false
+        },
+        system: {
+          database_test: false,
+          backup: false,
+          restore: false,
+          settings: false
+        }
+      }
     },
     village_health_worker: {
       pages: ['dashboard', 'inventory', 'transactions'],
-      actions: ['read', 'update']
+      actions: ['read', 'update'],
+      permissions: {
+        users: {
+          view: false,
+          create: false,
+          edit: false,
+          delete: false,
+          assign_roles: false,
+          reset_passwords: false
+        },
+        facilities: {
+          view: false,
+          create: false,
+          edit: false,
+          delete: false,
+          manage_users: false
+        },
+        inventory: {
+          view: true,
+          create: true,
+          edit: true,
+          delete: false,
+          barcode_scan: true,
+          bulk_operations: false,
+          export_data: false
+        },
+        transactions: {
+          view: true,
+          create: true,
+          edit: true,
+          delete: false,
+          approve: false,
+          void: false
+        },
+        transfers: {
+          view: false,
+          create: false,
+          edit: false,
+          delete: false,
+          approve: false,
+          reject: false,
+          track: false
+        },
+        reports: {
+          view: false,
+          generate: false,
+          export: false,
+          schedule: false
+        },
+        system: {
+          database_test: false,
+          backup: false,
+          restore: false,
+          settings: false
+        }
+      }
     }
   };
 
@@ -1273,6 +1557,17 @@ export default function UserManagement() {
                         {roles.find(r => r.value === newRole)?.description || 'No description available'}
                       </p>
                     </div>
+                  </div>
+                )}
+
+                {/* Detailed Permissions Display */}
+                {newRole && rolePermissions[newRole as keyof typeof rolePermissions]?.permissions && (
+                  <div className="mt-4">
+                    <h4 className="text-sm font-medium text-gray-700 mb-3">Detailed Permissions:</h4>
+                    <RolePermissionsDisplay 
+                      role={newRole} 
+                      permissions={rolePermissions[newRole as keyof typeof rolePermissions]?.permissions} 
+                    />
                   </div>
                 )}
               </div>
