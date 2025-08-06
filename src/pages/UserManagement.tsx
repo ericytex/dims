@@ -41,6 +41,11 @@ export default function UserManagement() {
     sendCredentials: false // Changed to false since we're not using email
   });
 
+  // Role assignment modal state
+  const [showRoleModal, setShowRoleModal] = useState(false);
+  const [selectedUserForRole, setSelectedUserForRole] = useState<User | null>(null);
+  const [newRole, setNewRole] = useState('');
+
   const { addNotification } = useNotification();
   const { user: currentUser } = useFirebaseAuth();
 
@@ -229,12 +234,123 @@ export default function UserManagement() {
   }, []);
 
   const roles = [
-    { value: 'admin', label: 'System Administrator' },
-    { value: 'regional_supervisor', label: 'Regional Supervisor' },
-    { value: 'district_health_officer', label: 'District Health Officer' },
-    { value: 'facility_manager', label: 'Facility Manager' },
-    { value: 'village_health_worker', label: 'Village Health Worker' }
+    { 
+      value: 'admin', 
+      label: 'System Administrator',
+      permissions: ['all'],
+      description: 'Full system access - can manage users, facilities, inventory, reports, and all data'
+    },
+    { 
+      value: 'regional_supervisor', 
+      label: 'Regional Supervisor',
+      permissions: ['users', 'facilities', 'inventory', 'transactions', 'transfers', 'reports'],
+      description: 'Can manage users, facilities, inventory, and view reports for their region'
+    },
+    { 
+      value: 'district_health_officer', 
+      label: 'District Health Officer',
+      permissions: ['users', 'facilities', 'inventory', 'transactions', 'transfers', 'reports'],
+      description: 'Can manage users, facilities, inventory, and view reports for their district'
+    },
+    { 
+      value: 'facility_manager', 
+      label: 'Facility Manager',
+      permissions: ['users', 'facilities', 'inventory', 'transactions', 'transfers', 'reports'],
+      description: 'Can manage users, facilities, inventory, and view reports for their facility'
+    },
+    { 
+      value: 'village_health_worker', 
+      label: 'Village Health Worker',
+      permissions: ['inventory', 'transactions'],
+      description: 'Can view and update inventory, record transactions'
+    }
   ];
+
+  // Role permissions mapping
+  const rolePermissions = {
+    admin: {
+      pages: ['dashboard', 'users', 'facilities', 'inventory', 'transactions', 'transfers', 'reports', 'database-test'],
+      actions: ['create', 'read', 'update', 'delete', 'assign_roles', 'view_reports', 'manage_system']
+    },
+    regional_supervisor: {
+      pages: ['dashboard', 'users', 'facilities', 'inventory', 'transactions', 'transfers', 'reports'],
+      actions: ['create', 'read', 'update', 'delete', 'view_reports']
+    },
+    district_health_officer: {
+      pages: ['dashboard', 'users', 'facilities', 'inventory', 'transactions', 'transfers', 'reports'],
+      actions: ['create', 'read', 'update', 'delete', 'view_reports']
+    },
+    facility_manager: {
+      pages: ['dashboard', 'users', 'facilities', 'inventory', 'transactions', 'transfers', 'reports'],
+      actions: ['create', 'read', 'update', 'delete', 'view_reports']
+    },
+    village_health_worker: {
+      pages: ['dashboard', 'inventory', 'transactions'],
+      actions: ['read', 'update']
+    }
+  };
+
+  // Function to check if user can assign roles
+  const canAssignRoles = (currentUserRole: string) => {
+    return ['admin', 'regional_supervisor', 'district_health_officer'].includes(currentUserRole);
+  };
+
+  // Function to get available roles for assignment
+  const getAvailableRoles = (currentUserRole: string) => {
+    switch (currentUserRole) {
+      case 'admin':
+        return roles; // Admin can assign any role
+      case 'regional_supervisor':
+        return roles.filter(role => ['facility_manager', 'village_health_worker'].includes(role.value));
+      case 'district_health_officer':
+        return roles.filter(role => ['facility_manager', 'village_health_worker'].includes(role.value));
+      default:
+        return [];
+    }
+  };
+
+  // Handle role assignment
+  const handleAssignRole = (user: User) => {
+    if (!canAssignRoles(currentUser?.role || '')) {
+      addNotification({
+        type: 'error',
+        title: 'Permission Denied',
+        message: 'You do not have permission to assign roles.'
+      });
+      return;
+    }
+    setSelectedUserForRole(user);
+    setNewRole(user.role);
+    setShowRoleModal(true);
+  };
+
+  // Save role assignment
+  const handleSaveRoleAssignment = async () => {
+    if (!selectedUserForRole || !newRole) return;
+
+    try {
+      await FirebaseDatabaseService.updateUser(selectedUserForRole.id!, {
+        role: newRole
+      });
+
+      addNotification({
+        type: 'success',
+        title: 'Role Updated',
+        message: `${selectedUserForRole.name}'s role has been updated to ${newRole}.`
+      });
+
+      setShowRoleModal(false);
+      setSelectedUserForRole(null);
+      setNewRole('');
+    } catch (error: any) {
+      console.error('Error updating user role:', error);
+      addNotification({
+        type: 'error',
+        title: 'Error',
+        message: `Failed to update role: ${error.message || 'Unknown error'}.`
+      });
+    }
+  };
 
   const facilities = [
     { value: '', label: 'Select Facility' },
@@ -719,6 +835,15 @@ export default function UserManagement() {
                       >
                         <Edit className="w-4 h-4" />
                       </button>
+                      {canAssignRoles(currentUser?.role || '') && (
+                        <button
+                          onClick={() => handleAssignRole(user)}
+                          className="text-purple-600 hover:text-purple-900"
+                          title="Assign role"
+                        >
+                          <UserIcon className="w-4 h-4" />
+                        </button>
+                      )}
                       <button
                         onClick={() => handleResetPassword(user)}
                         className="text-yellow-600 hover:text-yellow-900"
@@ -1089,6 +1214,84 @@ export default function UserManagement() {
                   </div>
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Role Assignment Modal */}
+      {showRoleModal && selectedUserForRole && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <h3 className="text-lg font-semibold text-uganda-black">
+                Assign Role to {selectedUserForRole.name}
+              </h3>
+              <button
+                onClick={() => setShowRoleModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            
+            <div className="p-6">
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Current Role
+                  </label>
+                  <div className="px-3 py-2 bg-gray-100 rounded-lg">
+                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getRoleColor(selectedUserForRole.role)}`}>
+                      {selectedUserForRole.role.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                    </span>
+                  </div>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    New Role
+                  </label>
+                  <select
+                    value={newRole}
+                    onChange={(e) => setNewRole(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
+                  >
+                    {getAvailableRoles(currentUser?.role || '').map(role => (
+                      <option key={role.value} value={role.value}>
+                        {role.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                
+                {newRole && (
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                    <div className="text-sm text-blue-800">
+                      <p className="font-medium">Role Permissions:</p>
+                      <p className="mt-1">
+                        {roles.find(r => r.value === newRole)?.description || 'No description available'}
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+              
+              <div className="flex space-x-3 pt-4">
+                <button
+                  onClick={() => setShowRoleModal(false)}
+                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSaveRoleAssignment}
+                  disabled={newRole === selectedUserForRole.role}
+                  className="flex-1 px-4 py-2 bg-uganda-yellow text-uganda-black font-medium rounded-lg hover:bg-yellow-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Update Role
+                </button>
+              </div>
             </div>
           </div>
         </div>
