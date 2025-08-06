@@ -472,353 +472,388 @@ export default function InventoryManagement() {
   ];
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Inventory Management</h1>
-          <p className="text-gray-600">Manage your inventory items and stock levels</p>
-        </div>
-        <button
-          onClick={handleAddItem}
-          className="bg-uganda-yellow text-uganda-black px-4 py-2 rounded-lg hover:bg-yellow-400 transition-colors flex items-center space-x-2"
-        >
-          <Plus className="w-5 h-5" />
-          <span>Add Item</span>
-        </button>
-      </div>
-
-      {/* Offline Status Indicator */}
-      {!isOnline && (
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <AlertTriangle className="w-5 h-5 text-yellow-600" />
-              <div>
-                <h3 className="text-sm font-medium text-yellow-800">Offline Mode</h3>
-                <p className="text-sm text-yellow-700">
-                  You're currently offline. Items will be saved locally and synced when you're back online.
-                </p>
-              </div>
-            </div>
-            <div className="text-sm text-yellow-700">
-              Pending: {pendingCount} items
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Online Sync Status */}
-      {isOnline && pendingCount > 0 && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <AlertTriangle className="w-5 h-5 text-blue-600" />
-              <div>
-                <h3 className="text-sm font-medium text-blue-800">Sync Available</h3>
-                <p className="text-sm text-blue-700">
-                  You have {pendingCount} offline items ready to sync.
-                </p>
-              </div>
+    <div className="min-h-screen bg-gray-50">
+      {/* Header Section */}
+      <div className="bg-white shadow-sm border-b border-gray-200">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">Inventory Management</h1>
+              <p className="text-sm text-gray-600">Manage your inventory items and stock levels</p>
             </div>
             <button
-              onClick={syncOfflineData}
-              disabled={isSyncing}
-              className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+              onClick={handleAddItem}
+              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-uganda-yellow hover:bg-yellow-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-uganda-yellow transition-colors"
             >
-              {isSyncing ? 'Syncing...' : 'Sync Now'}
+              <Plus className="w-4 h-4 mr-2" />
+              Add Item
             </button>
           </div>
         </div>
-      )}
-
-      {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {stats.map((stat, index) => {
-          const Icon = stat.Icon;
-          return (
-            <div key={index} className="bg-white rounded-lg shadow p-6">
-              <div className="flex items-center">
-                <div className="bg-uganda-yellow rounded-lg p-3">
-                  <Icon className="w-6 h-6 text-white" />
-                </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">{stat.name}</p>
-                  <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
-                </div>
-              </div>
-              <div className="mt-4 flex items-center">
-                {stat.changeType === 'increase' ? (
-                  <TrendingUp className="w-4 h-4 text-green-500" />
-                ) : (
-                  <TrendingDown className="w-4 h-4 text-red-500" />
-                )}
-                <span className={`ml-1 text-sm font-medium ${
-                  stat.changeType === 'increase' ? 'text-green-600' : 'text-red-600'
-                }`}>
-                  {stat.change}
-                </span>
-                <span className="ml-2 text-sm text-gray-500">from last month</span>
-              </div>
-            </div>
-          );
-        })}
       </div>
 
-      {/* Filters */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Search</label>
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-              <input
-                type="text"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
-                placeholder="Search items..."
-              />
-              {searchTerm && (
+      {/* Main Content */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Status Indicators */}
+        <div className="space-y-4 mb-8">
+          {/* Offline Status Indicator */}
+          {!isOnline && (
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <AlertTriangle className="w-5 h-5 text-yellow-600 flex-shrink-0" />
+                  <div>
+                    <h3 className="text-sm font-medium text-yellow-800">Offline Mode</h3>
+                    <p className="text-sm text-yellow-700">
+                      You're currently offline. Items will be saved locally and synced when you're back online.
+                    </p>
+                  </div>
+                </div>
+                <div className="text-sm text-yellow-700 font-medium">
+                  Pending: {pendingCount} items
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Online Sync Status */}
+          {isOnline && pendingCount > 0 && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <AlertTriangle className="w-5 h-5 text-blue-600 flex-shrink-0" />
+                  <div>
+                    <h3 className="text-sm font-medium text-blue-800">Sync Available</h3>
+                    <p className="text-sm text-blue-700">
+                      You have {pendingCount} offline items ready to sync.
+                    </p>
+                  </div>
+                </div>
                 <button
-                  onClick={() => setSearchTerm('')}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  onClick={syncOfflineData}
+                  disabled={isSyncing}
+                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
                 >
-                  <X className="w-4 h-4" />
+                  {isSyncing ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Syncing...
+                    </>
+                  ) : (
+                    'Sync Now'
+                  )}
                 </button>
-              )}
-            </div>
-            {searchTerm && (
-              <div className="mt-1 text-sm text-blue-600 flex items-center">
-                <QrCode className="w-3 h-3 mr-1" />
-                Filtered by barcode: {searchTerm}
               </div>
-            )}
+            </div>
+          )}
+        </div>
+
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          {stats.map((stat, index) => {
+            const Icon = stat.Icon;
+            return (
+              <div key={index} className="bg-white overflow-hidden shadow rounded-lg">
+                <div className="p-5">
+                  <div className="flex items-center">
+                    <div className="flex-shrink-0">
+                      <div className="bg-uganda-yellow rounded-md p-3">
+                        <Icon className="w-6 h-6 text-white" />
+                      </div>
+                    </div>
+                    <div className="ml-5 w-0 flex-1">
+                      <dl>
+                        <dt className="text-sm font-medium text-gray-500 truncate">{stat.name}</dt>
+                        <dd className="text-lg font-medium text-gray-900">{stat.value}</dd>
+                      </dl>
+                    </div>
+                  </div>
+                </div>
+                <div className="bg-gray-50 px-5 py-3">
+                  <div className="flex items-center">
+                    {stat.changeType === 'increase' ? (
+                      <TrendingUp className="w-4 h-4 text-green-500" />
+                    ) : (
+                      <TrendingDown className="w-4 h-4 text-red-500" />
+                    )}
+                    <span className={`ml-2 text-sm font-medium ${
+                      stat.changeType === 'increase' ? 'text-green-600' : 'text-red-600'
+                    }`}>
+                      {stat.change}
+                    </span>
+                    <span className="ml-2 text-sm text-gray-500">from last month</span>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Filters and Search */}
+        <div className="bg-white shadow rounded-lg mb-8">
+          <div className="px-6 py-4 border-b border-gray-200">
+            <h3 className="text-lg font-medium text-gray-900">Filters & Search</h3>
           </div>
-          
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Barcode Scanner</label>
-            <button
-              onClick={handleOpenBarcodeScanner}
-              className="w-full bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors flex items-center justify-center space-x-2"
-            >
-              <QrCode className="w-4 h-4" />
-              <span>Scan Barcode</span>
-            </button>
-            <button
-              onClick={addTestItemForScanning}
-              className="w-full mt-2 bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-colors flex items-center justify-center space-x-2 text-sm"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Add Test Item (0072782051600)</span>
-            </button>
-          </div>
-          
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
-            <select
-              value={filterCategory}
-              onChange={(e) => setFilterCategory(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
-            >
-              <option value="">All Categories</option>
-              <option value="Electronics">Electronics</option>
-              <option value="Furniture">Furniture</option>
-              <option value="Office Supplies">Office Supplies</option>
-              <option value="Safety Equipment">Safety Equipment</option>
-              <option value="Industrial Equipment">Industrial Equipment</option>
-              <option value="Lighting">Lighting</option>
-              <option value="Tools">Tools</option>
-              <option value="Clothing">Clothing</option>
-              <option value="Food & Beverages">Food & Beverages</option>
-            </select>
-          </div>
-          
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-            <select
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
-            >
-              <option value="">All Status</option>
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
-              <option value="discontinued">Discontinued</option>
-            </select>
-          </div>
-          
-          <div className="flex items-end">
-            <button
-              onClick={() => {
-                setSearchTerm('');
-                setFilterCategory('');
-                setFilterStatus('');
-              }}
-              className="w-full bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors"
-            >
-              Clear Filters
-            </button>
+          <div className="px-6 py-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              {/* Search */}
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Search Items</label>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                  <input
+                    type="text"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-md focus:ring-uganda-yellow focus:border-uganda-yellow"
+                    placeholder="Search by name, SKU, or description..."
+                  />
+                  {searchTerm && (
+                    <button
+                      onClick={() => setSearchTerm('')}
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+                {searchTerm && (
+                  <div className="mt-1 text-sm text-blue-600 flex items-center">
+                    <QrCode className="w-3 h-3 mr-1" />
+                    Filtered by: {searchTerm}
+                  </div>
+                )}
+              </div>
+
+              {/* Barcode Scanner */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Barcode Scanner</label>
+                <button
+                  onClick={handleOpenBarcodeScanner}
+                  className="w-full inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+                >
+                  <QrCode className="w-4 h-4 mr-2" />
+                  Scan Barcode
+                </button>
+                <button
+                  onClick={addTestItemForScanning}
+                  className="w-full mt-2 inline-flex items-center justify-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-uganda-yellow transition-colors"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add Test Item
+                </button>
+              </div>
+
+              {/* Category Filter */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Category</label>
+                <select
+                  value={filterCategory}
+                  onChange={(e) => setFilterCategory(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-uganda-yellow focus:border-uganda-yellow"
+                >
+                  <option value="">All Categories</option>
+                  <option value="Electronics">Electronics</option>
+                  <option value="Furniture">Furniture</option>
+                  <option value="Office Supplies">Office Supplies</option>
+                  <option value="Safety Equipment">Safety Equipment</option>
+                  <option value="Industrial Equipment">Industrial Equipment</option>
+                  <option value="Lighting">Lighting</option>
+                  <option value="Tools">Tools</option>
+                  <option value="Clothing">Clothing</option>
+                  <option value="Food & Beverages">Food & Beverages</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Additional Filters */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
+                <select
+                  value={filterStatus}
+                  onChange={(e) => setFilterStatus(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-uganda-yellow focus:border-uganda-yellow"
+                >
+                  <option value="">All Status</option>
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
+                  <option value="discontinued">Discontinued</option>
+                </select>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Inventory Table */}
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Item
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  SKU
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Category
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Stock
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Cost
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Facility
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {filteredInventory.map((item) => {
-                const stockStatus = getStockStatus(item.currentStock, item.minStock);
-                const isOffline = isOfflineItem(item);
-                return (
-                  <tr key={item.id} className={`hover:bg-gray-50 ${isOffline ? 'bg-yellow-50' : ''}`} id={`item-${item.id}`}>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div>
-                        <div className="flex items-center space-x-2">
-                          <div className="text-sm font-medium text-gray-900">{item.name}</div>
-                          {isOffline && (
-                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                              <AlertTriangle className="w-3 h-3 mr-1" />
-                              Offline
-                            </span>
-                          )}
+        {/* Inventory Table */}
+        <div className="bg-white shadow rounded-lg">
+          <div className="px-6 py-4 border-b border-gray-200">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-medium text-gray-900">Inventory Items</h3>
+              <div className="text-sm text-gray-500">
+                {filteredInventory.length} of {allInventoryItems.length} items
+              </div>
+            </div>
+          </div>
+          
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Item Details
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    SKU
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Category
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Stock Level
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Cost
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Facility
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Status
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {filteredInventory.map((item) => {
+                  const stockStatus = getStockStatus(item.currentStock, item.minStock);
+                  const isOffline = isOfflineItem(item);
+                  return (
+                    <tr key={item.id} className={`hover:bg-gray-50 ${isOffline ? 'bg-yellow-50' : ''}`} id={`item-${item.id}`}>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div>
+                          <div className="flex items-center space-x-2">
+                            <div className="text-sm font-medium text-gray-900">{item.name}</div>
+                            {isOffline && (
+                              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                                <AlertTriangle className="w-3 h-3 mr-1" />
+                                Offline
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-sm text-gray-500">{item.description}</div>
                         </div>
-                        <div className="text-sm text-gray-500">{item.description}</div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {item.sku}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {item.category}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center space-x-2">
-                        <span className="text-sm font-medium text-gray-900">
-                          {item.currentStock} {item.unit}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-mono">
+                        {item.sku}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {item.category}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center space-x-2">
+                          <span className="text-sm font-medium text-gray-900">
+                            {item.currentStock} {item.unit}
+                          </span>
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStockStatusColor(stockStatus)}`}>
+                            {stockStatus}
+                          </span>
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          Min: {item.minStock} | Max: {item.maxStock}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-mono">
+                        UGX {item.cost.toLocaleString()}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {item.facility}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(item.status)}`}>
+                          {item.status}
                         </span>
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStockStatusColor(stockStatus)}`}>
-                          {stockStatus}
-                        </span>
-                      </div>
-                      <div className="text-xs text-gray-500">
-                        Min: {item.minStock} | Max: {item.maxStock}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      UGX {item.cost.toLocaleString()}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {item.facility}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(item.status)}`}>
-                        {item.status}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <div className="flex items-center space-x-2">
-                        <button
-                          onClick={() => handleViewItem(item)}
-                          className="text-gray-400 hover:text-gray-600"
-                        >
-                          <Eye className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleEditItem(item)}
-                          className="text-gray-400 hover:text-gray-600"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleDeleteItem(item)}
-                          className="text-red-400 hover:text-red-600"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <div className="flex items-center space-x-2">
+                          <button
+                            onClick={() => handleViewItem(item)}
+                            className="text-gray-400 hover:text-gray-600 transition-colors"
+                            title="View Details"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleEditItem(item)}
+                            className="text-gray-400 hover:text-gray-600 transition-colors"
+                            title="Edit Item"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteItem(item)}
+                            className="text-red-400 hover:text-red-600 transition-colors"
+                            title="Delete Item"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
 
       {/* Add Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between p-6 border-b border-gray-200">
               <h2 className="text-xl font-semibold text-gray-900">Add New Item</h2>
               <button
                 onClick={() => setShowAddModal(false)}
-                className="text-gray-400 hover:text-gray-600"
+                className="text-gray-400 hover:text-gray-600 transition-colors"
               >
                 <X className="w-6 h-6" />
               </button>
             </div>
             
             <div className="p-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Item Name *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Item Name *</label>
                   <input
                     type="text"
                     value={formData.name}
                     onChange={(e) => setFormData({...formData, name: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-uganda-yellow focus:border-uganda-yellow"
                     placeholder="Enter item name"
                   />
                 </div>
                 
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
                   <textarea
                     value={formData.description}
                     onChange={(e) => setFormData({...formData, description: e.target.value})}
                     rows={3}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-uganda-yellow focus:border-uganda-yellow"
                     placeholder="Enter item description"
                   />
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Category *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Category *</label>
                   <select
                     value={formData.category}
                     onChange={(e) => setFormData({...formData, category: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-uganda-yellow focus:border-uganda-yellow"
                   >
                     <option value="">Select Category</option>
                     <option value="Electronics">Electronics</option>
@@ -834,37 +869,36 @@ export default function InventoryManagement() {
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">SKU *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">SKU *</label>
                   <div className="flex space-x-2">
                     <input
                       type="text"
                       value={formData.sku}
                       onChange={(e) => setFormData({...formData, sku: e.target.value})}
-                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:ring-uganda-yellow focus:border-uganda-yellow"
                       placeholder="Enter SKU or scan barcode"
                     />
                     <button
                       type="button"
                       onClick={() => {
                         setShowBarcodeScanner(true);
-                        // Set a flag to indicate this is for SKU scanning
                         setFormData(prev => ({ ...prev, _scanningForSku: true }));
                       }}
-                      className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors flex items-center space-x-2"
+                      className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
                       title="Scan barcode for SKU"
                     >
-                      <QrCode className="w-4 h-4" />
+                      <QrCode className="w-4 h-4 mr-2" />
                       <span className="hidden sm:inline">Scan</span>
                     </button>
                   </div>
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Unit</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Unit</label>
                   <select
                     value={formData.unit}
                     onChange={(e) => setFormData({...formData, unit: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-uganda-yellow focus:border-uganda-yellow"
                   >
                     <option value="">Select Unit</option>
                     <option value="pieces">Pieces</option>
@@ -879,102 +913,102 @@ export default function InventoryManagement() {
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Current Stock</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Current Stock</label>
                   <input
                     type="number"
                     value={formData.currentStock}
                     onChange={(e) => setFormData({...formData, currentStock: parseInt(e.target.value) || 0})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-uganda-yellow focus:border-uganda-yellow"
                     placeholder="0"
                   />
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Min Stock</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Min Stock</label>
                   <input
                     type="number"
                     value={formData.minStock}
                     onChange={(e) => setFormData({...formData, minStock: parseInt(e.target.value) || 0})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-uganda-yellow focus:border-uganda-yellow"
                     placeholder="0"
                   />
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Max Stock</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Max Stock</label>
                   <input
                     type="number"
                     value={formData.maxStock}
                     onChange={(e) => setFormData({...formData, maxStock: parseInt(e.target.value) || 0})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-uganda-yellow focus:border-uganda-yellow"
                     placeholder="0"
                   />
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Cost (UGX)</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Cost (UGX)</label>
                   <input
                     type="number"
                     value={formData.cost}
                     onChange={(e) => setFormData({...formData, cost: parseInt(e.target.value) || 0})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-uganda-yellow focus:border-uganda-yellow"
                     placeholder="0"
                   />
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Supplier *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Supplier *</label>
                   <input
                     type="text"
                     value={formData.supplier}
                     onChange={(e) => setFormData({...formData, supplier: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-uganda-yellow focus:border-uganda-yellow"
                     placeholder="Enter supplier name"
                   />
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Facility</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Facility</label>
                   <select
                     value={formData.facility}
                     onChange={(e) => setFormData({...formData, facility: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-uganda-yellow focus:border-uganda-yellow"
                   >
                     <option value="">Select Facility</option>
                     <option value="Main Warehouse">Main Warehouse</option>
                     <option value="Distribution Center">Distribution Center</option>
-                    <option value="Regional Warehouse">Regional Warehouse</option>
-                    <option value="Retail Store">Retail Store</option>
+                    <option value="Retail Outlet">Retail Outlet</option>
+                    <option value="Regional Office">Regional Office</option>
                   </select>
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Location *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Location</label>
                   <input
                     type="text"
                     value={formData.location}
                     onChange={(e) => setFormData({...formData, location: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-uganda-yellow focus:border-uganda-yellow"
                     placeholder="Enter storage location"
                   />
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Expiry Date</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Expiry Date</label>
                   <input
                     type="date"
                     value={formData.expiryDate}
                     onChange={(e) => setFormData({...formData, expiryDate: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-uganda-yellow focus:border-uganda-yellow"
                   />
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
                   <select
                     value={formData.status}
                     onChange={(e) => setFormData({...formData, status: e.target.value as any})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-uganda-yellow focus:border-uganda-yellow"
                   >
                     <option value="active">Active</option>
                     <option value="inactive">Inactive</option>
@@ -983,16 +1017,16 @@ export default function InventoryManagement() {
                 </div>
               </div>
               
-              <div className="flex items-center justify-end space-x-3 p-6 border-t border-gray-200">
+              <div className="flex items-center justify-end space-x-3 mt-8 pt-6 border-t border-gray-200">
                 <button
                   onClick={() => setShowAddModal(false)}
-                  className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                  className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-uganda-yellow transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleSaveItem}
-                  className="px-4 py-2 bg-uganda-yellow text-uganda-black rounded-lg hover:bg-yellow-400 transition-colors"
+                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-uganda-yellow hover:bg-yellow-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-uganda-yellow transition-colors"
                 >
                   Add Item
                 </button>
