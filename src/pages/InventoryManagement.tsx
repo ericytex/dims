@@ -632,7 +632,7 @@ export default function InventoryManagement() {
           <div className="px-6 py-4 border-b border-gray-200">
             <h3 className="text-lg font-medium text-gray-900">Filters & Search</h3>
           </div>
-          <div className="px-6 py-4">
+          <div className="p-6">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               {/* Search */}
               <div className="md:col-span-2">
@@ -671,14 +671,16 @@ export default function InventoryManagement() {
                   className="w-full inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
                 >
                   <QrCode className="w-4 h-4 mr-2" />
-                  Scan Barcode
+                  <span className="hidden sm:inline">Scan Barcode</span>
+                  <span className="sm:hidden">Scan</span>
                 </button>
                 <button
                   onClick={addTestItemForScanning}
                   className="w-full mt-2 inline-flex items-center justify-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-uganda-yellow transition-colors"
                 >
                   <Plus className="w-4 h-4 mr-2" />
-                  Add Test Item
+                  <span className="hidden sm:inline">Add Test Item</span>
+                  <span className="sm:hidden">Test Item</span>
                 </button>
               </div>
 
@@ -704,8 +706,8 @@ export default function InventoryManagement() {
               </div>
             </div>
 
-            {/* Additional Filters */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+            {/* Additional Filters - Mobile Responsive */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
                 <select
@@ -719,12 +721,28 @@ export default function InventoryManagement() {
                   <option value="discontinued">Discontinued</option>
                 </select>
               </div>
+              
+              {/* Clear Filters Button - Mobile Responsive */}
+              <div className="sm:col-span-2 lg:col-span-1">
+                <label className="block text-sm font-medium text-gray-700 mb-2 opacity-0">Actions</label>
+                <button
+                  onClick={() => {
+                    setSearchTerm('');
+                    setFilterCategory('');
+                    setFilterStatus('');
+                  }}
+                  className="w-full inline-flex items-center justify-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-uganda-yellow transition-colors"
+                >
+                  <X className="w-4 h-4 mr-2" />
+                  Clear Filters
+                </button>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Inventory Table */}
-        <div className="bg-white shadow rounded-lg">
+        {/* Inventory Table - Desktop */}
+        <div className="hidden lg:block bg-white shadow rounded-lg">
           <div className="px-6 py-4 border-b border-gray-200">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-medium text-gray-900">Inventory Items</h3>
@@ -888,6 +906,148 @@ export default function InventoryManagement() {
               </tbody>
             </table>
           </div>
+        </div>
+
+        {/* Mobile Cards View */}
+        <div className="lg:hidden space-y-4">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-medium text-gray-900">Inventory Items</h3>
+            <div className="text-sm text-gray-500">
+              {filteredInventory.length} items
+            </div>
+          </div>
+          
+          {filteredInventory.map((item) => {
+            const stockStatus = getStockStatus(item.currentStock, item.minStock);
+            const isOffline = isOfflineItem(item);
+            const stockLevel = getStockLevelIndicator(item.currentStock, item.minStock, item.maxStock);
+            
+            return (
+              <div key={item.id} className={`bg-white rounded-lg shadow-sm border ${isOffline ? 'border-yellow-200 bg-yellow-50' : 'border-gray-200'} p-4`} id={`item-${item.id}`}>
+                {/* Header with Stock Level Indicator */}
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex items-center space-x-3">
+                    <div className={`w-4 h-4 rounded-full ${stockLevel.color}`}></div>
+                    <div>
+                      <h4 className="text-base font-semibold text-gray-900">{item.name}</h4>
+                      <div className="flex items-center space-x-2 mt-1">
+                        <span className="text-xs font-medium text-gray-600">
+                          {stockLevel.level === 'critical' && 'Critical'}
+                          {stockLevel.level === 'low' && 'Low Stock'}
+                          {stockLevel.level === 'normal' && 'Good'}
+                          {stockLevel.level === 'high' && 'High'}
+                        </span>
+                        {isOffline && (
+                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                            <AlertTriangle className="w-3 h-3 mr-1" />
+                            Offline
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <button
+                      onClick={() => handleViewItem(item)}
+                      className="text-gray-400 hover:text-gray-600 transition-colors p-2 rounded-md hover:bg-gray-100"
+                      title="View Details"
+                    >
+                      <Eye className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => handleEditItem(item)}
+                      className="text-gray-400 hover:text-gray-600 transition-colors p-2 rounded-md hover:bg-gray-100"
+                      title="Edit Item"
+                    >
+                      <Edit className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => handleDeleteItem(item)}
+                      className="text-red-400 hover:text-red-600 transition-colors p-2 rounded-md hover:bg-red-50"
+                      title="Delete Item"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Item Details */}
+                <div className="space-y-3">
+                  <div>
+                    <p className="text-sm text-gray-600">{item.description}</p>
+                  </div>
+
+                  {/* SKU and Category */}
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <span className="text-xs font-medium text-gray-500">SKU:</span>
+                      <span className="text-sm font-mono text-gray-900 ml-1">{item.sku}</span>
+                    </div>
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                      {item.category}
+                    </span>
+                  </div>
+
+                  {/* Stock Information */}
+                  <div className="bg-gray-50 rounded-lg p-3">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-medium text-gray-900">
+                        {item.currentStock} {item.unit}
+                      </span>
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStockStatusColor(stockStatus)}`}>
+                        {stockStatus}
+                      </span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2 mb-2">
+                      <div 
+                        className={`h-2 rounded-full ${stockLevel.progressColor}`}
+                        style={{ width: `${stockLevel.percentage}%` }}
+                      ></div>
+                    </div>
+                    <div className="flex justify-between text-xs text-gray-500">
+                      <span>Min: {item.minStock}</span>
+                      <span>Max: {item.maxStock}</span>
+                    </div>
+                  </div>
+
+                  {/* Additional Info */}
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <span className="text-gray-500">Cost:</span>
+                      <span className="font-mono text-gray-900 ml-1">UGX {item.cost.toLocaleString()}</span>
+                    </div>
+                    <div>
+                      <span className="text-gray-500">Facility:</span>
+                      <span className="text-gray-900 ml-1">{item.facility}</span>
+                    </div>
+                    <div>
+                      <span className="text-gray-500">Supplier:</span>
+                      <span className="text-gray-900 ml-1">{item.supplier}</span>
+                    </div>
+                    <div>
+                      <span className="text-gray-500">Status:</span>
+                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ml-1 ${getStatusColor(item.status)}`}>
+                        {item.status === 'active' && <div className="w-1.5 h-1.5 bg-green-400 rounded-full mr-1"></div>}
+                        {item.status === 'inactive' && <div className="w-1.5 h-1.5 bg-gray-400 rounded-full mr-1"></div>}
+                        {item.status === 'discontinued' && <div className="w-1.5 h-1.5 bg-red-400 rounded-full mr-1"></div>}
+                        {item.status}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Location and Last Updated */}
+                  {item.location && (
+                    <div className="text-xs text-gray-500">
+                      <span>Location: {item.location}</span>
+                    </div>
+                  )}
+                  <div className="text-xs text-gray-500">
+                    Last updated: {new Date(item.lastUpdated).toLocaleDateString()}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
         </div>
       </div>
 
