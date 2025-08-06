@@ -739,6 +739,9 @@ export default function InventoryManagement() {
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Stock Level
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Item Details
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -773,27 +776,33 @@ export default function InventoryManagement() {
                   return (
                     <tr key={item.id} className={`hover:bg-gray-50 ${isOffline ? 'bg-yellow-50' : ''}`} id={`item-${item.id}`}>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-start space-x-3">
-                          <div className="flex-shrink-0">
-                            <div className={`w-3 h-3 rounded-full ${stockLevel.color}`}></div>
+                        <div className="flex flex-col items-center space-y-2">
+                          <div className={`w-4 h-4 rounded-full ${stockLevel.color}`}></div>
+                          <div className="text-xs font-medium text-gray-600 text-center">
+                            {stockLevel.level === 'critical' && 'Critical'}
+                            {stockLevel.level === 'low' && 'Low'}
+                            {stockLevel.level === 'normal' && 'Good'}
+                            {stockLevel.level === 'high' && 'High'}
                           </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center space-x-2">
-                              <div className="text-sm font-medium text-gray-900">{item.name}</div>
-                              {isOffline && (
-                                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                                  <AlertTriangle className="w-3 h-3 mr-1" />
-                                  Offline
-                                </span>
-                              )}
+                          {isOffline && (
+                            <div className="flex items-center space-x-1 text-xs text-yellow-600">
+                              <AlertTriangle className="w-3 h-3" />
+                              <span>Offline</span>
                             </div>
-                            <div className="text-sm text-gray-500 mt-1">{item.description}</div>
-                            <div className="flex items-center space-x-2 mt-1">
-                              <span className="text-xs text-gray-400">Supplier: {item.supplier}</span>
-                              {item.location && (
-                                <span className="text-xs text-gray-400">• Location: {item.location}</span>
-                              )}
-                            </div>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center space-x-2">
+                            <div className="text-sm font-medium text-gray-900">{item.name}</div>
+                          </div>
+                          <div className="text-sm text-gray-500 mt-1">{item.description}</div>
+                          <div className="flex items-center space-x-2 mt-1">
+                            <span className="text-xs text-gray-400">Supplier: {item.supplier}</span>
+                            {item.location && (
+                              <span className="text-xs text-gray-400">• Location: {item.location}</span>
+                            )}
                           </div>
                         </div>
                       </td>
