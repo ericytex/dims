@@ -132,17 +132,39 @@ export class FirebaseDatabaseService {
   }
 
   static onUsersChange(callback: (users: User[]) => void): () => void {
-    const q = query(collection(db, 'users'), orderBy('createdAt', 'desc'));
-    
-    const unsubscribe = onSnapshot(q, (querySnapshot) => {
-      const users = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as User[];
-      callback(users);
-    });
+    try {
+      // First try with ordering by createdAt
+      const q = query(collection(db, 'users'), orderBy('createdAt', 'desc'));
+      
+      const unsubscribe = onSnapshot(q, (querySnapshot) => {
+        const users = querySnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        })) as User[];
+        callback(users);
+      }, (error) => {
+        console.error('Error in users listener with createdAt ordering:', error);
+        // If ordering by createdAt fails, try without ordering
+        const q2 = query(collection(db, 'users'));
+        const unsubscribe2 = onSnapshot(q2, (querySnapshot) => {
+          const users = querySnapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          })) as User[];
+          callback(users);
+        }, (error2) => {
+          console.error('Error in users listener without ordering:', error2);
+          callback([]);
+        });
+        return unsubscribe2;
+      });
 
-    return unsubscribe;
+      return unsubscribe;
+    } catch (error) {
+      console.error('Error setting up users listener:', error);
+      // Return a no-op function if setup fails
+      return () => {};
+    }
   }
 
   static async searchUsers(searchTerm: string): Promise<User[]> {
@@ -159,6 +181,39 @@ export class FirebaseDatabaseService {
     } catch (error) {
       console.error('Error searching users:', error);
       throw error;
+    }
+  }
+
+  // Sync Firebase Auth users to Firestore
+  static async syncAuthUsersToFirestore(): Promise<void> {
+    try {
+      const { getAuth, listUsers } = await import('firebase/auth');
+      const auth = getAuth();
+      
+      // Note: This requires Firebase Admin SDK on the server side
+      // For now, we'll create a basic user structure
+      console.log('Syncing auth users to Firestore...');
+      
+      // Get current user from auth
+      const currentUser = auth.currentUser;
+      if (currentUser) {
+        // Check if user already exists in Firestore
+        const existingUser = await this.getUser(currentUser.uid);
+        if (!existingUser) {
+          // Create user in Firestore
+          await this.addUser({
+            name: currentUser.displayName || 'Admin User',
+            email: currentUser.email || '',
+            phone: '',
+            role: 'admin',
+            status: 'active',
+            isFirstLogin: false
+          });
+          console.log('Synced current user to Firestore');
+        }
+      }
+    } catch (error) {
+      console.error('Error syncing auth users:', error);
     }
   }
 

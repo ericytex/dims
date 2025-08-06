@@ -36,7 +36,7 @@ export default function UserManagement() {
     facilityName: '',
     region: '',
     district: '',
-    status: 'active' as const,
+    status: 'active' as 'active' | 'inactive',
     password: '',
     sendCredentials: true
   });
@@ -94,7 +94,7 @@ export default function UserManagement() {
           phone: '+256 705 678 901',
           role: 'village_health_worker',
           district: 'Wakiso District',
-          status: 'inactive' as const,
+          status: 'inactive' as 'active' | 'inactive',
           tempPassword: 'temp123',
           isFirstLogin: true
         }
@@ -115,6 +115,25 @@ export default function UserManagement() {
         type: 'error',
         title: 'Error',
         message: 'Failed to add sample users.'
+      });
+    }
+  };
+
+  // Sync current auth user to Firestore
+  const syncCurrentUser = async () => {
+    try {
+      await FirebaseDatabaseService.syncAuthUsersToFirestore();
+      addNotification({
+        type: 'success',
+        title: 'User Synced',
+        message: 'Current user has been synced to Firestore database.'
+      });
+    } catch (error) {
+      console.error('Error syncing current user:', error);
+      addNotification({
+        type: 'error',
+        title: 'Error',
+        message: 'Failed to sync current user.'
       });
     }
   };
@@ -465,6 +484,13 @@ export default function UserManagement() {
           >
             <RefreshCw className="w-5 h-5 mr-2" />
             Add Sample Data
+          </button>
+          <button
+            onClick={syncCurrentUser}
+            className="inline-flex items-center px-4 py-2 bg-uganda-yellow text-uganda-black font-medium rounded-lg hover:bg-yellow-500 transition-colors"
+          >
+            <UserIcon className="w-5 h-5 mr-2" />
+            Sync Current User
           </button>
           <button
             onClick={handleAddUser}
