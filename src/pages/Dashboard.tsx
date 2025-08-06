@@ -1,18 +1,46 @@
 import React from 'react';
 import { useFirebaseAuth } from '../hooks/useFirebaseAuth';
-import {
-  Package,
-  Building,
-  Users,
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
+import { 
+  Users, 
+  Package, 
+  FileText, 
+  TrendingUp, 
   AlertTriangle,
-  TrendingUp,
-  TrendingDown,
-  Calendar,
-  MapPin
+  User,
+  Shield,
+  Eye
 } from 'lucide-react';
+import RoleDebugger from '../components/RoleDebugger';
 
 export default function Dashboard() {
   const { user } = useFirebaseAuth();
+
+  // Role permissions mapping for debugging
+  const rolePermissions = {
+    admin: {
+      pages: ['dashboard', 'users', 'facilities', 'inventory', 'transactions', 'transfers', 'reports', 'database-test'],
+      actions: ['create', 'read', 'update', 'delete', 'assign_roles', 'view_reports', 'manage_system']
+    },
+    regional_supervisor: {
+      pages: ['dashboard', 'users', 'facilities', 'inventory', 'transactions', 'transfers', 'reports'],
+      actions: ['create', 'read', 'update', 'delete', 'view_reports']
+    },
+    district_health_officer: {
+      pages: ['dashboard', 'users', 'facilities', 'inventory', 'transactions', 'transfers', 'reports'],
+      actions: ['create', 'read', 'update', 'delete', 'view_reports']
+    },
+    facility_manager: {
+      pages: ['dashboard', 'users', 'facilities', 'inventory', 'transactions', 'transfers', 'reports'],
+      actions: ['create', 'read', 'update', 'delete', 'view_reports']
+    },
+    village_health_worker: {
+      pages: ['dashboard', 'inventory', 'transactions'],
+      actions: ['read', 'update']
+    }
+  };
+
+  const currentUserPermissions = rolePermissions[user?.role as keyof typeof rolePermissions] || { pages: [], actions: [] };
 
   const stats = [
     {
@@ -135,17 +163,23 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-          <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-          <p className="text-gray-600">Welcome back, {user?.name}</p>
+      <div className="flex items-center justify-between">
+        <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
+        <div className="flex items-center space-x-4">
+          <div className="text-sm text-gray-600">
+            Welcome back, <span className="font-semibold">{user?.name || 'User'}</span>
           </div>
-          <div className="flex items-center space-x-2 text-sm text-gray-500">
-            <Calendar className="w-4 h-4" />
-          <span>{new Date().toLocaleDateString()}</span>
+          <div className="flex items-center space-x-2">
+            <Shield className="w-4 h-4 text-gray-500" />
+            <span className="text-sm font-medium text-gray-700">
+              {user?.role?.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase()) || 'No Role'}
+            </span>
+          </div>
         </div>
       </div>
+
+      {/* Role Debugger - Show for all users to help troubleshoot */}
+      <RoleDebugger />
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
