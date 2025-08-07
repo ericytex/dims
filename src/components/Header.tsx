@@ -70,6 +70,18 @@ export default function Header({ onMenuClick, onAlertsClick }: HeaderProps) {
     }
   };
 
+  // Helper function to format role names
+  const formatRoleName = (role: string) => {
+    const roleMap: { [key: string]: string } = {
+      'admin': 'System Administrator',
+      'regional_supervisor': 'Regional Supervisor',
+      'district_health_officer': 'District Health Officer',
+      'facility_manager': 'Facility Manager',
+      'village_health_worker': 'Village Health Worker'
+    };
+    return roleMap[role] || role.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
+  };
+
   return (
     <header className="bg-white shadow-sm border-b border-gray-200">
       <div className="flex items-center justify-between px-4 py-3">
@@ -210,10 +222,10 @@ export default function Header({ onMenuClick, onAlertsClick }: HeaderProps) {
           <div className="flex items-center space-x-3">
             <div className="text-right hidden sm:block">
               <p className="text-sm font-medium text-uganda-black">
-                {user?.name}
+                {user?.displayName || user?.email}
               </p>
               <p className="text-xs text-gray-600">
-                {user?.role.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                {user?.role ? formatRoleName(user.role) : 'No Role'}
               </p>
             </div>
             

@@ -14,7 +14,7 @@ export interface AuthUser {
   uid: string;
   email: string | null;
   displayName: string | null;
-  role: 'admin' | 'regional_manager' | 'district_manager' | 'facility_manager' | 'inventory_worker';
+  role: 'admin' | 'regional_supervisor' | 'district_health_officer' | 'facility_manager' | 'village_health_worker';
   phone?: string;
   facilityId?: string;
   facilityName?: string;
@@ -34,16 +34,16 @@ export const DEMO_ACCOUNTS = [
   {
     email: 'regional@ims.com',
     password: 'regional123',
-    displayName: 'Regional Manager',
-    role: 'regional_manager' as const,
+    displayName: 'Regional Supervisor',
+    role: 'regional_supervisor' as const,
     phone: '+256700000002',
     region: 'Central Region'
   },
   {
     email: 'district@ims.com',
     password: 'district123',
-    displayName: 'District Manager',
-    role: 'district_manager' as const,
+    displayName: 'District Health Officer',
+    role: 'district_health_officer' as const,
     phone: '+256700000003',
     district: 'Kampala District'
   },
@@ -59,8 +59,8 @@ export const DEMO_ACCOUNTS = [
   {
     email: 'worker@ims.com',
     password: 'worker123',
-    displayName: 'Inventory Worker',
-    role: 'inventory_worker' as const,
+    displayName: 'Village Health Worker',
+    role: 'village_health_worker' as const,
     phone: '+256700000005',
     facilityId: '2',
     facilityName: 'Distribution Center'
@@ -286,7 +286,7 @@ export class FirebaseAuthService {
         uid: user.uid,
         email: user.email,
         displayName: user.displayName,
-        role: 'inventory_worker' // Default role
+        role: 'village_health_worker' // Updated default role
       };
     } catch (error) {
       console.error('Error converting to AuthUser:', error);
@@ -294,7 +294,7 @@ export class FirebaseAuthService {
         uid: user.uid,
         email: user.email,
         displayName: user.displayName,
-        role: 'inventory_worker' // Default role
+        role: 'village_health_worker' // Updated default role
       };
     }
   }

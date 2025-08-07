@@ -94,16 +94,6 @@ export default function UserManagement() {
           status: 'active' as const,
           tempPassword: 'temp123',
           isFirstLogin: true
-        },
-        {
-          name: 'David Ochieng',
-          email: 'david.ochieng@ims.com',
-          phone: '+256 705 678 901',
-          role: 'village_health_worker',
-          district: 'Wakiso District',
-          status: 'inactive' as 'active' | 'inactive',
-          tempPassword: 'temp123',
-          isFirstLogin: true
         }
       ];
 
