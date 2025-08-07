@@ -340,6 +340,65 @@ export default function TransferManagement() {
   const deliveredTransfers = filteredTransfers.filter(t => t.status === 'delivered').length;
   const urgentTransfers = filteredTransfers.filter(t => t.priority === 'urgent' && t.status === 'pending').length;
 
+  // Add sample facilities to Firebase
+  const addSampleFacilities = async () => {
+    try {
+      addNotification('Adding sample facilities to Firebase...', 'info');
+      
+      const sampleFacilities = [
+        {
+          name: 'Main Warehouse',
+          type: 'warehouse' as const,
+          region: 'Central',
+          district: 'Kampala',
+          address: 'Industrial Area, Kampala',
+          contactPerson: 'John Mukasa',
+          contactPhone: '+256700000001',
+          status: 'active' as const
+        },
+        {
+          name: 'Distribution Center',
+          type: 'distribution_center' as const,
+          region: 'Central',
+          district: 'Kampala',
+          address: 'Nakawa Division, Kampala',
+          contactPerson: 'Mary Nambi',
+          contactPhone: '+256700000002',
+          status: 'active' as const
+        },
+        {
+          name: 'Regional Office',
+          type: 'office' as const,
+          region: 'Central',
+          district: 'Kampala',
+          address: 'City Center, Kampala',
+          contactPerson: 'Sarah Nakato',
+          contactPhone: '+256700000003',
+          status: 'active' as const
+        },
+        {
+          name: 'Retail Store',
+          type: 'retail_outlet' as const,
+          region: 'Central',
+          district: 'Kampala',
+          address: 'Shopping Mall, Kampala',
+          contactPerson: 'James Ssebunya',
+          contactPhone: '+256700000004',
+          status: 'active' as const
+        }
+      ];
+
+      for (const facility of sampleFacilities) {
+        await FirebaseDatabaseService.addFacility(facility);
+      }
+      
+      addNotification('Sample facilities added successfully!', 'success');
+    } catch (error) {
+      console.error('Error adding sample facilities:', error);
+      addNotification('Failed to add sample facilities', 'error');
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}

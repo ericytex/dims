@@ -421,7 +421,7 @@ export class FirebaseDatabaseService {
   }
 
   static async updateFacility(id: string, facility: Partial<Facility>): Promise<void> {
-    return this.updateDocument<Facility>('facilities', id, facility);
+    return this.updateDocument('facilities', id, facility);
   }
 
   static async deleteFacility(id: string): Promise<void> {

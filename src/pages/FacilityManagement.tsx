@@ -1,5 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNotification } from '../contexts/NotificationContext';
+import { useFirebaseDatabase } from '../hooks/useFirebaseDatabase';
+import { useFirebaseAuth } from '../hooks/useFirebaseAuth';
+import { FirebaseDatabaseService } from '../services/firebaseDatabase';
 import {
   Plus,
   Search,
@@ -10,109 +13,122 @@ import {
   Users,
   Package,
   X,
-  Map
+  Map,
+  RefreshCw,
+  Database
 } from 'lucide-react';
 
 interface Facility {
-  id: string;
+  id?: string;
   name: string;
   type: 'warehouse' | 'distribution_center' | 'retail_store' | 'manufacturing_plant' | 'office';
   region: string;
   district: string;
-  location: string;
-  gpsCoordinates?: {
-    latitude: number;
-    longitude: number;
-  };
-  manager: string;
-  phone: string;
-  email: string;
+  address?: string;
+  gpsCoordinates?: string;
+  contactPerson?: string;
+  contactPhone?: string;
   status: 'active' | 'inactive';
-  totalItems: number;
-  users: number;
+  createdAt?: any;
+  updatedAt?: any;
 }
 
 export default function FacilityManagement() {
-  const [facilities, setFacilities] = useState<Facility[]>([
+  const { addNotification } = useNotification();
+  const { user } = useFirebaseAuth();
+  const { facilities, loading } = useFirebaseDatabase();
+  
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedType, setSelectedType] = useState('all');
+  const [selectedRegion, setSelectedRegion] = useState('all');
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showViewModal, setShowViewModal] = useState(false);
+  const [selectedFacility, setSelectedFacility] = useState<Facility | null>(null);
+  const [formData, setFormData] = useState<Partial<Facility>>({
+    name: '',
+    type: 'warehouse',
+    region: '',
+    district: '',
+    address: '',
+    contactPerson: '',
+    contactPhone: '',
+    status: 'active'
+  });
+
+  // Sample facilities data to populate Firebase
+  const sampleFacilities: Omit<Facility, 'id'>[] = [
     {
-      id: '1',
       name: 'Main Warehouse',
       type: 'warehouse',
       region: 'Central',
       district: 'Kampala',
-      location: 'Industrial Area, Kampala',
-      gpsCoordinates: { latitude: 0.3354, longitude: 32.5851 },
-      manager: 'John Mukasa',
-      phone: '+256700000001',
-      email: 'manager@ims.com',
-      status: 'active',
-      totalItems: 1247,
-      users: 25
+      address: 'Industrial Area, Kampala',
+      gpsCoordinates: '0.3354,32.5851',
+      contactPerson: 'John Mukasa',
+      contactPhone: '+256700000001',
+      status: 'active'
     },
     {
-      id: '2',
       name: 'Distribution Center',
       type: 'distribution_center',
       region: 'Central',
       district: 'Kampala',
-      location: 'Nakawa Division, Kampala',
-      gpsCoordinates: { latitude: 0.3676, longitude: 32.5851 },
-      manager: 'Mary Nambi',
-      phone: '+256700000002',
-      email: 'manager@ims.com',
-      status: 'active',
-      totalItems: 432,
-      users: 8
+      address: 'Nakawa Division, Kampala',
+      gpsCoordinates: '0.3676,32.5851',
+      contactPerson: 'Mary Nambi',
+      contactPhone: '+256700000002',
+      status: 'active'
     },
     {
-      id: '3',
       name: 'Regional Warehouse',
       type: 'warehouse',
       region: 'Central',
       district: 'Kampala',
-      location: 'Makindye Division, Kampala',
-      gpsCoordinates: { latitude: 0.2743, longitude: 32.5851 },
-      manager: 'Sarah Nakato',
-      phone: '+256700000003',
-      email: 'manager@ims.com',
-      status: 'active',
-      totalItems: 892,
-      users: 18
+      address: 'Makindye Division, Kampala',
+      gpsCoordinates: '0.2743,32.5851',
+      contactPerson: 'Sarah Nakato',
+      contactPhone: '+256700000003',
+      status: 'active'
     },
     {
-      id: '4',
       name: 'Retail Store',
       type: 'retail_store',
       region: 'Central',
       district: 'Kampala',
-      location: 'City Center, Kampala',
-      manager: 'James Ssebunya',
-      phone: '+256700000004',
-      email: 'manager@ims.com',
-      status: 'inactive',
-      totalItems: 256,
-      users: 5
+      address: 'City Center, Kampala',
+      contactPerson: 'James Ssebunya',
+      contactPhone: '+256700000004',
+      status: 'active'
+    },
+    {
+      name: 'Manufacturing Plant',
+      type: 'manufacturing_plant',
+      region: 'Eastern',
+      district: 'Jinja',
+      address: 'Industrial Zone, Jinja',
+      gpsCoordinates: '0.4471,33.2022',
+      contactPerson: 'David Okello',
+      contactPhone: '+256700000005',
+      status: 'active'
     }
-  ]);
+  ];
 
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedType, setSelectedType] = useState('all');
-  const [selectedRegion, setSelectedRegion] = useState('all');
-  const [showModal, setShowModal] = useState(false);
-  const [modalType, setModalType] = useState<'add' | 'edit' | 'view'>('add');
-  const [selectedFacility, setSelectedFacility] = useState<Facility | null>(null);
-  const [formData, setFormData] = useState({
-    name: '',
-    type: 'warehouse' as const,
-    region: 'Central',
-    district: '',
-    location: '',
-    manager: '',
-    phone: '',
-    email: '',
-    status: 'active' as const
-  });
-  const { addNotification } = useNotification();
+  // Add sample facilities to Firebase
+  const addSampleFacilities = async () => {
+    try {
+      addNotification('Adding sample facilities to Firebase...', 'info');
+      
+      for (const facility of sampleFacilities) {
+        await FirebaseDatabaseService.addFacility(facility);
+      }
+      
+      addNotification('Sample facilities added successfully!', 'success');
+    } catch (error) {
+      console.error('Error adding sample facilities:', error);
+      addNotification('Failed to add sample facilities', 'error');
+    }
+  };
 
   const facilityTypes = [
     { value: 'all', label: 'All Types' },
@@ -140,68 +156,67 @@ export default function FacilityManagement() {
   });
 
   const handleAddFacility = () => {
-    setModalType('add');
-    setSelectedFacility(null);
     setFormData({
       name: '',
       type: 'warehouse',
-      region: 'Central',
+      region: '',
       district: '',
-      location: '',
-      manager: '',
-      phone: '',
-      email: '',
+      address: '',
+      contactPerson: '',
+      contactPhone: '',
       status: 'active'
     });
-    setShowModal(true);
+    setShowAddModal(true);
   };
 
   const handleEditFacility = (facility: Facility) => {
-    setModalType('edit');
     setSelectedFacility(facility);
-    setFormData({
-      name: facility.name,
-      type: facility.type,
-      region: facility.region,
-      district: facility.district,
-      location: facility.location,
-      manager: facility.manager,
-      phone: facility.phone,
-      email: facility.email,
-      status: facility.status
-    });
-    setShowModal(true);
+    setFormData(facility);
+    setShowEditModal(true);
   };
 
   const handleViewFacility = (facility: Facility) => {
-    setModalType('view');
     setSelectedFacility(facility);
-    setShowModal(true);
+    setShowViewModal(true);
   };
 
-  const handleSaveFacility = () => {
-    if (!formData.name || !formData.district || !formData.location || !formData.manager || !formData.phone || !formData.email) {
-      addNotification('Please fill in all required fields', 'error');
-      return;
-    }
+  const handleSaveFacility = async () => {
+    try {
+      if (!formData.name || !formData.region || !formData.district) {
+        addNotification('Please fill in all required fields', 'error');
+        return;
+      }
 
-    if (modalType === 'add') {
-      const newFacility: Facility = {
-        id: Date.now().toString(),
-        ...formData,
-        totalItems: 0,
-        users: 0
-      };
-      setFacilities([...facilities, newFacility]);
-      addNotification('Facility added successfully', 'success');
-    } else if (modalType === 'edit' && selectedFacility) {
-      setFacilities(facilities.map(f => 
-        f.id === selectedFacility.id ? { ...f, ...formData } : f
-      ));
-      addNotification('Facility updated successfully', 'success');
+      if (selectedFacility?.id) {
+        // Update existing facility
+        await FirebaseDatabaseService.updateFacility(selectedFacility.id, formData);
+        addNotification('Facility updated successfully', 'success');
+        setShowEditModal(false);
+      } else {
+        // Add new facility
+        await FirebaseDatabaseService.addFacility(formData);
+        addNotification('Facility added successfully', 'success');
+        setShowAddModal(false);
+      }
+      
+      setFormData({});
+      setSelectedFacility(null);
+    } catch (error) {
+      console.error('Error saving facility:', error);
+      addNotification('Failed to save facility', 'error');
     }
+  };
 
-    setShowModal(false);
+  const handleDeleteFacility = async (facility: Facility) => {
+    try {
+      if (!facility.id) return;
+      
+      await FirebaseDatabaseService.deleteFacility(facility.id);
+      addNotification('Facility deleted successfully', 'success');
+    } catch (error) {
+      console.error('Error deleting facility:', error);
+      addNotification('Failed to delete facility', 'error');
+    }
   };
 
   const getFacilityTypeIcon = (type: string) => {
@@ -247,11 +262,11 @@ export default function FacilityManagement() {
           <p className="text-gray-600 mt-1">Manage facilities and their information</p>
         </div>
         <button
-          onClick={handleAddFacility}
+          onClick={addSampleFacilities}
           className="bg-uganda-yellow text-uganda-black px-4 py-2 rounded-lg hover:bg-yellow-400 transition-colors flex items-center space-x-2"
         >
-          <Plus className="w-4 h-4" />
-          <span>Add Facility</span>
+          <Database className="w-4 h-4" />
+          <span>Add Sample Facilities</span>
         </button>
       </div>
 
@@ -315,79 +330,86 @@ export default function FacilityManagement() {
 
       {/* Facilities Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredFacilities.map((facility) => (
-          <div key={facility.id} className="bg-white rounded-lg shadow p-6">
+        {loading ? (
+          <div className="col-span-full text-center py-10">
+            <p>Loading facilities...</p>
+          </div>
+        ) : filteredFacilities.length === 0 ? (
+          <div className="col-span-full text-center py-10">
+            <p>No facilities found matching your criteria.</p>
+          </div>
+        ) : (
+          filteredFacilities.map((facility) => (
+            <div key={facility.id} className="bg-white rounded-lg shadow p-6">
               <div className="flex items-start justify-between mb-4">
-              <div className="flex items-center space-x-3">
-                {getFacilityTypeIcon(facility.type)}
-                <div>
-                  <h3 className="font-semibold text-gray-900">{facility.name}</h3>
-                  <p className="text-sm text-gray-500">{getFacilityTypeLabel(facility.type)}</p>
+                <div className="flex items-center space-x-3">
+                  {getFacilityTypeIcon(facility.type)}
+                  <div>
+                    <h3 className="font-semibold text-gray-900">{facility.name}</h3>
+                    <p className="text-sm text-gray-500">{getFacilityTypeLabel(facility.type)}</p>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={() => handleViewFacility(facility)}
+                    className="p-1 text-gray-400 hover:text-gray-600"
+                  >
+                    <Eye className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => handleEditFacility(facility)}
+                    className="p-1 text-gray-400 hover:text-gray-600"
+                  >
+                    <Edit className="w-4 h-4" />
+                  </button>
                 </div>
               </div>
-              <div className="flex items-center space-x-2">
-                <button
-                  onClick={() => handleViewFacility(facility)}
-                  className="p-1 text-gray-400 hover:text-gray-600"
-                >
-                  <Eye className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={() => handleEditFacility(facility)}
-                  className="p-1 text-gray-400 hover:text-gray-600"
-                >
-                  <Edit className="w-4 h-4" />
-                </button>
+              
+              <div className="space-y-3">
+                <div className="flex items-center space-x-2 text-sm text-gray-600">
+                  <MapPin className="w-4 h-4" />
+                  <span>{facility.address || 'N/A'}</span>
+                </div>
+                
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-gray-600">Contact:</span>
+                  <span className="font-medium">{facility.contactPerson || 'N/A'}</span>
+                </div>
+                
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-gray-600">Phone:</span>
+                  <span className="font-medium">{facility.contactPhone || 'N/A'}</span>
+                </div>
+                
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-gray-600">Status:</span>
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                    facility.status === 'active' 
+                      ? 'bg-green-100 text-green-800' 
+                      : 'bg-red-100 text-red-800'
+                  }`}>
+                    {facility.status}
+                  </span>
+                </div>
+                
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-gray-600">GPS:</span>
+                  <span className="font-medium">{facility.gpsCoordinates || 'N/A'}</span>
+                </div>
               </div>
             </div>
-            
-            <div className="space-y-3">
-              <div className="flex items-center space-x-2 text-sm text-gray-600">
-                <MapPin className="w-4 h-4" />
-                <span>{facility.location}</span>
-              </div>
-              
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-gray-600">Manager:</span>
-                <span className="font-medium">{facility.manager}</span>
-              </div>
-              
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-gray-600">Status:</span>
-                <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                  facility.status === 'active' 
-                    ? 'bg-green-100 text-green-800' 
-                    : 'bg-red-100 text-red-800'
-                }`}>
-                  {facility.status}
-                </span>
-              </div>
-              
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-gray-600">Items:</span>
-                <span className="font-medium">{facility.totalItems}</span>
-              </div>
-              
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-gray-600">Users:</span>
-                <span className="font-medium">{facility.users}</span>
-              </div>
-            </div>
-          </div>
-        ))}
+          ))
+        )}
       </div>
 
-      {/* Modal */}
-      {showModal && (
+      {/* Modals */}
+      {showAddModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between p-6 border-b border-gray-200">
-              <h2 className="text-xl font-semibold text-gray-900">
-                {modalType === 'add' ? 'Add New Facility' : 
-                 modalType === 'edit' ? 'Edit Facility' : 'Facility Details'}
-              </h2>
+              <h2 className="text-xl font-semibold text-gray-900">Add New Facility</h2>
               <button
-                onClick={() => setShowModal(false)}
+                onClick={() => setShowAddModal(false)}
                 className="text-gray-400 hover:text-gray-600"
               >
                 <X className="w-6 h-6" />
@@ -395,234 +417,377 @@ export default function FacilityManagement() {
             </div>
             
             <div className="p-6">
-              {modalType === 'view' && selectedFacility ? (
-                <div className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="md:col-span-2">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Facility Name
-                      </label>
-                      <p className="text-gray-900">{selectedFacility.name}</p>
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Type
-                      </label>
-                      <p className="text-gray-900">{getFacilityTypeLabel(selectedFacility.type)}</p>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Region
-                      </label>
-                          <p className="text-gray-900">{selectedFacility.region}</p>
-                        </div>
-                    
-                        <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        District
-                      </label>
-                          <p className="text-gray-900">{selectedFacility.district}</p>
-                        </div>
-                    
-                    <div className="md:col-span-2">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Location
-                      </label>
-                          <p className="text-gray-900">{selectedFacility.location}</p>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Manager
-                      </label>
-                          <p className="text-gray-900">{selectedFacility.manager}</p>
-                        </div>
-                    
-                        <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Phone
-                      </label>
-                          <p className="text-gray-900">{selectedFacility.phone}</p>
-                        </div>
-                    
-                    <div className="md:col-span-2">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Email
-                      </label>
-                          <p className="text-gray-900">{selectedFacility.email}</p>
-                        </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Status
-                      </label>
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        selectedFacility.status === 'active' 
-                          ? 'bg-green-100 text-green-800' 
-                          : 'bg-red-100 text-red-800'
-                      }`}>
-                        {selectedFacility.status}
-                      </span>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Total Items
-                      </label>
-                      <p className="text-gray-900">{selectedFacility.totalItems}</p>
-                    </div>
-                  </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Facility Name *
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.name}
+                    onChange={(e) => setFormData({...formData, name: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
+                    placeholder="Enter facility name"
+                  />
                 </div>
-              ) : (
-                <div className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="md:col-span-2">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Facility Name *
-                      </label>
-                      <input
-                        type="text"
-                        value={formData.name}
-                        onChange={(e) => setFormData({...formData, name: e.target.value})}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
-                        placeholder="Enter facility name"
-                      />
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Type *
-                      </label>
-                      <select
-                        value={formData.type}
-                        onChange={(e) => setFormData({...formData, type: e.target.value as any})}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
-                      >
-                        <option value="warehouse">Warehouse</option>
-                        <option value="distribution_center">Distribution Center</option>
-                        <option value="retail_store">Retail Store</option>
-                        <option value="manufacturing_plant">Manufacturing Plant</option>
-                        <option value="office">Office</option>
-                      </select>
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Region *
-                      </label>
-                      <select
-                        value={formData.region}
-                        onChange={(e) => setFormData({...formData, region: e.target.value})}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
-                      >
-                        <option value="Central">Central</option>
-                        <option value="Eastern">Eastern</option>
-                        <option value="Northern">Northern</option>
-                        <option value="Western">Western</option>
-                      </select>
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        District *
-                      </label>
-                      <input
-                        type="text"
-                        value={formData.district}
-                        onChange={(e) => setFormData({...formData, district: e.target.value})}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
-                        placeholder="Enter district"
-                      />
-                    </div>
-                    
-                    <div className="md:col-span-2">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Location *
-                      </label>
-                      <input
-                        type="text"
-                        value={formData.location}
-                        onChange={(e) => setFormData({...formData, location: e.target.value})}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
-                        placeholder="Enter location"
-                      />
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Manager *
-                      </label>
-                      <input
-                        type="text"
-                        value={formData.manager}
-                        onChange={(e) => setFormData({...formData, manager: e.target.value})}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
-                        placeholder="Enter manager name"
-                      />
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Phone *
-                      </label>
-                      <input
-                        type="tel"
-                        value={formData.phone}
-                        onChange={(e) => setFormData({...formData, phone: e.target.value})}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
-                        placeholder="Enter phone number"
-                      />
-                    </div>
-                    
-                    <div className="md:col-span-2">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Email *
-                      </label>
-                      <input
-                        type="email"
-                        value={formData.email}
-                        onChange={(e) => setFormData({...formData, email: e.target.value})}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
-                        placeholder="Enter email address"
-                      />
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Status *
-                      </label>
-                      <select
-                        value={formData.status}
-                        onChange={(e) => setFormData({...formData, status: e.target.value as any})}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
-                      >
-                        <option value="active">Active</option>
-                        <option value="inactive">Inactive</option>
-                      </select>
-                    </div>
-                  </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Type *
+                  </label>
+                  <select
+                    value={formData.type}
+                    onChange={(e) => setFormData({...formData, type: e.target.value as any})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
+                  >
+                    <option value="warehouse">Warehouse</option>
+                    <option value="distribution_center">Distribution Center</option>
+                    <option value="retail_store">Retail Store</option>
+                    <option value="manufacturing_plant">Manufacturing Plant</option>
+                    <option value="office">Office</option>
+                  </select>
                 </div>
-              )}
-                  </div>
-                  
-            {modalType !== 'view' && (
-              <div className="flex items-center justify-end space-x-3 p-6 border-t border-gray-200">
-                    <button
-                      onClick={() => setShowModal(false)}
-                  className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      onClick={handleSaveFacility}
-                  className="px-4 py-2 bg-uganda-yellow text-uganda-black rounded-lg hover:bg-yellow-400 transition-colors"
-                    >
-                      {modalType === 'add' ? 'Add Facility' : 'Update Facility'}
-                    </button>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Region *
+                  </label>
+                  <select
+                    value={formData.region}
+                    onChange={(e) => setFormData({...formData, region: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
+                  >
+                    <option value="Central">Central</option>
+                    <option value="Eastern">Eastern</option>
+                    <option value="Northern">Northern</option>
+                    <option value="Western">Western</option>
+                  </select>
                 </div>
-              )}
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    District *
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.district}
+                    onChange={(e) => setFormData({...formData, district: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
+                    placeholder="Enter district"
+                  />
+                </div>
+                
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Address *
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.address}
+                    onChange={(e) => setFormData({...formData, address: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
+                    placeholder="Enter address"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Contact Person
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.contactPerson}
+                    onChange={(e) => setFormData({...formData, contactPerson: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
+                    placeholder="Enter contact person"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Phone
+                  </label>
+                  <input
+                    type="tel"
+                    value={formData.contactPhone}
+                    onChange={(e) => setFormData({...formData, contactPhone: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
+                    placeholder="Enter phone number"
+                  />
+                </div>
+                
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Status *
+                  </label>
+                  <select
+                    value={formData.status}
+                    onChange={(e) => setFormData({...formData, status: e.target.value as any})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
+                  >
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center justify-end space-x-3 p-6 border-t border-gray-200">
+              <button
+                onClick={() => setShowAddModal(false)}
+                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveFacility}
+                className="px-4 py-2 bg-uganda-yellow text-uganda-black rounded-lg hover:bg-yellow-400 transition-colors"
+              >
+                Add Facility
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showEditModal && selectedFacility && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <h2 className="text-xl font-semibold text-gray-900">Edit Facility</h2>
+              <button
+                onClick={() => setShowEditModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            
+            <div className="p-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Facility Name *
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.name}
+                    onChange={(e) => setFormData({...formData, name: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
+                    placeholder="Enter facility name"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Type *
+                  </label>
+                  <select
+                    value={formData.type}
+                    onChange={(e) => setFormData({...formData, type: e.target.value as any})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
+                  >
+                    <option value="warehouse">Warehouse</option>
+                    <option value="distribution_center">Distribution Center</option>
+                    <option value="retail_store">Retail Store</option>
+                    <option value="manufacturing_plant">Manufacturing Plant</option>
+                    <option value="office">Office</option>
+                  </select>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Region *
+                  </label>
+                  <select
+                    value={formData.region}
+                    onChange={(e) => setFormData({...formData, region: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
+                  >
+                    <option value="Central">Central</option>
+                    <option value="Eastern">Eastern</option>
+                    <option value="Northern">Northern</option>
+                    <option value="Western">Western</option>
+                  </select>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    District *
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.district}
+                    onChange={(e) => setFormData({...formData, district: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
+                    placeholder="Enter district"
+                  />
+                </div>
+                
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Address *
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.address}
+                    onChange={(e) => setFormData({...formData, address: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
+                    placeholder="Enter address"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Contact Person
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.contactPerson}
+                    onChange={(e) => setFormData({...formData, contactPerson: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
+                    placeholder="Enter contact person"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Phone
+                  </label>
+                  <input
+                    type="tel"
+                    value={formData.contactPhone}
+                    onChange={(e) => setFormData({...formData, contactPhone: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
+                    placeholder="Enter phone number"
+                  />
+                </div>
+                
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Status *
+                  </label>
+                  <select
+                    value={formData.status}
+                    onChange={(e) => setFormData({...formData, status: e.target.value as any})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
+                  >
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center justify-end space-x-3 p-6 border-t border-gray-200">
+              <button
+                onClick={() => setShowEditModal(false)}
+                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveFacility}
+                className="px-4 py-2 bg-uganda-yellow text-uganda-black rounded-lg hover:bg-yellow-400 transition-colors"
+              >
+                Update Facility
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showViewModal && selectedFacility && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <h2 className="text-xl font-semibold text-gray-900">Facility Details</h2>
+              <button
+                onClick={() => setShowViewModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            
+            <div className="p-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Facility Name
+                  </label>
+                  <p className="text-gray-900">{selectedFacility.name}</p>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Type
+                  </label>
+                  <p className="text-gray-900">{getFacilityTypeLabel(selectedFacility.type)}</p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Region
+                  </label>
+                  <p className="text-gray-900">{selectedFacility.region}</p>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    District
+                  </label>
+                  <p className="text-gray-900">{selectedFacility.district}</p>
+                </div>
+                
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Address
+                  </label>
+                  <p className="text-gray-900">{selectedFacility.address || 'N/A'}</p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Contact Person
+                  </label>
+                  <p className="text-gray-900">{selectedFacility.contactPerson || 'N/A'}</p>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Phone
+                  </label>
+                  <p className="text-gray-900">{selectedFacility.contactPhone || 'N/A'}</p>
+                </div>
+                
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Status
+                  </label>
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                    selectedFacility.status === 'active' 
+                      ? 'bg-green-100 text-green-800' 
+                      : 'bg-red-100 text-red-800'
+                  }`}>
+                    {selectedFacility.status}
+                  </span>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    GPS Coordinates
+                  </label>
+                  <p className="text-gray-900">{selectedFacility.gpsCoordinates || 'N/A'}</p>
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center justify-end space-x-3 p-6 border-t border-gray-200">
+              <button
+                onClick={() => setShowViewModal(false)}
+                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+              >
+                Close
+              </button>
+            </div>
           </div>
         </div>
       )}
