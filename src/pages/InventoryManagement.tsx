@@ -185,12 +185,12 @@ export default function InventoryManagement() {
   };
 
   const handleDeleteItem = async (item: InventoryItem) => {
-    if (window.confirm(`Are you sure you want to delete "${item.name}"?`)) {
+    if (window.confirm('Are you sure you want to delete this item?')) {
       try {
-        await deleteInventoryItem(item.id);
+        await deleteInventoryItem(item.id!);
         showNotification('Item deleted successfully', 'success');
-      } catch (error: any) {
-        showNotification(`Error deleting item: ${error.message}`, 'error');
+      } catch (error) {
+        showNotification('Failed to delete item', 'error');
       }
     }
   };
@@ -430,32 +430,6 @@ export default function InventoryManagement() {
     return null;
   };
 
-  // Function to add a test item for barcode scanning
-  const addTestItemForScanning = async () => {
-    const testItem = {
-      name: 'Test Product - Barcode Scanner',
-      description: 'Test item for barcode scanning functionality',
-      category: 'Test',
-      sku: '0072782051600', // Updated to match the scanned barcode
-      unit: 'pieces',
-      currentStock: 50,
-      minStock: 10,
-      maxStock: 100,
-      cost: 25000,
-      supplier: 'Test Supplier',
-      facility: 'Test Facility',
-      location: 'Test Location',
-      status: 'active' as const
-    };
-
-    try {
-      await addInventoryItem(testItem);
-      showNotification('Test item added successfully!', 'success');
-    } catch (error) {
-      showNotification('Failed to add test item', 'error');
-    }
-  };
-
   // Helper function to check if an item is offline
   const isOfflineItem = (item: InventoryItem) => {
     return offlineItems.some(offlineItem => offlineItem.id === item.id);
@@ -693,14 +667,6 @@ export default function InventoryManagement() {
                   <QrCode className="w-4 h-4 mr-2" />
                   <span className="hidden sm:inline">Scan Barcode</span>
                   <span className="sm:hidden">Scan</span>
-                </button>
-                <button
-                  onClick={addTestItemForScanning}
-                  className="w-full mt-2 inline-flex items-center justify-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-uganda-yellow transition-colors"
-                >
-                  <Plus className="w-4 h-4 mr-2" />
-                  <span className="hidden sm:inline">Add Test Item</span>
-                  <span className="sm:hidden">Test Item</span>
                 </button>
               </div>
 

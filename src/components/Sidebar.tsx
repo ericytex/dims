@@ -12,7 +12,9 @@ import {
   Database,
   LogOut,
   X,
-  Shield
+  Shield,
+  TrendingUp,
+  ArrowRightLeft
 } from 'lucide-react';
 
 interface NavItem {
@@ -61,13 +63,13 @@ const navigation: NavItem[] = [
     {
       name: 'Transactions',
       href: '/transactions',
-      icon: FileText,
+      icon: TrendingUp,
       roles: ['admin', 'regional_supervisor', 'district_health_officer', 'facility_manager', 'village_health_worker']
     },
     {
       name: 'Transfers',
       href: '/transfers',
-      icon: ArrowLeftRight,
+      icon: ArrowRightLeft,
       roles: ['admin', 'regional_supervisor', 'district_health_officer', 'facility_manager']
     },
     {
@@ -75,12 +77,6 @@ const navigation: NavItem[] = [
       href: '/reports',
       icon: BarChart3,
       roles: ['admin', 'regional_supervisor', 'district_health_officer', 'facility_manager']
-    },
-    {
-      name: 'Database Test',
-      href: '/database-test',
-      icon: Database,
-      roles: ['admin']
     }
   ];
 
@@ -88,14 +84,10 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
   const { user, logout } = useFirebaseAuth();
   const location = useLocation();
 
-  const filteredNavigation = navigation.filter(item => user && item.roles.includes(user.role));
+  const filteredNavigation = navigation.filter(item => 
+    item.roles.includes(user?.role || '')
+  );
   
-  // Debug logging
-  console.log('Current user:', user);
-  console.log('User role:', user?.role);
-  console.log('Available navigation items:', navigation.map(item => ({ name: item.name, roles: item.roles })));
-  console.log('Filtered navigation items:', filteredNavigation.map(item => item.name));
-
   return (
     <>
       {/* Mobile overlay */}

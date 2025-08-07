@@ -1,10 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { FirebaseAuthProvider, useFirebaseAuth } from './hooks/useFirebaseAuth';
+import { FirebaseAuthProvider } from './contexts/FirebaseAuthContext';
 import { NotificationProvider } from './contexts/NotificationContext';
 import { OfflineProvider } from './contexts/OfflineContext';
 import { AlertsProvider } from './contexts/AlertsContext';
-import LoginPage from './pages/LoginPage';
+import Login from './components/Login';
+import Layout from './components/Layout';
+import ProtectedRoute from './components/ProtectedRoute';
 import Dashboard from './pages/Dashboard';
 import UserManagement from './pages/UserManagement';
 import RolesManagement from './pages/RolesManagement';
@@ -13,14 +15,6 @@ import InventoryManagement from './pages/InventoryManagement';
 import StockTransactions from './pages/StockTransactions';
 import TransferManagement from './pages/TransferManagement';
 import Reports from './pages/Reports';
-import DatabaseTestPage from './pages/DatabaseTestPage';
-import { FirebaseTest } from './components/FirebaseTest';
-import { DemoAccountsSetup } from './components/DemoAccountsSetup';
-import { FirebaseConfigTest } from './components/FirebaseConfigTest';
-import Layout from './components/Layout';
-import ProtectedRoute from './components/ProtectedRoute';
-import NotificationContainer from './components/NotificationContainer';
-import OfflineStatus from './components/OfflineStatus';
 
 function AppContent() {
   const { user } = useFirebaseAuth();
@@ -30,19 +24,17 @@ function AppContent() {
       <NotificationContainer />
       <OfflineStatus />
       <Routes>
-        <Route path="/login" element={
-          user ? <Navigate to="/dashboard" /> : <LoginPage />
-        } />
-        <Route path="/" element={
-          user ? <Navigate to="/dashboard" /> : <Navigate to="/login" />
-        } />
+        <Route path="/login" element={<Login />} />
+        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+        
         <Route path="/dashboard" element={
-          <ProtectedRoute>
+          <ProtectedRoute allowedRoles={['admin', 'regional_supervisor', 'district_health_officer', 'facility_manager', 'village_health_worker']}>
             <Layout>
               <Dashboard />
             </Layout>
           </ProtectedRoute>
         } />
+        
         <Route path="/users" element={
           <ProtectedRoute allowedRoles={['admin', 'regional_supervisor', 'district_health_officer', 'facility_manager']}>
             <Layout>
@@ -50,6 +42,7 @@ function AppContent() {
             </Layout>
           </ProtectedRoute>
         } />
+        
         <Route path="/roles-management" element={
           <ProtectedRoute allowedRoles={['admin', 'regional_supervisor', 'district_health_officer']}>
             <Layout>
@@ -57,6 +50,7 @@ function AppContent() {
             </Layout>
           </ProtectedRoute>
         } />
+        
         <Route path="/facilities" element={
           <ProtectedRoute allowedRoles={['admin', 'regional_supervisor', 'district_health_officer', 'facility_manager']}>
             <Layout>
@@ -64,20 +58,23 @@ function AppContent() {
             </Layout>
           </ProtectedRoute>
         } />
+        
         <Route path="/inventory" element={
-          <ProtectedRoute>
+          <ProtectedRoute allowedRoles={['admin', 'regional_supervisor', 'district_health_officer', 'facility_manager', 'village_health_worker']}>
             <Layout>
               <InventoryManagement />
             </Layout>
           </ProtectedRoute>
         } />
+        
         <Route path="/transactions" element={
-          <ProtectedRoute>
+          <ProtectedRoute allowedRoles={['admin', 'regional_supervisor', 'district_health_officer', 'facility_manager', 'village_health_worker']}>
             <Layout>
               <StockTransactions />
             </Layout>
           </ProtectedRoute>
         } />
+        
         <Route path="/transfers" element={
           <ProtectedRoute allowedRoles={['admin', 'regional_supervisor', 'district_health_officer', 'facility_manager']}>
             <Layout>
@@ -85,28 +82,13 @@ function AppContent() {
             </Layout>
           </ProtectedRoute>
         } />
+        
         <Route path="/reports" element={
           <ProtectedRoute allowedRoles={['admin', 'regional_supervisor', 'district_health_officer', 'facility_manager']}>
             <Layout>
               <Reports />
             </Layout>
           </ProtectedRoute>
-        } />
-        <Route path="/database-test" element={
-          <ProtectedRoute allowedRoles={['admin']}>
-            <Layout>
-              <DatabaseTestPage />
-            </Layout>
-          </ProtectedRoute>
-        } />
-        <Route path="/firebase-test" element={
-          <FirebaseTest />
-        } />
-        <Route path="/firebase-config-test" element={
-          <FirebaseConfigTest />
-        } />
-        <Route path="/demo-setup" element={
-          <DemoAccountsSetup />
         } />
       </Routes>
     </div>

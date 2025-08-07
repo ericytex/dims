@@ -1,19 +1,18 @@
 import React from 'react';
+import { useFirebaseDatabase } from '../hooks/useFirebaseDatabase';
 import { useFirebaseAuth } from '../hooks/useFirebaseAuth';
-import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
-import { 
-  Users, 
-  Package, 
-  FileText, 
+import {
+  Package,
+  Users,
+  Building,
   TrendingUp,
-  TrendingDown, 
+  TrendingDown,
   AlertTriangle,
-  User,
-  Shield,
-  Eye,
-  Building
+  CheckCircle,
+  Clock,
+  MapPin,
+  Calendar
 } from 'lucide-react';
-import RoleDebugger from '../components/RoleDebugger';
 
 export default function Dashboard() {
   const { user } = useFirebaseAuth();
@@ -165,23 +164,21 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-        <div className="flex items-center space-x-4">
-          <div className="text-sm text-gray-600">
-            Welcome back, <span className="font-semibold">{user?.name || 'User'}</span>
-          </div>
-          <div className="flex items-center space-x-2">
-            <Shield className="w-4 h-4 text-gray-500" />
-            <span className="text-sm font-medium text-gray-700">
-              {user?.role?.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase()) || 'No Role'}
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
+          <p className="text-gray-600 mt-2">Welcome back, {user?.displayName || 'User'}!</p>
+        </div>
+        <div className="flex items-center space-x-2">
+          <div className="text-sm text-gray-500">
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+              <CheckCircle className="w-3 h-3 mr-1" />
+              System Online
             </span>
           </div>
         </div>
       </div>
-
-      {/* Role Debugger - Show for all users to help troubleshoot */}
-      <RoleDebugger />
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
