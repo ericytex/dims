@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useNotification } from '../contexts/NotificationContext';
 import { useOffline } from '../contexts/OfflineContext';
 import { useFirebaseDatabase } from '../hooks/useFirebaseDatabase';
@@ -45,6 +46,8 @@ export default function InventoryManagement() {
   const { showNotification } = useNotification();
   const { isOnline, addOfflineInventoryUpdate, syncOfflineData, isSyncing, pendingCount } = useOffline();
   const { user } = useFirebaseAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
   const { 
     inventoryItems, 
     loading, 
@@ -54,8 +57,25 @@ export default function InventoryManagement() {
     deleteInventoryItem 
   } = useFirebaseDatabase();
 
+  // Get itemId from URL parameters
+  const searchParams = new URLSearchParams(location.search);
+  const itemIdFromUrl = searchParams.get('itemId');
+
   // State for offline items
   const [offlineItems, setOfflineItems] = useState<InventoryItem[]>([]);
+  const [highlightedItemId, setHighlightedItemId] = useState<string | null>(itemIdFromUrl);
+
+  // Handle URL parameter changes
+  useEffect(() => {
+    if (itemIdFromUrl) {
+      setHighlightedItemId(itemIdFromUrl);
+      // Clear the URL parameter after a few seconds
+      setTimeout(() => {
+        navigate('/inventory', { replace: true });
+        setHighlightedItemId(null);
+      }, 5000);
+    }
+  }, [itemIdFromUrl, navigate]);
 
   // Load offline items
   useEffect(() => {
@@ -792,7 +812,7 @@ export default function InventoryManagement() {
                   const stockLevel = getStockLevelIndicator(item.currentStock, item.minStock, item.maxStock);
                   
                   return (
-                    <tr key={item.id} className={`hover:bg-gray-50 ${isOffline ? 'bg-yellow-50' : ''}`} id={`item-${item.id}`}>
+                    <tr key={item.id} className={`hover:bg-gray-50 ${isOffline ? 'bg-yellow-50' : ''} ${highlightedItemId === item.id ? 'bg-blue-50' : ''}`} id={`item-${item.id}`}>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex flex-col items-center space-y-2">
                           <div className={`w-4 h-4 rounded-full ${stockLevel.color}`}></div>
@@ -923,7 +943,7 @@ export default function InventoryManagement() {
             const stockLevel = getStockLevelIndicator(item.currentStock, item.minStock, item.maxStock);
             
             return (
-              <div key={item.id} className={`bg-white rounded-lg shadow-sm border ${isOffline ? 'border-yellow-200 bg-yellow-50' : 'border-gray-200'} p-4`} id={`item-${item.id}`}>
+              <div key={item.id} className={`bg-white rounded-lg shadow-sm border ${isOffline ? 'border-yellow-200 bg-yellow-50' : 'border-gray-200'} p-4 ${highlightedItemId === item.id ? 'bg-blue-50' : ''}`} id={`item-${item.id}`}>
                 {/* Header with Stock Level Indicator */}
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex items-center space-x-3">

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAlerts, Alert } from '../contexts/AlertsContext';
 import { 
   Bell, 
@@ -12,7 +13,8 @@ import {
   Calendar,
   TrendingDown,
   Eye,
-  EyeOff
+  EyeOff,
+  ExternalLink
 } from 'lucide-react';
 
 interface AlertsPanelProps {
@@ -23,6 +25,26 @@ interface AlertsPanelProps {
 const AlertsPanel: React.FC<AlertsPanelProps> = ({ isOpen, onClose }) => {
   const { alerts, unreadCount, markAsRead, dismissAlert, dismissAllAlerts, refreshAlerts, isLoading } = useAlerts();
   const [filter, setFilter] = useState<'all' | 'unread' | 'critical' | 'low_stock' | 'expiry' | 'reorder'>('all');
+  const navigate = useNavigate();
+
+  const handleViewItem = (alert: Alert) => {
+    if (alert.itemId) {
+      // Mark as read when viewing item
+      if (!alert.isRead) {
+        markAsRead(alert.id);
+      }
+      // Navigate to inventory with item filter
+      navigate(`/inventory?itemId=${alert.itemId}`);
+      onClose();
+    }
+  };
+
+  const handleViewFacility = (alert: Alert) => {
+    if (alert.facilityId) {
+      navigate(`/facilities?facilityId=${alert.facilityId}`);
+      onClose();
+    }
+  };
 
   const getSeverityIcon = (severity: Alert['severity']) => {
     switch (severity) {
@@ -183,15 +205,35 @@ const AlertsPanel: React.FC<AlertsPanelProps> = ({ isOpen, onClose }) => {
                           {/* Alert Details */}
                           <div className="space-y-1 text-xs text-gray-500">
                             {alert.itemName && (
-                              <div className="flex items-center space-x-1">
-                                <Package className="w-3 h-3" />
-                                <span>{alert.itemName}</span>
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center space-x-1">
+                                  <Package className="w-3 h-3" />
+                                  <span>{alert.itemName}</span>
+                                </div>
+                                <button
+                                  onClick={() => handleViewItem(alert)}
+                                  className="flex items-center space-x-1 text-blue-600 hover:text-blue-800 transition-colors"
+                                  title="View Item"
+                                >
+                                  <ExternalLink className="w-3 h-3" />
+                                  <span className="text-xs">View</span>
+                                </button>
                               </div>
                             )}
                             {alert.facilityName && (
-                              <div className="flex items-center space-x-1">
-                                <Info className="w-3 h-3" />
-                                <span>{alert.facilityName}</span>
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center space-x-1">
+                                  <Info className="w-3 h-3" />
+                                  <span>{alert.facilityName}</span>
+                                </div>
+                                <button
+                                  onClick={() => handleViewFacility(alert)}
+                                  className="flex items-center space-x-1 text-blue-600 hover:text-blue-800 transition-colors"
+                                  title="View Facility"
+                                >
+                                  <ExternalLink className="w-3 h-3" />
+                                  <span className="text-xs">View</span>
+                                </button>
                               </div>
                             )}
                             {alert.currentStock !== undefined && (
