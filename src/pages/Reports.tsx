@@ -22,7 +22,14 @@ import {
   Clock
 } from 'lucide-react';
 import { jsPDF } from 'jspdf';
-import 'jspdf-autotable';
+import autoTable from 'jspdf-autotable';
+
+// Extend jsPDF with autoTable method
+declare module 'jspdf' {
+  interface jsPDF {
+    autoTable: (options: any) => jsPDF;
+  }
+}
 
 interface ReportData {
   inventory: any[];
@@ -283,7 +290,7 @@ export default function Reports() {
         item.status || 'N/A'
       ]);
 
-      (doc as any).autoTable({
+      doc.autoTable({
         head: head,
         body: body,
         startY: startY,
@@ -299,120 +306,184 @@ export default function Reports() {
   };
 
   const generateUsersPDF = (doc: jsPDF, startY: number) => {
-    const headers = [['Name', 'Email', 'Role', 'Facility', 'Status', 'Region']];
-    const data = reportData.users.map(user => [
-      user.name,
-      user.email,
-      user.role,
-      user.facilityName || 'N/A',
-      user.status,
-      user.region || 'N/A'
-    ]);
+    try {
+      const usersData = reportData.users || [];
+      
+      if (usersData.length === 0) {
+        doc.setFontSize(14);
+        doc.text('No users data available', 14, startY);
+        return;
+      }
 
-    (doc as any).autoTable({
-      head: headers,
-      body: data,
-      startY: startY,
-      theme: 'grid',
-      headStyles: { fillColor: [255, 193, 7] }
-    });
+      const head = [['Name', 'Email', 'Role', 'Phone', 'Facility', 'Status']];
+      const body = usersData.map(user => [
+        user.name || 'N/A',
+        user.email || 'N/A',
+        user.role || 'N/A',
+        user.phone || 'N/A',
+        user.facilityName || 'N/A',
+        user.status || 'N/A'
+      ]);
+
+      doc.autoTable({
+        head: head,
+        body: body,
+        startY: startY,
+        styles: { fontSize: 8, cellPadding: 2 },
+        headStyles: { fillColor: [255, 204, 0], textColor: [0, 0, 0] },
+        alternateRowStyles: { fillColor: [245, 245, 245] }
+      });
+    } catch (error) {
+      console.error('Error generating users PDF:', error);
+      doc.setFontSize(14);
+      doc.text('Error generating users data', 14, startY);
+    }
   };
 
   const generateFacilitiesPDF = (doc: jsPDF, startY: number) => {
-    const headers = [['Facility Name', 'Type', 'Location', 'Manager', 'Status']];
-    const data = reportData.facilities.map(facility => [
-      facility.name,
-      facility.type,
-      facility.location,
-      facility.manager || 'N/A',
-      facility.status
-    ]);
+    try {
+      const facilitiesData = reportData.facilities || [];
+      
+      if (facilitiesData.length === 0) {
+        doc.setFontSize(14);
+        doc.text('No facilities data available', 14, startY);
+        return;
+      }
 
-    (doc as any).autoTable({
-      head: headers,
-      body: data,
-      startY: startY,
-      theme: 'grid',
-      headStyles: { fillColor: [255, 193, 7] }
-    });
+      const head = [['Name', 'Type', 'Location', 'Status', 'Contact']];
+      const body = facilitiesData.map(facility => [
+        facility.name || 'N/A',
+        facility.type || 'N/A',
+        facility.location || 'N/A',
+        facility.status || 'N/A',
+        facility.contact || 'N/A'
+      ]);
+
+      doc.autoTable({
+        head: head,
+        body: body,
+        startY: startY,
+        styles: { fontSize: 8, cellPadding: 2 },
+        headStyles: { fillColor: [255, 204, 0], textColor: [0, 0, 0] },
+        alternateRowStyles: { fillColor: [245, 245, 245] }
+      });
+    } catch (error) {
+      console.error('Error generating facilities PDF:', error);
+      doc.setFontSize(14);
+      doc.text('Error generating facilities data', 14, startY);
+    }
   };
 
   const generateTransactionsPDF = (doc: jsPDF, startY: number) => {
-    const headers = [['Date', 'Type', 'Item', 'Quantity', 'Facility', 'Status']];
-    const data = reportData.transactions.map(transaction => [
-      new Date(transaction.date).toLocaleDateString(),
-      transaction.type,
-      transaction.itemName,
-      transaction.quantity,
-      transaction.facility,
-      transaction.status
-    ]);
+    try {
+      const transactionsData = reportData.transactions || [];
+      
+      if (transactionsData.length === 0) {
+        doc.setFontSize(14);
+        doc.text('No transactions data available', 14, startY);
+        return;
+      }
 
-    (doc as any).autoTable({
-      head: headers,
-      body: data,
-      startY: startY,
-      theme: 'grid',
-      headStyles: { fillColor: [255, 193, 7] }
-    });
+      const head = [['Item', 'Type', 'Quantity', 'Facility', 'Date']];
+      const body = transactionsData.map(transaction => [
+        transaction.itemName || 'N/A',
+        transaction.type || 'N/A',
+        transaction.quantity?.toString() || '0',
+        transaction.facility || 'N/A',
+        transaction.date ? new Date(transaction.date).toLocaleDateString() : 'N/A'
+      ]);
+
+      doc.autoTable({
+        head: head,
+        body: body,
+        startY: startY,
+        styles: { fontSize: 8, cellPadding: 2 },
+        headStyles: { fillColor: [255, 204, 0], textColor: [0, 0, 0] },
+        alternateRowStyles: { fillColor: [245, 245, 245] }
+      });
+    } catch (error) {
+      console.error('Error generating transactions PDF:', error);
+      doc.setFontSize(14);
+      doc.text('Error generating transactions data', 14, startY);
+    }
   };
 
   const generateTransfersPDF = (doc: jsPDF, startY: number) => {
-    const headers = [['Date', 'From', 'To', 'Item', 'Quantity', 'Status']];
-    const data = reportData.transfers.map(transfer => [
-      new Date(transfer.date).toLocaleDateString(),
-      transfer.fromFacility,
-      transfer.toFacility,
-      transfer.itemName,
-      transfer.quantity,
-      transfer.status
-    ]);
+    try {
+      const transfersData = reportData.transfers || [];
+      
+      if (transfersData.length === 0) {
+        doc.setFontSize(14);
+        doc.text('No transfers data available', 14, startY);
+        return;
+      }
 
-    (doc as any).autoTable({
-      head: headers,
-      body: data,
-      startY: startY,
-      theme: 'grid',
-      headStyles: { fillColor: [255, 193, 7] }
-    });
+      const head = [['Item', 'From', 'To', 'Quantity', 'Status', 'Date']];
+      const body = transfersData.map(transfer => [
+        transfer.itemName || 'N/A',
+        transfer.fromFacility || 'N/A',
+        transfer.toFacility || 'N/A',
+        transfer.quantity?.toString() || '0',
+        transfer.status || 'N/A',
+        transfer.date ? new Date(transfer.date).toLocaleDateString() : 'N/A'
+      ]);
+
+      doc.autoTable({
+        head: head,
+        body: body,
+        startY: startY,
+        styles: { fontSize: 8, cellPadding: 2 },
+        headStyles: { fillColor: [255, 204, 0], textColor: [0, 0, 0] },
+        alternateRowStyles: { fillColor: [245, 245, 245] }
+      });
+    } catch (error) {
+      console.error('Error generating transfers PDF:', error);
+      doc.setFontSize(14);
+      doc.text('Error generating transfers data', 14, startY);
+    }
   };
 
   const generateAllReportsPDF = (doc: jsPDF, startY: number) => {
-    let currentY = startY;
+    try {
+      let currentY = startY;
 
-    // Summary
-    doc.setFontSize(16);
-    doc.text('System Summary', 20, currentY);
-    currentY += 20;
-
-    doc.setFontSize(12);
-    doc.text(`Total Items: ${reportData.inventory.length}`, 20, currentY);
-    currentY += 10;
-    doc.text(`Total Users: ${reportData.users.length}`, 20, currentY);
-    currentY += 10;
-    doc.text(`Total Facilities: ${reportData.facilities.length}`, 20, currentY);
-    currentY += 10;
-    doc.text(`Total Transactions: ${reportData.transactions.length}`, 20, currentY);
-    currentY += 10;
-    doc.text(`Total Transfers: ${reportData.transfers.length}`, 20, currentY);
-    currentY += 20;
-
-    // Add each report section
-    if (reportData.inventory.length > 0) {
-      doc.setFontSize(14);
-      doc.text('Inventory Report', 20, currentY);
+      // Inventory Section
+      doc.setFontSize(16);
+      doc.text('Inventory Report', 14, currentY);
       currentY += 10;
       generateInventoryPDF(doc, currentY);
       currentY = (doc as any).lastAutoTable.finalY + 20;
-    }
 
-    if (reportData.users.length > 0) {
-      doc.addPage();
-      currentY = 20;
-      doc.setFontSize(14);
-      doc.text('Users Report', 20, currentY);
+      // Users Section
+      doc.setFontSize(16);
+      doc.text('Users Report', 14, currentY);
       currentY += 10;
       generateUsersPDF(doc, currentY);
+      currentY = (doc as any).lastAutoTable.finalY + 20;
+
+      // Facilities Section
+      doc.setFontSize(16);
+      doc.text('Facilities Report', 14, currentY);
+      currentY += 10;
+      generateFacilitiesPDF(doc, currentY);
+      currentY = (doc as any).lastAutoTable.finalY + 20;
+
+      // Transactions Section
+      doc.setFontSize(16);
+      doc.text('Transactions Report', 14, currentY);
+      currentY += 10;
+      generateTransactionsPDF(doc, currentY);
+      currentY = (doc as any).lastAutoTable.finalY + 20;
+
+      // Transfers Section
+      doc.setFontSize(16);
+      doc.text('Transfers Report', 14, currentY);
+      currentY += 10;
+      generateTransfersPDF(doc, currentY);
+    } catch (error) {
+      console.error('Error generating all reports PDF:', error);
+      doc.setFontSize(14);
+      doc.text('Error generating comprehensive report', 14, startY);
     }
   };
 
