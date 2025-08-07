@@ -26,25 +26,21 @@ const OfflineStatus: React.FC = () => {
     }
   };
 
-  if (!isOnline) {
+  // Simple blinking dot for online status
+  if (isOnline && pendingCount === 0) {
     return (
-      <div className="fixed bottom-4 right-4 bg-red-500 text-white px-4 py-2 rounded-lg shadow-lg flex items-center space-x-2 z-50">
-        <WifiOff className="w-4 h-4" />
-        <span className="text-sm font-medium">Offline Mode</span>
-        {pendingCount > 0 && (
-          <span className="bg-white text-red-500 px-2 py-1 rounded-full text-xs font-bold">
-            {pendingCount}
-          </span>
-        )}
+      <div className="fixed top-4 right-4 z-50">
+        <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
       </div>
     );
   }
 
+  // Show sync status when there are pending items
   if (pendingCount > 0) {
     return (
-      <div className="fixed bottom-4 right-4 bg-yellow-500 text-white px-4 py-2 rounded-lg shadow-lg flex items-center space-x-2 z-50">
+      <div className="fixed top-4 right-4 bg-yellow-500 text-white px-3 py-1 rounded-lg shadow-lg flex items-center space-x-2 z-50">
         <AlertCircle className="w-4 h-4" />
-        <span className="text-sm font-medium">{pendingCount} pending sync</span>
+        <span className="text-sm font-medium">{pendingCount}</span>
         <button
           onClick={handleSync}
           disabled={isSyncing}
@@ -57,22 +53,26 @@ const OfflineStatus: React.FC = () => {
           )}
           <span>Sync</span>
         </button>
-        {isSyncing && syncProgress.total > 0 && (
-          <div className="absolute -bottom-8 left-0 right-0 bg-gray-800 text-white text-xs px-2 py-1 rounded">
-            {syncProgress.current} ({syncProgress.completed}/{syncProgress.total})
-          </div>
+      </div>
+    );
+  }
+
+  // Offline status
+  if (!isOnline) {
+    return (
+      <div className="fixed top-4 right-4 bg-red-500 text-white px-3 py-1 rounded-lg shadow-lg flex items-center space-x-2 z-50">
+        <WifiOff className="w-4 h-4" />
+        <span className="text-sm font-medium">Offline</span>
+        {pendingCount > 0 && (
+          <span className="bg-white text-red-500 px-2 py-1 rounded-full text-xs font-bold">
+            {pendingCount}
+          </span>
         )}
       </div>
     );
   }
 
-  return (
-    <div className="fixed bottom-4 right-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg flex items-center space-x-2 z-50">
-      <Wifi className="w-4 h-4" />
-      <span className="text-sm font-medium">Online</span>
-      <CheckCircle className="w-4 h-4" />
-    </div>
-  );
+  return null;
 };
 
 export default OfflineStatus; 
