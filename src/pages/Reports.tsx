@@ -22,7 +22,7 @@ import {
   Clock
 } from 'lucide-react';
 import { jsPDF } from 'jspdf';
-import autoTable from 'jspdf-autotable';
+import 'jspdf-autotable';
 
 // Extend jsPDF with autoTable method
 declare module 'jspdf' {
@@ -266,7 +266,48 @@ export default function Reports() {
     }
   };
 
-  // PDF Generation Functions
+  // Simple PDF generation without autoTable
+  const generateSimplePDF = (doc: jsPDF, title: string, data: any[], columns: string[]) => {
+    try {
+      let yPosition = 20;
+      
+      // Title
+      doc.setFontSize(16);
+      doc.text(title, 14, yPosition);
+      yPosition += 20;
+
+      // Headers
+      doc.setFontSize(10);
+      let xPosition = 14;
+      columns.forEach((column, index) => {
+        doc.text(column, xPosition, yPosition);
+        xPosition += 40;
+      });
+      yPosition += 15;
+
+      // Data rows
+      doc.setFontSize(8);
+      data.forEach((row, rowIndex) => {
+        if (yPosition > 250) {
+          doc.addPage();
+          yPosition = 20;
+        }
+        
+        xPosition = 14;
+        columns.forEach((column, colIndex) => {
+          const value = row[column] || row[colIndex] || 'N/A';
+          doc.text(String(value).substring(0, 20), xPosition, yPosition);
+          xPosition += 40;
+        });
+        yPosition += 10;
+      });
+    } catch (error) {
+      console.error('Error in simple PDF generation:', error);
+      doc.setFontSize(14);
+      doc.text('Error generating data', 14, 20);
+    }
+  };
+
   const generateInventoryPDF = (doc: jsPDF, startY: number) => {
     try {
       const inventoryData = reportData.inventory || [];
@@ -277,27 +318,63 @@ export default function Reports() {
         return;
       }
 
-      const head = [['Name', 'SKU', 'Category', 'Stock', 'Min Stock', 'Cost', 'Supplier', 'Facility', 'Status']];
-      const body = inventoryData.map(item => [
-        item.name || 'N/A',
-        item.sku || 'N/A',
-        item.category || 'N/A',
-        item.currentStock?.toString() || '0',
-        item.minStock?.toString() || '0',
-        `UGX ${(item.cost || 0).toLocaleString()}`,
-        item.supplier || 'N/A',
-        item.facility || 'N/A',
-        item.status || 'N/A'
-      ]);
+      // Try autoTable first, fallback to simple PDF
+      try {
+        const head = [['Name', 'SKU', 'Category', 'Stock', 'Min Stock', 'Cost', 'Supplier', 'Facility', 'Status']];
+        const body = inventoryData.map(item => [
+          item.name || 'N/A',
+          item.sku || 'N/A',
+          item.category || 'N/A',
+          item.currentStock?.toString() || '0',
+          item.minStock?.toString() || '0',
+          `UGX ${(item.cost || 0).toLocaleString()}`,
+          item.supplier || 'N/A',
+          item.facility || 'N/A',
+          item.status || 'N/A'
+        ]);
 
-      doc.autoTable({
-        head: head,
-        body: body,
-        startY: startY,
-        styles: { fontSize: 8, cellPadding: 2 },
-        headStyles: { fillColor: [255, 204, 0], textColor: [0, 0, 0] },
-        alternateRowStyles: { fillColor: [245, 245, 245] }
-      });
+        if (typeof doc.autoTable === 'function') {
+          doc.autoTable({
+            head: head,
+            body: body,
+            startY: startY,
+            styles: { fontSize: 8, cellPadding: 2 },
+            headStyles: { fillColor: [255, 204, 0], textColor: [0, 0, 0] },
+            alternateRowStyles: { fillColor: [245, 245, 245] }
+          });
+        } else {
+          // Fallback to simple PDF
+          const columns = ['Name', 'SKU', 'Category', 'Stock', 'Min Stock', 'Cost', 'Supplier', 'Facility', 'Status'];
+          const data = inventoryData.map(item => ({
+            Name: item.name || 'N/A',
+            SKU: item.sku || 'N/A',
+            Category: item.category || 'N/A',
+            Stock: item.currentStock?.toString() || '0',
+            'Min Stock': item.minStock?.toString() || '0',
+            Cost: `UGX ${(item.cost || 0).toLocaleString()}`,
+            Supplier: item.supplier || 'N/A',
+            Facility: item.facility || 'N/A',
+            Status: item.status || 'N/A'
+          }));
+          generateSimplePDF(doc, 'Inventory Report', data, columns);
+        }
+      } catch (autoTableError) {
+        console.error('AutoTable failed, using simple PDF:', autoTableError);
+        // Fallback to simple PDF
+        const columns = ['Name', 'SKU', 'Category', 'Stock', 'Min Stock', 'Cost', 'Supplier', 'Facility', 'Status'];
+        const data = inventoryData.map(item => ({
+          Name: item.name || 'N/A',
+          SKU: item.sku || 'N/A',
+          Category: item.category || 'N/A',
+          Stock: item.currentStock?.toString() || '0',
+          'Min Stock': item.minStock?.toString() || '0',
+          Cost: `UGX ${(item.cost || 0).toLocaleString()}`,
+          Supplier: item.supplier || 'N/A',
+          Facility: item.facility || 'N/A',
+          Status: item.status || 'N/A'
+        }));
+        generateSimplePDF(doc, 'Inventory Report', data, columns);
+      }
     } catch (error) {
       console.error('Error generating inventory PDF:', error);
       doc.setFontSize(14);
@@ -315,24 +392,54 @@ export default function Reports() {
         return;
       }
 
-      const head = [['Name', 'Email', 'Role', 'Phone', 'Facility', 'Status']];
-      const body = usersData.map(user => [
-        user.name || 'N/A',
-        user.email || 'N/A',
-        user.role || 'N/A',
-        user.phone || 'N/A',
-        user.facilityName || 'N/A',
-        user.status || 'N/A'
-      ]);
+      // Try autoTable first, fallback to simple PDF
+      try {
+        const head = [['Name', 'Email', 'Role', 'Phone', 'Facility', 'Status']];
+        const body = usersData.map(user => [
+          user.name || 'N/A',
+          user.email || 'N/A',
+          user.role || 'N/A',
+          user.phone || 'N/A',
+          user.facilityName || 'N/A',
+          user.status || 'N/A'
+        ]);
 
-      doc.autoTable({
-        head: head,
-        body: body,
-        startY: startY,
-        styles: { fontSize: 8, cellPadding: 2 },
-        headStyles: { fillColor: [255, 204, 0], textColor: [0, 0, 0] },
-        alternateRowStyles: { fillColor: [245, 245, 245] }
-      });
+        if (typeof doc.autoTable === 'function') {
+          doc.autoTable({
+            head: head,
+            body: body,
+            startY: startY,
+            styles: { fontSize: 8, cellPadding: 2 },
+            headStyles: { fillColor: [255, 204, 0], textColor: [0, 0, 0] },
+            alternateRowStyles: { fillColor: [245, 245, 245] }
+          });
+        } else {
+          // Fallback to simple PDF
+          const columns = ['Name', 'Email', 'Role', 'Phone', 'Facility', 'Status'];
+          const data = usersData.map(user => ({
+            Name: user.name || 'N/A',
+            Email: user.email || 'N/A',
+            Role: user.role || 'N/A',
+            Phone: user.phone || 'N/A',
+            Facility: user.facilityName || 'N/A',
+            Status: user.status || 'N/A'
+          }));
+          generateSimplePDF(doc, 'Users Report', data, columns);
+        }
+      } catch (autoTableError) {
+        console.error('AutoTable failed, using simple PDF:', autoTableError);
+        // Fallback to simple PDF
+        const columns = ['Name', 'Email', 'Role', 'Phone', 'Facility', 'Status'];
+        const data = usersData.map(user => ({
+          Name: user.name || 'N/A',
+          Email: user.email || 'N/A',
+          Role: user.role || 'N/A',
+          Phone: user.phone || 'N/A',
+          Facility: user.facilityName || 'N/A',
+          Status: user.status || 'N/A'
+        }));
+        generateSimplePDF(doc, 'Users Report', data, columns);
+      }
     } catch (error) {
       console.error('Error generating users PDF:', error);
       doc.setFontSize(14);
@@ -350,23 +457,51 @@ export default function Reports() {
         return;
       }
 
-      const head = [['Name', 'Type', 'Location', 'Status', 'Contact']];
-      const body = facilitiesData.map(facility => [
-        facility.name || 'N/A',
-        facility.type || 'N/A',
-        facility.location || 'N/A',
-        facility.status || 'N/A',
-        facility.contact || 'N/A'
-      ]);
+      // Try autoTable first, fallback to simple PDF
+      try {
+        const head = [['Name', 'Type', 'Location', 'Status', 'Contact']];
+        const body = facilitiesData.map(facility => [
+          facility.name || 'N/A',
+          facility.type || 'N/A',
+          facility.location || 'N/A',
+          facility.status || 'N/A',
+          facility.contact || 'N/A'
+        ]);
 
-      doc.autoTable({
-        head: head,
-        body: body,
-        startY: startY,
-        styles: { fontSize: 8, cellPadding: 2 },
-        headStyles: { fillColor: [255, 204, 0], textColor: [0, 0, 0] },
-        alternateRowStyles: { fillColor: [245, 245, 245] }
-      });
+        if (typeof doc.autoTable === 'function') {
+          doc.autoTable({
+            head: head,
+            body: body,
+            startY: startY,
+            styles: { fontSize: 8, cellPadding: 2 },
+            headStyles: { fillColor: [255, 204, 0], textColor: [0, 0, 0] },
+            alternateRowStyles: { fillColor: [245, 245, 245] }
+          });
+        } else {
+          // Fallback to simple PDF
+          const columns = ['Name', 'Type', 'Location', 'Status', 'Contact'];
+          const data = facilitiesData.map(facility => ({
+            Name: facility.name || 'N/A',
+            Type: facility.type || 'N/A',
+            Location: facility.location || 'N/A',
+            Status: facility.status || 'N/A',
+            Contact: facility.contact || 'N/A'
+          }));
+          generateSimplePDF(doc, 'Facilities Report', data, columns);
+        }
+      } catch (autoTableError) {
+        console.error('AutoTable failed, using simple PDF:', autoTableError);
+        // Fallback to simple PDF
+        const columns = ['Name', 'Type', 'Location', 'Status', 'Contact'];
+        const data = facilitiesData.map(facility => ({
+          Name: facility.name || 'N/A',
+          Type: facility.type || 'N/A',
+          Location: facility.location || 'N/A',
+          Status: facility.status || 'N/A',
+          Contact: facility.contact || 'N/A'
+        }));
+        generateSimplePDF(doc, 'Facilities Report', data, columns);
+      }
     } catch (error) {
       console.error('Error generating facilities PDF:', error);
       doc.setFontSize(14);
@@ -384,23 +519,51 @@ export default function Reports() {
         return;
       }
 
-      const head = [['Item', 'Type', 'Quantity', 'Facility', 'Date']];
-      const body = transactionsData.map(transaction => [
-        transaction.itemName || 'N/A',
-        transaction.type || 'N/A',
-        transaction.quantity?.toString() || '0',
-        transaction.facility || 'N/A',
-        transaction.date ? new Date(transaction.date).toLocaleDateString() : 'N/A'
-      ]);
+      // Try autoTable first, fallback to simple PDF
+      try {
+        const head = [['Item', 'Type', 'Quantity', 'Facility', 'Date']];
+        const body = transactionsData.map(transaction => [
+          transaction.itemName || 'N/A',
+          transaction.type || 'N/A',
+          transaction.quantity?.toString() || '0',
+          transaction.facility || 'N/A',
+          transaction.date ? new Date(transaction.date).toLocaleDateString() : 'N/A'
+        ]);
 
-      doc.autoTable({
-        head: head,
-        body: body,
-        startY: startY,
-        styles: { fontSize: 8, cellPadding: 2 },
-        headStyles: { fillColor: [255, 204, 0], textColor: [0, 0, 0] },
-        alternateRowStyles: { fillColor: [245, 245, 245] }
-      });
+        if (typeof doc.autoTable === 'function') {
+          doc.autoTable({
+            head: head,
+            body: body,
+            startY: startY,
+            styles: { fontSize: 8, cellPadding: 2 },
+            headStyles: { fillColor: [255, 204, 0], textColor: [0, 0, 0] },
+            alternateRowStyles: { fillColor: [245, 245, 245] }
+          });
+        } else {
+          // Fallback to simple PDF
+          const columns = ['Item', 'Type', 'Quantity', 'Facility', 'Date'];
+          const data = transactionsData.map(transaction => ({
+            Item: transaction.itemName || 'N/A',
+            Type: transaction.type || 'N/A',
+            Quantity: transaction.quantity?.toString() || '0',
+            Facility: transaction.facility || 'N/A',
+            Date: transaction.date ? new Date(transaction.date).toLocaleDateString() : 'N/A'
+          }));
+          generateSimplePDF(doc, 'Transactions Report', data, columns);
+        }
+      } catch (autoTableError) {
+        console.error('AutoTable failed, using simple PDF:', autoTableError);
+        // Fallback to simple PDF
+        const columns = ['Item', 'Type', 'Quantity', 'Facility', 'Date'];
+        const data = transactionsData.map(transaction => ({
+          Item: transaction.itemName || 'N/A',
+          Type: transaction.type || 'N/A',
+          Quantity: transaction.quantity?.toString() || '0',
+          Facility: transaction.facility || 'N/A',
+          Date: transaction.date ? new Date(transaction.date).toLocaleDateString() : 'N/A'
+        }));
+        generateSimplePDF(doc, 'Transactions Report', data, columns);
+      }
     } catch (error) {
       console.error('Error generating transactions PDF:', error);
       doc.setFontSize(14);
@@ -418,24 +581,54 @@ export default function Reports() {
         return;
       }
 
-      const head = [['Item', 'From', 'To', 'Quantity', 'Status', 'Date']];
-      const body = transfersData.map(transfer => [
-        transfer.itemName || 'N/A',
-        transfer.fromFacility || 'N/A',
-        transfer.toFacility || 'N/A',
-        transfer.quantity?.toString() || '0',
-        transfer.status || 'N/A',
-        transfer.date ? new Date(transfer.date).toLocaleDateString() : 'N/A'
-      ]);
+      // Try autoTable first, fallback to simple PDF
+      try {
+        const head = [['Item', 'From', 'To', 'Quantity', 'Status', 'Date']];
+        const body = transfersData.map(transfer => [
+          transfer.itemName || 'N/A',
+          transfer.fromFacility || 'N/A',
+          transfer.toFacility || 'N/A',
+          transfer.quantity?.toString() || '0',
+          transfer.status || 'N/A',
+          transfer.date ? new Date(transfer.date).toLocaleDateString() : 'N/A'
+        ]);
 
-      doc.autoTable({
-        head: head,
-        body: body,
-        startY: startY,
-        styles: { fontSize: 8, cellPadding: 2 },
-        headStyles: { fillColor: [255, 204, 0], textColor: [0, 0, 0] },
-        alternateRowStyles: { fillColor: [245, 245, 245] }
-      });
+        if (typeof doc.autoTable === 'function') {
+          doc.autoTable({
+            head: head,
+            body: body,
+            startY: startY,
+            styles: { fontSize: 8, cellPadding: 2 },
+            headStyles: { fillColor: [255, 204, 0], textColor: [0, 0, 0] },
+            alternateRowStyles: { fillColor: [245, 245, 245] }
+          });
+        } else {
+          // Fallback to simple PDF
+          const columns = ['Item', 'From', 'To', 'Quantity', 'Status', 'Date'];
+          const data = transfersData.map(transfer => ({
+            Item: transfer.itemName || 'N/A',
+            From: transfer.fromFacility || 'N/A',
+            To: transfer.toFacility || 'N/A',
+            Quantity: transfer.quantity?.toString() || '0',
+            Status: transfer.status || 'N/A',
+            Date: transfer.date ? new Date(transfer.date).toLocaleDateString() : 'N/A'
+          }));
+          generateSimplePDF(doc, 'Transfers Report', data, columns);
+        }
+      } catch (autoTableError) {
+        console.error('AutoTable failed, using simple PDF:', autoTableError);
+        // Fallback to simple PDF
+        const columns = ['Item', 'From', 'To', 'Quantity', 'Status', 'Date'];
+        const data = transfersData.map(transfer => ({
+          Item: transfer.itemName || 'N/A',
+          From: transfer.fromFacility || 'N/A',
+          To: transfer.toFacility || 'N/A',
+          Quantity: transfer.quantity?.toString() || '0',
+          Status: transfer.status || 'N/A',
+          Date: transfer.date ? new Date(transfer.date).toLocaleDateString() : 'N/A'
+        }));
+        generateSimplePDF(doc, 'Transfers Report', data, columns);
+      }
     } catch (error) {
       console.error('Error generating transfers PDF:', error);
       doc.setFontSize(14);
