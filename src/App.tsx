@@ -4,7 +4,7 @@ import { FirebaseAuthProvider } from './hooks/useFirebaseAuth';
 import { NotificationProvider } from './contexts/NotificationContext';
 import { OfflineProvider } from './contexts/OfflineContext';
 import { AlertsProvider } from './contexts/AlertsContext';
-import Login from './components/Login';
+import LoginPage from './pages/LoginPage';
 import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
 import Dashboard from './pages/Dashboard';
@@ -27,7 +27,7 @@ function AppContent() {
       <NotificationContainer />
       <OfflineStatus />
       <Routes>
-        <Route path="/login" element={<Login />} />
+        <Route path="/login" element={<LoginPage />} />
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
         
         <Route path="/dashboard" element={
