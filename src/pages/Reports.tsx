@@ -462,12 +462,6 @@ export default function Reports() {
     }
   };
 
-  // Simple test function for debugging
-  const testGenerateReport = () => {
-    console.log('Test generate report clicked');
-    alert('Generate Report button is working! Report config: ' + JSON.stringify(reportConfig));
-  };
-
   const getReportStats = () => {
     const stats = {
       inventory: {
