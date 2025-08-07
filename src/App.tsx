@@ -15,7 +15,6 @@ import InventoryManagement from './pages/InventoryManagement';
 import StockTransactions from './pages/StockTransactions';
 import TransferManagement from './pages/TransferManagement';
 import Reports from './pages/Reports';
-import OfflineStatus from './components/OfflineStatus';
 import NotificationContainer from './components/NotificationContainer';
 import { useFirebaseAuth } from './hooks/useFirebaseAuth';
 
@@ -25,7 +24,6 @@ function AppContent() {
   return (
     <div className="min-h-screen bg-gray-50">
       <NotificationContainer />
-      <OfflineStatus />
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/" element={<Navigate to="/dashboard" replace />} />

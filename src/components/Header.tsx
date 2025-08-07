@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useFirebaseAuth } from '../hooks/useFirebaseAuth';
 import { useAlerts, Alert } from '../contexts/AlertsContext';
+import { useOffline } from '../contexts/OfflineContext';
 import { 
   Menu, 
   Bell, 
@@ -24,6 +25,7 @@ interface HeaderProps {
 export default function Header({ onMenuClick, onAlertsClick }: HeaderProps) {
   const { user, logout } = useFirebaseAuth();
   const { alerts, unreadCount, markAsRead } = useAlerts();
+  const { isOnline, pendingCount } = useOffline();
   const [showAlertsDropdown, setShowAlertsDropdown] = useState(false);
   const navigate = useNavigate();
 
@@ -101,6 +103,17 @@ export default function Header({ onMenuClick, onAlertsClick }: HeaderProps) {
         </div>
 
         <div className="flex items-center space-x-4">
+          {/* Online Status Indicator */}
+          <div className="flex items-center space-x-2">
+            {isOnline && pendingCount === 0 ? (
+              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+            ) : !isOnline ? (
+              <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+            ) : (
+              <div className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse"></div>
+            )}
+          </div>
+
           <div className="relative">
             <button 
               onClick={() => setShowAlertsDropdown(!showAlertsDropdown)}
