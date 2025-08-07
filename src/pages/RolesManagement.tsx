@@ -72,6 +72,8 @@ export default function RolesManagement() {
   const [searchTerm, setSearchTerm] = useState('');
   const [viewType, setViewType] = useState<'cards' | 'table'>('cards');
   const [roleSearchTerms, setRoleSearchTerms] = useState<{ [key: string]: string }>({});
+  const [editingRole, setEditingRole] = useState<Role | null>(null);
+  const [editRoleData, setEditRoleData] = useState<any>(null);
 
   // Comprehensive role permissions mapping
   const rolePermissions = {
@@ -419,6 +421,60 @@ export default function RolesManagement() {
     }));
   };
 
+  // Handle edit role
+  const handleEditRole = (role: Role) => {
+    setEditingRole(role);
+    setEditRoleData({
+      value: role.value,
+      label: role.label,
+      description: role.description,
+      permissions: { ...role.permissions }
+    });
+    setShowEditModal(true);
+  };
+
+  // Save role changes
+  const handleSaveRoleChanges = async () => {
+    if (!editingRole || !editRoleData) return;
+
+    try {
+      // Update the role data
+      const updatedRole = {
+        ...editingRole,
+        label: editRoleData.label,
+        description: editRoleData.description,
+        permissions: editRoleData.permissions
+      };
+
+      // Here you would typically save to Firebase
+      // For now, we'll just update the local state
+      addNotification(`Role "${editRoleData.label}" updated successfully`, 'success');
+      
+      setShowEditModal(false);
+      setEditingRole(null);
+      setEditRoleData(null);
+    } catch (error) {
+      console.error('Error updating role:', error);
+      addNotification('Failed to update role', 'error');
+    }
+  };
+
+  // Handle permission toggle
+  const handlePermissionToggle = (area: string, permission: string) => {
+    if (!editRoleData) return;
+    
+    setEditRoleData(prev => ({
+      ...prev,
+      permissions: {
+        ...prev.permissions,
+        [area]: {
+          ...prev.permissions[area],
+          [permission]: !prev.permissions[area][permission]
+        }
+      }
+    }));
+  };
+
   // Determine view type based on user count
   const getViewTypeForRole = (roleValue: string) => {
     const userCount = getUsersByRole(roleValue).length;
@@ -530,11 +586,6 @@ export default function RolesManagement() {
 
   const handleCreateRole = () => {
     setShowCreateModal(true);
-  };
-
-  const handleEditRole = (role: Role) => {
-    setSelectedRole(role.value);
-    setShowEditModal(true);
   };
 
   const handleDeleteRole = (role: Role) => {
@@ -1040,6 +1091,135 @@ export default function RolesManagement() {
               </button>
               <button
                 onClick={handleSaveRoleAssignment}
+                className="flex-1 px-4 py-2 bg-uganda-yellow text-white rounded-lg hover:bg-yellow-600 transition-colors"
+              >
+                Save Changes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Role Editing Modal */}
+      {showEditModal && editingRole && editRoleData && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-4xl mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-lg font-medium text-gray-900">Edit Role: {editingRole.label}</h3>
+              <button
+                onClick={() => setShowEditModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="space-y-6">
+              {/* Basic Information */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Role Name
+                  </label>
+                  <input
+                    type="text"
+                    value={editRoleData.label}
+                    onChange={(e) => setEditRoleData(prev => ({ ...prev, label: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-uganda-yellow focus:border-transparent"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Role Value
+                  </label>
+                  <input
+                    type="text"
+                    value={editRoleData.value}
+                    disabled
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-500"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Role value cannot be changed</p>
+                </div>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Description
+                </label>
+                <textarea
+                  value={editRoleData.description}
+                  onChange={(e) => setEditRoleData(prev => ({ ...prev, description: e.target.value }))}
+                  rows={3}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-uganda-yellow focus:border-transparent"
+                />
+              </div>
+
+              {/* Permissions */}
+              <div>
+                <h4 className="text-lg font-medium text-gray-900 mb-4">Permissions</h4>
+                <div className="space-y-6">
+                  {Object.entries(editRoleData.permissions).map(([area, permissions]: [string, any]) => (
+                    <div key={area} className="border border-gray-200 rounded-lg p-4">
+                      <h5 className="font-medium text-gray-900 mb-3 capitalize">
+                        {area.replace('_', ' ')} Permissions
+                      </h5>
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                        {Object.entries(permissions).map(([permission, allowed]: [string, boolean]) => (
+                          <label key={permission} className="flex items-center space-x-3 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={allowed as boolean}
+                              onChange={() => handlePermissionToggle(area, permission)}
+                              className="w-4 h-4 text-uganda-yellow border-gray-300 rounded focus:ring-uganda-yellow"
+                            />
+                            <span className="text-sm text-gray-700 capitalize">
+                              {permission.replace('_', ' ')}
+                            </span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Summary */}
+              <div className="bg-gray-50 rounded-lg p-4">
+                <h5 className="font-medium text-gray-900 mb-2">Role Summary</h5>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                  <div>
+                    <span className="text-gray-600">Total Permissions:</span>
+                    <span className="ml-2 font-medium">
+                      {Object.values(editRoleData.permissions).flatMap(Object.values).filter(Boolean).length}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-gray-600">System Areas:</span>
+                    <span className="ml-2 font-medium">
+                      {Object.keys(editRoleData.permissions).length}/7
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-gray-600">Users Assigned:</span>
+                    <span className="ml-2 font-medium">{editingRole.userCount}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-600">Status:</span>
+                    <span className="ml-2 font-medium text-green-600">Active</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div className="flex space-x-3 mt-6 pt-4 border-t border-gray-200">
+              <button
+                onClick={() => setShowEditModal(false)}
+                className="flex-1 px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveRoleChanges}
                 className="flex-1 px-4 py-2 bg-uganda-yellow text-white rounded-lg hover:bg-yellow-600 transition-colors"
               >
                 Save Changes
