@@ -71,6 +71,7 @@ export default function RolesManagement() {
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [viewType, setViewType] = useState<'cards' | 'table'>('cards');
+  const [roleSearchTerms, setRoleSearchTerms] = useState<{ [key: string]: string }>({});
 
   // Comprehensive role permissions mapping
   const rolePermissions = {
@@ -398,14 +399,24 @@ export default function RolesManagement() {
   // Filter users by search term
   const getFilteredUsers = (roleValue: string) => {
     const roleUsers = getUsersByRole(roleValue);
-    if (!searchTerm) return roleUsers;
+    const roleSearchTerm = roleSearchTerms[roleValue] || '';
+    
+    if (!roleSearchTerm) return roleUsers;
     
     return roleUsers.filter(user => 
-      user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.phone?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.facilityName?.toLowerCase().includes(searchTerm.toLowerCase())
+      user.name.toLowerCase().includes(roleSearchTerm.toLowerCase()) ||
+      user.email.toLowerCase().includes(roleSearchTerm.toLowerCase()) ||
+      user.phone?.toLowerCase().includes(roleSearchTerm.toLowerCase()) ||
+      user.facilityName?.toLowerCase().includes(roleSearchTerm.toLowerCase())
     );
+  };
+
+  // Handle role-specific search
+  const handleRoleSearch = (roleValue: string, searchTerm: string) => {
+    setRoleSearchTerms(prev => ({
+      ...prev,
+      [roleValue]: searchTerm
+    }));
   };
 
   // Determine view type based on user count
@@ -746,44 +757,30 @@ export default function RolesManagement() {
           <div className="bg-white rounded-lg shadow-md p-6">
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-lg font-medium text-gray-900">Users by Role</h3>
-              <div className="flex items-center space-x-4">
-                {/* Search Input */}
-                <div className="relative">
-                  <input
-                    type="text"
-                    placeholder="Search users..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-uganda-yellow focus:border-transparent text-sm"
-                  />
-                  <Search className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
-                </div>
-                
+              <div className="flex items-center space-x-2">
                 {/* View Toggle */}
-                <div className="flex items-center space-x-2">
-                  <button
-                    onClick={() => setViewType('cards')}
-                    className={`p-2 rounded-lg transition-colors ${
-                      viewType === 'cards' 
-                        ? 'bg-uganda-yellow text-white' 
-                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                    }`}
-                    title="Card View"
-                  >
-                    <Grid3X3 className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => setViewType('table')}
-                    className={`p-2 rounded-lg transition-colors ${
-                      viewType === 'table' 
-                        ? 'bg-uganda-yellow text-white' 
-                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                    }`}
-                    title="Table View"
-                  >
-                    <Table className="w-4 h-4" />
-                  </button>
-                </div>
+                <button
+                  onClick={() => setViewType('cards')}
+                  className={`p-2 rounded-lg transition-colors ${
+                    viewType === 'cards' 
+                      ? 'bg-uganda-yellow text-white' 
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                  title="Card View"
+                >
+                  <Grid3X3 className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => setViewType('table')}
+                  className={`p-2 rounded-lg transition-colors ${
+                    viewType === 'table' 
+                      ? 'bg-uganda-yellow text-white' 
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                  title="Table View"
+                >
+                  <Table className="w-4 h-4" />
+                </button>
               </div>
             </div>
             
@@ -797,6 +794,7 @@ export default function RolesManagement() {
                 {roles.map((role) => {
                   const roleUsers = getFilteredUsers(role.value);
                   const totalRoleUsers = getUsersByRole(role.value).length;
+                  const roleSearchTerm = roleSearchTerms[role.value] || '';
                   const effectiveViewType = viewType === 'cards' && roleUsers.length > 6 ? 'table' : viewType;
                   
                   return (
@@ -810,7 +808,7 @@ export default function RolesManagement() {
                           </div>
                         </div>
                         <div className="flex items-center space-x-3">
-                          {searchTerm && (
+                          {roleSearchTerm && (
                             <span className="text-sm text-gray-500">
                               {roleUsers.length} of {totalRoleUsers} users
                             </span>
@@ -829,6 +827,28 @@ export default function RolesManagement() {
                         <div className="flex items-center justify-between text-sm">
                           <span className="text-gray-600">System Areas:</span>
                           <span className="font-medium">{role.allowedAreas}/7</span>
+                        </div>
+                      </div>
+
+                      {/* Role-specific Search */}
+                      <div className="mb-4">
+                        <div className="relative">
+                          <input
+                            type="text"
+                            placeholder={`Search users in ${role.label}...`}
+                            value={roleSearchTerm}
+                            onChange={(e) => handleRoleSearch(role.value, e.target.value)}
+                            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-uganda-yellow focus:border-transparent text-sm"
+                          />
+                          <Search className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
+                          {roleSearchTerm && (
+                            <button
+                              onClick={() => handleRoleSearch(role.value, '')}
+                              className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          )}
                         </div>
                       </div>
 
