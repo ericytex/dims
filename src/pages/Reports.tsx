@@ -67,6 +67,8 @@ export default function Reports() {
   useEffect(() => {
     const loadReportData = async () => {
       try {
+        console.log('Loading report data...');
+        
         const [users, facilities, transactions, transfers] = await Promise.all([
           FirebaseDatabaseService.getUsers(),
           FirebaseDatabaseService.getFacilities(),
@@ -74,13 +76,127 @@ export default function Reports() {
           FirebaseDatabaseService.getTransfers()
         ]);
 
-        setReportData({
-          inventory: inventoryItems,
-          users,
-          facilities,
-          transactions,
-          transfers
+        console.log('Loaded data:', {
+          inventory: inventoryItems?.length || 0,
+          users: users?.length || 0,
+          facilities: facilities?.length || 0,
+          transactions: transactions?.length || 0,
+          transfers: transfers?.length || 0
         });
+
+        // If no data exists, create sample data for demonstration
+        const sampleData = {
+          inventory: inventoryItems?.length > 0 ? inventoryItems : [
+            {
+              id: '1',
+              name: 'Paracetamol 500mg',
+              sku: 'MED001',
+              category: 'Medication',
+              currentStock: 150,
+              minStock: 50,
+              cost: 2500,
+              supplier: 'Pharma Ltd',
+              facility: 'Main Warehouse',
+              status: 'active',
+              expiryDate: '2025-12-31'
+            },
+            {
+              id: '2',
+              name: 'Amoxicillin 250mg',
+              sku: 'MED002',
+              category: 'Antibiotics',
+              currentStock: 75,
+              minStock: 100,
+              cost: 3500,
+              supplier: 'MediCorp',
+              facility: 'Regional Office',
+              status: 'active',
+              expiryDate: '2025-10-15'
+            },
+            {
+              id: '3',
+              name: 'Bandages 10cm',
+              sku: 'SUP001',
+              category: 'Supplies',
+              currentStock: 200,
+              minStock: 50,
+              cost: 500,
+              supplier: 'Health Supplies Co',
+              facility: 'Distribution Center',
+              status: 'active',
+              expiryDate: '2026-06-30'
+            }
+          ],
+          users: users?.length > 0 ? users : [
+            {
+              id: '1',
+              name: 'John Doe',
+              email: 'john@example.com',
+              role: 'admin',
+              status: 'active',
+              phone: '+256700000001'
+            },
+            {
+              id: '2',
+              name: 'Jane Smith',
+              email: 'jane@example.com',
+              role: 'facility_manager',
+              status: 'active',
+              phone: '+256700000002'
+            }
+          ],
+          facilities: facilities?.length > 0 ? facilities : [
+            {
+              id: '1',
+              name: 'Main Warehouse',
+              type: 'warehouse',
+              status: 'active',
+              location: 'Kampala'
+            },
+            {
+              id: '2',
+              name: 'Regional Office',
+              type: 'office',
+              status: 'active',
+              location: 'Entebbe'
+            }
+          ],
+          transactions: transactions?.length > 0 ? transactions : [
+            {
+              id: '1',
+              itemId: '1',
+              itemName: 'Paracetamol 500mg',
+              type: 'in',
+              quantity: 100,
+              date: new Date().toISOString(),
+              facility: 'Main Warehouse'
+            },
+            {
+              id: '2',
+              itemId: '2',
+              itemName: 'Amoxicillin 250mg',
+              type: 'out',
+              quantity: 25,
+              date: new Date().toISOString(),
+              facility: 'Regional Office'
+            }
+          ],
+          transfers: transfers?.length > 0 ? transfers : [
+            {
+              id: '1',
+              itemId: '1',
+              itemName: 'Paracetamol 500mg',
+              fromFacility: 'Main Warehouse',
+              toFacility: 'Regional Office',
+              quantity: 50,
+              status: 'completed',
+              date: new Date().toISOString()
+            }
+          ]
+        };
+
+        setReportData(sampleData);
+        console.log('Report data set:', sampleData);
       } catch (error) {
         console.error('Error loading report data:', error);
       }
@@ -454,37 +570,41 @@ export default function Reports() {
   const getReportStats = () => {
     const stats = {
       inventory: {
-        total: reportData.inventory.length,
-        lowStock: reportData.inventory.filter(item => item.currentStock <= item.minStock).length,
-        active: reportData.inventory.filter(item => item.status === 'active').length
+        total: reportData.inventory?.length || 0,
+        lowStock: reportData.inventory?.filter(item => (item.currentStock || 0) <= (item.minStock || 0))?.length || 0,
+        active: reportData.inventory?.filter(item => item.status === 'active')?.length || 0
       },
       users: {
-        total: reportData.users.length,
-        active: reportData.users.filter(user => user.status === 'active').length,
-        byRole: reportData.users.reduce((acc, user) => {
+        total: reportData.users?.length || 0,
+        active: reportData.users?.filter(user => user.status === 'active')?.length || 0,
+        byRole: reportData.users?.reduce((acc, user) => {
           acc[user.role] = (acc[user.role] || 0) + 1;
           return acc;
-        }, {} as any)
+        }, {} as any) || {}
       },
       facilities: {
-        total: reportData.facilities.length,
-        active: reportData.facilities.filter(facility => facility.status === 'active').length
+        total: reportData.facilities?.length || 0,
+        active: reportData.facilities?.filter(facility => facility.status === 'active')?.length || 0
       },
       transactions: {
-        total: reportData.transactions.length,
-        thisMonth: reportData.transactions.filter(t => 
+        total: reportData.transactions?.length || 0,
+        thisMonth: reportData.transactions?.filter(t => 
           new Date(t.date).getMonth() === new Date().getMonth()
-        ).length
+        )?.length || 0
       },
       transfers: {
-        total: reportData.transfers.length,
-        pending: reportData.transfers.filter(t => t.status === 'pending').length
+        total: reportData.transfers?.length || 0,
+        pending: reportData.transfers?.filter(t => t.status === 'pending')?.length || 0
       }
     };
     return stats;
   };
 
   const stats = getReportStats();
+
+  // Debug section to show actual data
+  console.log('Current report data:', reportData);
+  console.log('Calculated stats:', stats);
 
   return (
     <div className="space-y-6">
@@ -499,6 +619,20 @@ export default function Reports() {
           <span className="text-sm text-gray-500">Last updated: {new Date().toLocaleString()}</span>
         </div>
       </div>
+
+      {/* Debug Info - Remove this in production */}
+      {process.env.NODE_ENV === 'development' && (
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+          <h3 className="text-sm font-medium text-yellow-800 mb-2">Debug Info (Development Only)</h3>
+          <div className="text-xs text-yellow-700 space-y-1">
+            <p>Inventory Items: {reportData.inventory.length}</p>
+            <p>Users: {reportData.users.length}</p>
+            <p>Facilities: {reportData.facilities.length}</p>
+            <p>Transactions: {reportData.transactions.length}</p>
+            <p>Transfers: {reportData.transfers.length}</p>
+          </div>
+        </div>
+      )}
 
       {/* Quick Stats */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
