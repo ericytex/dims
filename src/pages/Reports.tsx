@@ -16,7 +16,6 @@ import {
   Eye,
   Printer,
   FileSpreadsheet,
-  FilePdf,
   RefreshCw,
   AlertTriangle,
   CheckCircle,
@@ -564,7 +563,7 @@ export default function Reports() {
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-medium text-gray-900">Quick Report Generation</h2>
           <div className="flex items-center space-x-2">
-            <FilePdf className="w-5 h-5 text-red-600" />
+            <FileText className="w-5 h-5 text-red-600" />
             <FileSpreadsheet className="w-5 h-5 text-green-600" />
           </div>
         </div>
