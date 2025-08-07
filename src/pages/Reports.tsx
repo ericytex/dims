@@ -1,905 +1,769 @@
-import React, { useState } from 'react';
-import { useNotification } from '../contexts/NotificationContext';
-import {
-  BarChart3,
-  Download,
+import React, { useState, useEffect } from 'react';
+import { useFirebaseDatabase } from '../hooks/useFirebaseDatabase';
+import { FirebaseDatabaseService } from '../services/firebaseDatabase';
+import { useFirebaseAuth } from '../hooks/useFirebaseAuth';
+import { 
+  FileText, 
+  Download, 
+  BarChart3, 
+  Users, 
+  Package, 
+  Building, 
+  TrendingUp, 
   Calendar,
-  TrendingUp,
-  TrendingDown,
-  Package,
-  AlertTriangle,
-  MapPin,
-  FileText,
   Filter,
-  X,
+  Search,
   Eye,
-  Clock,
-  DollarSign,
-  Users,
-  Building
+  Printer,
+  FileSpreadsheet,
+  FilePdf,
+  RefreshCw,
+  AlertTriangle,
+  CheckCircle,
+  Clock
 } from 'lucide-react';
+import { jsPDF } from 'jspdf';
+import 'jspdf-autotable';
 
 interface ReportData {
-  facilityStock: {
-    facility: string;
-    totalItems: number;
-    totalValue: number;
-    lowStockItems: number;
-    expiringItems: number;
-  }[];
-  consumptionTrends: {
-    month: string;
-    consumption: number;
-    value: number;
-  }[];
-  expiryReport: {
-    item: string;
-    facility: string;
-    quantity: number;
-    expiryDate: string;
-    daysLeft: number;
-  }[];
-  lowStockReport: {
-    item: string;
-    facility: string;
-    currentStock: number;
-    reorderLevel: number;
-    shortage: number;
-  }[];
+  inventory: any[];
+  users: any[];
+  facilities: any[];
+  transactions: any[];
+  transfers: any[];
+}
+
+interface ReportConfig {
+  type: 'inventory' | 'users' | 'facilities' | 'transactions' | 'transfers' | 'all';
+  format: 'pdf' | 'csv';
+  dateRange: 'all' | 'today' | 'week' | 'month' | 'year';
+  filters: {
+    status?: string;
+    category?: string;
+    facility?: string;
+    role?: string;
+  };
 }
 
 export default function Reports() {
-  const [selectedReport, setSelectedReport] = useState('overview');
-  const [dateRange, setDateRange] = useState('month');
-  const [selectedFacility, setSelectedFacility] = useState('all');
-  const [showModal, setShowModal] = useState(false);
-  const [selectedRecord, setSelectedRecord] = useState<any>(null);
-  const [modalType, setModalType] = useState<string>('');
-  const { addNotification } = useNotification();
+  const { user } = useFirebaseAuth();
+  const { inventoryItems, loading } = useFirebaseDatabase();
+  const [reportData, setReportData] = useState<ReportData>({
+    inventory: [],
+    users: [],
+    facilities: [],
+    transactions: [],
+    transfers: []
+  });
+  const [reportConfig, setReportConfig] = useState<ReportConfig>({
+    type: 'inventory',
+    format: 'pdf',
+    dateRange: 'all',
+    filters: {}
+  });
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [selectedReport, setSelectedReport] = useState<string>('');
 
-  const reportTypes = [
-    { value: 'overview', label: 'System Overview' },
-    { value: 'stock_levels', label: 'Stock Levels' },
-    { value: 'consumption', label: 'Consumption Analysis' },
-    { value: 'expiry', label: 'Expiry Report' },
-    { value: 'low_stock', label: 'Low Stock Alert' },
-    { value: 'transfers', label: 'Transfer Report' }
-  ];
+  // Load all data for reports
+  useEffect(() => {
+    const loadReportData = async () => {
+      try {
+        const [users, facilities, transactions, transfers] = await Promise.all([
+          FirebaseDatabaseService.getUsers(),
+          FirebaseDatabaseService.getFacilities(),
+          FirebaseDatabaseService.getTransactions(),
+          FirebaseDatabaseService.getTransfers()
+        ]);
 
-  const dateRanges = [
-    { value: 'week', label: 'This Week' },
-    { value: 'month', label: 'This Month' },
-    { value: 'quarter', label: 'This Quarter' },
-    { value: 'year', label: 'This Year' }
-  ];
-
-  const facilities = [
-    { value: 'all', label: 'All Facilities' },
-    { value: '1', label: 'Main Warehouse' },
-    { value: '2', label: 'Regional Office' },
-    { value: '3', label: 'Distribution Center' },
-    { value: '4', label: 'Retail Store' }
-  ];
-
-  // Mock data for reports
-  const reportData: ReportData = {
-    facilityStock: [
-      {
-        facility: 'Main Warehouse',
-        totalItems: 1247,
-        totalValue: 45678,
-        lowStockItems: 8,
-        expiringItems: 3
-      },
-      {
-        facility: 'Regional Office',
-        totalItems: 432,
-        totalValue: 15234,
-        lowStockItems: 5,
-        expiringItems: 2
-      },
-      {
-        facility: 'Distribution Center',
-        totalItems: 892,
-        totalValue: 32145,
-        lowStockItems: 6,
-        expiringItems: 1
-      },
-      {
-        facility: 'Retail Store',
-        totalItems: 256,
-        totalValue: 8945,
-        lowStockItems: 4,
-        expiringItems: 2
+        setReportData({
+          inventory: inventoryItems,
+          users,
+          facilities,
+          transactions,
+          transfers
+        });
+      } catch (error) {
+        console.error('Error loading report data:', error);
       }
-    ],
-    consumptionTrends: [
-      { month: 'Jul 2024', consumption: 2340, value: 12450 },
-      { month: 'Aug 2024', consumption: 2180, value: 11200 },
-      { month: 'Sep 2024', consumption: 2450, value: 13100 },
-      { month: 'Oct 2024', consumption: 2630, value: 14200 },
-      { month: 'Nov 2024', consumption: 2520, value: 13600 },
-      { month: 'Dec 2024', consumption: 2810, value: 15300 },
-      { month: 'Jan 2025', consumption: 2940, value: 16100 }
-    ],
-    expiryReport: [
-      {
-        item: 'Laptop Computers',
-        facility: 'Main Warehouse',
-        quantity: 45,
-        expiryDate: '2025-02-15',
-        daysLeft: 37
-      },
-      {
-        item: 'Office Supplies',
-        facility: 'Regional Office',
-        quantity: 120,
-        expiryDate: '2025-01-25',
-        daysLeft: 16
-      },
-      {
-        item: 'Printer Cartridges',
-        facility: 'Distribution Center',
-        quantity: 80,
-        expiryDate: '2025-03-10',
-        daysLeft: 60
+    };
+
+    loadReportData();
+  }, [inventoryItems]);
+
+  // Generate PDF Report
+  const generatePDFReport = async () => {
+    setIsGenerating(true);
+    try {
+      const doc = new jsPDF();
+      const pageWidth = doc.internal.pageSize.width;
+      const pageHeight = doc.internal.pageSize.height;
+      let yPosition = 20;
+
+      // Header
+      doc.setFontSize(20);
+      doc.setTextColor(0, 0, 0);
+      doc.text('DIMS Inventory Management System', pageWidth / 2, yPosition, { align: 'center' });
+      yPosition += 10;
+
+      doc.setFontSize(12);
+      doc.text(`Report: ${getReportTitle()}`, pageWidth / 2, yPosition, { align: 'center' });
+      yPosition += 10;
+
+      doc.setFontSize(10);
+      doc.text(`Generated: ${new Date().toLocaleString()}`, pageWidth / 2, yPosition, { align: 'center' });
+      yPosition += 10;
+
+      doc.text(`Generated by: ${user?.displayName || user?.email}`, pageWidth / 2, yPosition, { align: 'center' });
+      yPosition += 20;
+
+      // Report content based on type
+      switch (reportConfig.type) {
+        case 'inventory':
+          generateInventoryPDF(doc, yPosition);
+          break;
+        case 'users':
+          generateUsersPDF(doc, yPosition);
+          break;
+        case 'facilities':
+          generateFacilitiesPDF(doc, yPosition);
+          break;
+        case 'transactions':
+          generateTransactionsPDF(doc, yPosition);
+          break;
+        case 'transfers':
+          generateTransfersPDF(doc, yPosition);
+          break;
+        case 'all':
+          generateAllReportsPDF(doc, yPosition);
+          break;
       }
-    ],
-    lowStockReport: [
-      {
-        item: 'Office Chairs',
-        facility: 'Regional Office',
-        currentStock: 150,
-        reorderLevel: 500,
-        shortage: 350
-      },
-      {
-        item: 'Network Equipment',
-        facility: 'Distribution Center',
-        currentStock: 0,
-        reorderLevel: 200,
-        shortage: 200
-      },
-      {
-        item: 'Laptop Computers',
-        facility: 'Retail Store',
-        currentStock: 80,
-        reorderLevel: 300,
-        shortage: 220
-      }
-    ]
-  };
 
-  const handleExportReport = () => {
-    addNotification('Your report is being generated and will be downloaded shortly.');
-  };
-
-  const handleViewDetails = (record: any, type: string) => {
-    setSelectedRecord(record);
-    setModalType(type);
-    setShowModal(true);
-  };
-
-  const getExpiryColor = (daysLeft: number) => {
-    if (daysLeft <= 30) return 'text-uganda-red';
-    if (daysLeft <= 60) return 'text-uganda-yellow';
-    return 'text-green-600';
-  };
-
-  const renderOverview = () => (
-    <div className="space-y-6">
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div className="bg-white rounded-lg shadow-sm p-6">
-          <div className="flex items-center">
-            <div className="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center">
-              <Package className="w-6 h-6 text-white" />
-            </div>
-            <div className="ml-4">
-              <p className="text-2xl font-bold text-uganda-black">2,827</p>
-              <p className="text-sm text-gray-600">Total Items</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg shadow-sm p-6">
-          <div className="flex items-center">
-            <div className="w-10 h-10 bg-green-500 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold">$</span>
-            </div>
-            <div className="ml-4">
-              <p className="text-2xl font-bold text-uganda-black">$102K</p>
-              <p className="text-sm text-gray-600">Total Value</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg shadow-sm p-6">
-          <div className="flex items-center">
-            <div className="w-10 h-10 bg-uganda-red rounded-lg flex items-center justify-center">
-              <AlertTriangle className="w-6 h-6 text-white" />
-            </div>
-            <div className="ml-4">
-              <p className="text-2xl font-bold text-uganda-black">23</p>
-              <p className="text-sm text-gray-600">Low Stock Items</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg shadow-sm p-6">
-          <div className="flex items-center">
-            <div className="w-10 h-10 bg-uganda-yellow rounded-lg flex items-center justify-center">
-              <Calendar className="w-6 h-6 text-uganda-black" />
-            </div>
-            <div className="ml-4">
-              <p className="text-2xl font-bold text-uganda-black">8</p>
-              <p className="text-sm text-gray-600">Expiring Soon</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Facility Stock Overview */}
-      <div className="bg-white rounded-lg shadow-sm">
-        <div className="p-6 border-b border-gray-200">
-          <h3 className="text-lg font-semibold text-uganda-black">Facility Stock Overview</h3>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Facility</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total Items</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total Value</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Low Stock</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Expiring</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {reportData.facilityStock.map((facility, index) => (
-                <tr key={index} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      <MapPin className="w-4 h-4 text-gray-400 mr-2" />
-                      <span className="font-medium text-uganda-black">{facility.facility}</span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-gray-900">
-                    {facility.totalItems.toLocaleString()}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-gray-900">
-                    ${facility.totalValue.toLocaleString()}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                      facility.lowStockItems > 5 ? 'bg-red-100 text-red-800' : 
-                      facility.lowStockItems > 0 ? 'bg-yellow-100 text-yellow-800' : 
-                      'bg-green-100 text-green-800'
-                    }`}>
-                      {facility.lowStockItems}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                      facility.expiringItems > 2 ? 'bg-red-100 text-red-800' : 
-                      facility.expiringItems > 0 ? 'bg-yellow-100 text-yellow-800' : 
-                      'bg-green-100 text-green-800'
-                    }`}>
-                      {facility.expiringItems}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <button
-                      onClick={() => handleViewDetails(facility, 'facility')}
-                      className="p-2 text-gray-600 hover:text-uganda-black rounded-lg hover:bg-gray-100"
-                      title="View facility details"
-                    >
-                      <Eye className="w-4 h-4" />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* Consumption Trends */}
-      <div className="bg-white rounded-lg shadow-sm">
-        <div className="p-6 border-b border-gray-200">
-          <h3 className="text-lg font-semibold text-uganda-black">Consumption Trends</h3>
-        </div>
-        <div className="p-6">
-          <div className="space-y-4">
-            {reportData.consumptionTrends.map((trend, index) => (
-              <div key={index} className="flex items-center justify-between py-2 hover:bg-gray-50 rounded-lg px-2">
-                <span className="text-gray-600">{trend.month}</span>
-                <div className="flex items-center space-x-4">
-                  <div className="text-right">
-                    <p className="font-medium text-uganda-black">{trend.consumption.toLocaleString()} items</p>
-                    <p className="text-sm text-gray-500">${trend.value.toLocaleString()}</p>
-                  </div>
-                  <div className="w-32 bg-gray-200 rounded-full h-2">
-                    <div 
-                      className="bg-uganda-yellow h-2 rounded-full" 
-                      style={{ width: `${(trend.consumption / 3000) * 100}%` }}
-                    />
-                  </div>
-                  <button
-                    onClick={() => handleViewDetails(trend, 'consumption')}
-                    className="p-2 text-gray-600 hover:text-uganda-black rounded-lg hover:bg-gray-100"
-                    title="View consumption details"
-                  >
-                    <Eye className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-
-  const renderExpiryReport = () => (
-    <div className="bg-white rounded-lg shadow-sm">
-      <div className="p-6 border-b border-gray-200">
-        <h3 className="text-lg font-semibold text-uganda-black">Items Expiring Soon</h3>
-      </div>
-      
-      {/* Desktop Table */}
-      <div className="hidden lg:block overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Item</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Facility</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Quantity</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Expiry Date</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Days Left</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-200">
-            {reportData.expiryReport.map((item, index) => (
-              <tr key={index} className="hover:bg-gray-50">
-                <td className="px-6 py-4 whitespace-nowrap font-medium text-uganda-black">
-                  {item.item}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-gray-900">
-                  {item.facility}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-gray-900">
-                  {item.quantity.toLocaleString()}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-gray-900">
-                  {item.expiryDate}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <span className={`font-medium ${getExpiryColor(item.daysLeft)}`}>
-                    {item.daysLeft} days
-                  </span>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <button
-                    onClick={() => handleViewDetails(item, 'expiry')}
-                    className="p-2 text-gray-600 hover:text-uganda-black rounded-lg hover:bg-gray-100"
-                    title="View expiry details"
-                  >
-                    <Eye className="w-4 h-4" />
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Mobile Cards View */}
-      <div className="lg:hidden p-4 space-y-4">
-        {reportData.expiryReport.map((item, index) => (
-          <div key={index} className={`bg-white border rounded-lg p-4 shadow-sm ${
-            item.daysLeft <= 7 ? 'border-red-200' : 
-            item.daysLeft <= 30 ? 'border-yellow-200' : 'border-gray-200'
-          }`}>
-            <div className="flex items-start justify-between mb-3">
-              <div className="flex-1">
-                <h4 className="text-base font-semibold text-uganda-black">{item.item}</h4>
-                <p className="text-sm text-gray-600">{item.facility}</p>
-              </div>
-              <button
-                onClick={() => handleViewDetails(item, 'expiry')}
-                className="text-gray-400 hover:text-gray-600 transition-colors p-2 rounded-md hover:bg-gray-100"
-                title="View expiry details"
-              >
-                <Eye className="w-4 h-4" />
-              </button>
-            </div>
-
-            <div className="space-y-2">
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-gray-500">Quantity:</span>
-                <span className="text-gray-900 font-medium">
-                  {item.quantity.toLocaleString()}
-                </span>
-              </div>
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-gray-500">Expiry Date:</span>
-                <span className="text-gray-900">
-                  {item.expiryDate}
-                </span>
-              </div>
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-gray-500">Days Left:</span>
-                <span className={`font-medium ${getExpiryColor(item.daysLeft)}`}>
-                  {item.daysLeft} days
-                </span>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-
-  const renderLowStockReport = () => (
-    <div className="bg-white rounded-lg shadow-sm">
-      <div className="p-6 border-b border-gray-200">
-        <h3 className="text-lg font-semibold text-uganda-black">Low Stock Alerts</h3>
-      </div>
-      
-      {/* Desktop Table */}
-      <div className="hidden lg:block overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Item</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Facility</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Current Stock</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Reorder Level</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Shortage</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-200">
-            {reportData.lowStockReport.map((item, index) => (
-              <tr key={index} className="hover:bg-gray-50">
-                <td className="px-6 py-4 whitespace-nowrap font-medium text-uganda-black">
-                  {item.item}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-gray-900">
-                  {item.facility}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <span className="text-uganda-red font-medium">
-                    {item.currentStock.toLocaleString()}
-                  </span>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-gray-900">
-                  {item.reorderLevel.toLocaleString()}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <span className="text-uganda-red font-medium">
-                    -{item.shortage.toLocaleString()}
-                  </span>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <button
-                    onClick={() => handleViewDetails(item, 'low_stock')}
-                    className="p-2 text-gray-600 hover:text-uganda-black rounded-lg hover:bg-gray-100"
-                    title="View low stock details"
-                  >
-                    <Eye className="w-4 h-4" />
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Mobile Cards View */}
-      <div className="lg:hidden p-4 space-y-4">
-        {reportData.lowStockReport.map((item, index) => (
-          <div key={index} className="bg-white border border-red-200 rounded-lg p-4 shadow-sm">
-            <div className="flex items-start justify-between mb-3">
-              <div className="flex-1">
-                <h4 className="text-base font-semibold text-uganda-black">{item.item}</h4>
-                <p className="text-sm text-gray-600">{item.facility}</p>
-              </div>
-              <button
-                onClick={() => handleViewDetails(item, 'low_stock')}
-                className="text-gray-400 hover:text-gray-600 transition-colors p-2 rounded-md hover:bg-gray-100"
-                title="View low stock details"
-              >
-                <Eye className="w-4 h-4" />
-              </button>
-            </div>
-
-            <div className="space-y-2">
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-gray-500">Current Stock:</span>
-                <span className="text-uganda-red font-medium">
-                  {item.currentStock.toLocaleString()}
-                </span>
-              </div>
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-gray-500">Reorder Level:</span>
-                <span className="text-gray-900">
-                  {item.reorderLevel.toLocaleString()}
-                </span>
-              </div>
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-gray-500">Shortage:</span>
-                <span className="text-uganda-red font-medium">
-                  -{item.shortage.toLocaleString()}
-                </span>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-
-  const renderModalContent = () => {
-    if (!selectedRecord) return null;
-
-    switch (modalType) {
-      case 'facility':
-        return (
-          <div className="space-y-6">
-            <div className="flex items-center space-x-3">
-              <Building className="w-8 h-8 text-uganda-yellow" />
-              <div>
-                <h3 className="text-xl font-semibold text-uganda-black">{selectedRecord.facility}</h3>
-                <p className="text-gray-600">Facility Details</p>
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-2 gap-6">
-              <div className="space-y-4">
-                <div className="bg-blue-50 p-4 rounded-lg">
-                  <div className="flex items-center space-x-2">
-                    <Package className="w-5 h-5 text-blue-600" />
-                    <span className="font-semibold text-blue-900">Total Items</span>
-                  </div>
-                  <p className="text-2xl font-bold text-blue-900 mt-1">{selectedRecord.totalItems.toLocaleString()}</p>
-                </div>
-                
-                <div className="bg-green-50 p-4 rounded-lg">
-                  <div className="flex items-center space-x-2">
-                    <DollarSign className="w-5 h-5 text-green-600" />
-                    <span className="font-semibold text-green-900">Total Value</span>
-                  </div>
-                  <p className="text-2xl font-bold text-green-900 mt-1">${selectedRecord.totalValue.toLocaleString()}</p>
-                </div>
-              </div>
-              
-              <div className="space-y-4">
-                <div className="bg-red-50 p-4 rounded-lg">
-                  <div className="flex items-center space-x-2">
-                    <AlertTriangle className="w-5 h-5 text-red-600" />
-                    <span className="font-semibold text-red-900">Low Stock Items</span>
-                  </div>
-                  <p className="text-2xl font-bold text-red-900 mt-1">{selectedRecord.lowStockItems}</p>
-                </div>
-                
-                <div className="bg-yellow-50 p-4 rounded-lg">
-                  <div className="flex items-center space-x-2">
-                    <Clock className="w-5 h-5 text-yellow-600" />
-                    <span className="font-semibold text-yellow-900">Expiring Soon</span>
-                  </div>
-                  <p className="text-2xl font-bold text-yellow-900 mt-1">{selectedRecord.expiringItems}</p>
-                </div>
-              </div>
-            </div>
-            
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <h4 className="font-semibold text-gray-900 mb-2">Recommendations</h4>
-              <ul className="space-y-1 text-sm text-gray-700">
-                {selectedRecord.lowStockItems > 5 && (
-                  <li>• Immediate reorder needed for {selectedRecord.lowStockItems} items</li>
-                )}
-                {selectedRecord.expiringItems > 2 && (
-                  <li>• {selectedRecord.expiringItems} items expiring soon - consider redistribution</li>
-                )}
-                <li>• Regular inventory audit recommended</li>
-                <li>• Consider automated reorder system</li>
-              </ul>
-            </div>
-          </div>
-        );
-
-      case 'consumption':
-        return (
-          <div className="space-y-6">
-            <div className="flex items-center space-x-3">
-              <TrendingUp className="w-8 h-8 text-uganda-yellow" />
-              <div>
-                <h3 className="text-xl font-semibold text-uganda-black">{selectedRecord.month}</h3>
-                <p className="text-gray-600">Consumption Analysis</p>
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-2 gap-6">
-              <div className="bg-blue-50 p-4 rounded-lg">
-                <div className="flex items-center space-x-2">
-                  <Package className="w-5 h-5 text-blue-600" />
-                  <span className="font-semibold text-blue-900">Items Consumed</span>
-                </div>
-                <p className="text-2xl font-bold text-blue-900 mt-1">{selectedRecord.consumption.toLocaleString()}</p>
-              </div>
-              
-              <div className="bg-green-50 p-4 rounded-lg">
-                <div className="flex items-center space-x-2">
-                  <DollarSign className="w-5 h-5 text-green-600" />
-                  <span className="font-semibold text-green-900">Total Value</span>
-                </div>
-                <p className="text-2xl font-bold text-green-900 mt-1">${selectedRecord.value.toLocaleString()}</p>
-              </div>
-            </div>
-            
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <h4 className="font-semibold text-gray-900 mb-2">Trend Analysis</h4>
-              <div className="space-y-2 text-sm text-gray-700">
-                <p>• Average daily consumption: {Math.round(selectedRecord.consumption / 30)} items</p>
-                <p>• Average item value: ${Math.round(selectedRecord.value / selectedRecord.consumption)}</p>
-                <p>• Consumption rate: {Math.round((selectedRecord.consumption / 3000) * 100)}% of capacity</p>
-              </div>
-            </div>
-          </div>
-        );
-
-      case 'expiry':
-        return (
-          <div className="space-y-6">
-            <div className="flex items-center space-x-3">
-              <Calendar className="w-8 h-8 text-uganda-yellow" />
-              <div>
-                <h3 className="text-xl font-semibold text-uganda-black">{selectedRecord.item}</h3>
-                <p className="text-gray-600">Expiry Details</p>
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-2 gap-6">
-              <div className="space-y-4">
-                <div className="bg-blue-50 p-4 rounded-lg">
-                  <div className="flex items-center space-x-2">
-                    <Package className="w-5 h-5 text-blue-600" />
-                    <span className="font-semibold text-blue-900">Quantity</span>
-                  </div>
-                  <p className="text-2xl font-bold text-blue-900 mt-1">{selectedRecord.quantity.toLocaleString()}</p>
-                </div>
-                
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <div className="flex items-center space-x-2">
-                    <Building className="w-5 h-5 text-gray-600" />
-                    <span className="font-semibold text-gray-900">Facility</span>
-                  </div>
-                  <p className="text-lg font-medium text-gray-900 mt-1">{selectedRecord.facility}</p>
-                </div>
-              </div>
-              
-              <div className="space-y-4">
-                <div className="bg-red-50 p-4 rounded-lg">
-                  <div className="flex items-center space-x-2">
-                    <Clock className="w-5 h-5 text-red-600" />
-                    <span className="font-semibold text-red-900">Days Left</span>
-                  </div>
-                  <p className={`text-2xl font-bold mt-1 ${getExpiryColor(selectedRecord.daysLeft)}`}>
-                    {selectedRecord.daysLeft} days
-                  </p>
-                </div>
-                
-                <div className="bg-yellow-50 p-4 rounded-lg">
-                  <div className="flex items-center space-x-2">
-                    <Calendar className="w-5 h-5 text-yellow-600" />
-                    <span className="font-semibold text-yellow-900">Expiry Date</span>
-                  </div>
-                  <p className="text-lg font-medium text-yellow-900 mt-1">{selectedRecord.expiryDate}</p>
-                </div>
-              </div>
-            </div>
-            
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <h4 className="font-semibold text-gray-900 mb-2">Recommended Actions</h4>
-              <ul className="space-y-1 text-sm text-gray-700">
-                {selectedRecord.daysLeft <= 30 && (
-                  <li>• <strong>URGENT:</strong> Immediate action required</li>
-                )}
-                {selectedRecord.daysLeft <= 60 && (
-                  <li>• Consider redistribution to facilities with higher demand</li>
-                )}
-                <li>• Contact supplier for possible return or exchange</li>
-                <li>• Update inventory management procedures</li>
-              </ul>
-            </div>
-          </div>
-        );
-
-      case 'low_stock':
-        return (
-          <div className="space-y-6">
-            <div className="flex items-center space-x-3">
-              <AlertTriangle className="w-8 h-8 text-uganda-yellow" />
-              <div>
-                <h3 className="text-xl font-semibold text-uganda-black">{selectedRecord.item}</h3>
-                <p className="text-gray-600">Low Stock Alert</p>
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-2 gap-6">
-              <div className="space-y-4">
-                <div className="bg-red-50 p-4 rounded-lg">
-                  <div className="flex items-center space-x-2">
-                    <Package className="w-5 h-5 text-red-600" />
-                    <span className="font-semibold text-red-900">Current Stock</span>
-                  </div>
-                  <p className="text-2xl font-bold text-red-900 mt-1">{selectedRecord.currentStock.toLocaleString()}</p>
-                </div>
-                
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <div className="flex items-center space-x-2">
-                    <Building className="w-5 h-5 text-gray-600" />
-                    <span className="font-semibold text-gray-900">Facility</span>
-                  </div>
-                  <p className="text-lg font-medium text-gray-900 mt-1">{selectedRecord.facility}</p>
-                </div>
-              </div>
-              
-              <div className="space-y-4">
-                <div className="bg-blue-50 p-4 rounded-lg">
-                  <div className="flex items-center space-x-2">
-                    <TrendingUp className="w-5 h-5 text-blue-600" />
-                    <span className="font-semibold text-blue-900">Reorder Level</span>
-                  </div>
-                  <p className="text-2xl font-bold text-blue-900 mt-1">{selectedRecord.reorderLevel.toLocaleString()}</p>
-                </div>
-                
-                <div className="bg-yellow-50 p-4 rounded-lg">
-                  <div className="flex items-center space-x-2">
-                    <AlertTriangle className="w-5 h-5 text-yellow-600" />
-                    <span className="font-semibold text-yellow-900">Shortage</span>
-                  </div>
-                  <p className="text-2xl font-bold text-yellow-900 mt-1">-{selectedRecord.shortage.toLocaleString()}</p>
-                </div>
-              </div>
-            </div>
-            
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <h4 className="font-semibold text-gray-900 mb-2">Recommended Actions</h4>
-              <ul className="space-y-1 text-sm text-gray-700">
-                {selectedRecord.currentStock === 0 && (
-                  <li>• <strong>CRITICAL:</strong> Out of stock - immediate reorder required</li>
-                )}
-                <li>• Place reorder for {selectedRecord.shortage.toLocaleString()} units</li>
-                <li>• Consider emergency procurement if needed</li>
-                <li>• Review demand forecasting for this item</li>
-              </ul>
-            </div>
-          </div>
-        );
-
-      default:
-        return (
-          <div className="text-center py-8">
-            <p className="text-gray-500">No details available for this record.</p>
-          </div>
-        );
+      // Save PDF
+      const fileName = `DIMS_${reportConfig.type}_${new Date().toISOString().split('T')[0]}.pdf`;
+      doc.save(fileName);
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+    } finally {
+      setIsGenerating(false);
     }
   };
 
-  const renderReportContent = () => {
-    switch (selectedReport) {
-      case 'overview':
-        return renderOverview();
-      case 'expiry':
-        return renderExpiryReport();
-      case 'low_stock':
-        return renderLowStockReport();
-      default:
-        return (
-          <div className="bg-white rounded-lg shadow-sm p-12 text-center">
-            <BarChart3 className="w-12 h-12 mx-auto text-gray-400 mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">Report Coming Soon</h3>
-            <p className="text-gray-500">This report type is under development.</p>
-          </div>
-        );
+  // Generate CSV Report
+  const generateCSVReport = async () => {
+    setIsGenerating(true);
+    try {
+      let csvContent = '';
+      let fileName = '';
+
+      switch (reportConfig.type) {
+        case 'inventory':
+          csvContent = generateInventoryCSV();
+          fileName = `DIMS_Inventory_${new Date().toISOString().split('T')[0]}.csv`;
+          break;
+        case 'users':
+          csvContent = generateUsersCSV();
+          fileName = `DIMS_Users_${new Date().toISOString().split('T')[0]}.csv`;
+          break;
+        case 'facilities':
+          csvContent = generateFacilitiesCSV();
+          fileName = `DIMS_Facilities_${new Date().toISOString().split('T')[0]}.csv`;
+          break;
+        case 'transactions':
+          csvContent = generateTransactionsCSV();
+          fileName = `DIMS_Transactions_${new Date().toISOString().split('T')[0]}.csv`;
+          break;
+        case 'transfers':
+          csvContent = generateTransfersCSV();
+          fileName = `DIMS_Transfers_${new Date().toISOString().split('T')[0]}.csv`;
+          break;
+        case 'all':
+          csvContent = generateAllReportsCSV();
+          fileName = `DIMS_All_Reports_${new Date().toISOString().split('T')[0]}.csv`;
+          break;
+      }
+
+      // Download CSV
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', fileName);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (error) {
+      console.error('Error generating CSV:', error);
+    } finally {
+      setIsGenerating(false);
     }
   };
+
+  // PDF Generation Functions
+  const generateInventoryPDF = (doc: jsPDF, startY: number) => {
+    const headers = [['Item Name', 'SKU', 'Category', 'Stock', 'Cost', 'Facility', 'Status']];
+    const data = reportData.inventory.map(item => [
+      item.name,
+      item.sku,
+      item.category,
+      `${item.currentStock} ${item.unit}`,
+      `UGX ${item.cost.toLocaleString()}`,
+      item.facility,
+      item.status
+    ]);
+
+    (doc as any).autoTable({
+      head: headers,
+      body: data,
+      startY: startY,
+      theme: 'grid',
+      headStyles: { fillColor: [255, 193, 7] }
+    });
+  };
+
+  const generateUsersPDF = (doc: jsPDF, startY: number) => {
+    const headers = [['Name', 'Email', 'Role', 'Facility', 'Status', 'Region']];
+    const data = reportData.users.map(user => [
+      user.name,
+      user.email,
+      user.role,
+      user.facilityName || 'N/A',
+      user.status,
+      user.region || 'N/A'
+    ]);
+
+    (doc as any).autoTable({
+      head: headers,
+      body: data,
+      startY: startY,
+      theme: 'grid',
+      headStyles: { fillColor: [255, 193, 7] }
+    });
+  };
+
+  const generateFacilitiesPDF = (doc: jsPDF, startY: number) => {
+    const headers = [['Facility Name', 'Type', 'Location', 'Manager', 'Status']];
+    const data = reportData.facilities.map(facility => [
+      facility.name,
+      facility.type,
+      facility.location,
+      facility.manager || 'N/A',
+      facility.status
+    ]);
+
+    (doc as any).autoTable({
+      head: headers,
+      body: data,
+      startY: startY,
+      theme: 'grid',
+      headStyles: { fillColor: [255, 193, 7] }
+    });
+  };
+
+  const generateTransactionsPDF = (doc: jsPDF, startY: number) => {
+    const headers = [['Date', 'Type', 'Item', 'Quantity', 'Facility', 'Status']];
+    const data = reportData.transactions.map(transaction => [
+      new Date(transaction.date).toLocaleDateString(),
+      transaction.type,
+      transaction.itemName,
+      transaction.quantity,
+      transaction.facility,
+      transaction.status
+    ]);
+
+    (doc as any).autoTable({
+      head: headers,
+      body: data,
+      startY: startY,
+      theme: 'grid',
+      headStyles: { fillColor: [255, 193, 7] }
+    });
+  };
+
+  const generateTransfersPDF = (doc: jsPDF, startY: number) => {
+    const headers = [['Date', 'From', 'To', 'Item', 'Quantity', 'Status']];
+    const data = reportData.transfers.map(transfer => [
+      new Date(transfer.date).toLocaleDateString(),
+      transfer.fromFacility,
+      transfer.toFacility,
+      transfer.itemName,
+      transfer.quantity,
+      transfer.status
+    ]);
+
+    (doc as any).autoTable({
+      head: headers,
+      body: data,
+      startY: startY,
+      theme: 'grid',
+      headStyles: { fillColor: [255, 193, 7] }
+    });
+  };
+
+  const generateAllReportsPDF = (doc: jsPDF, startY: number) => {
+    let currentY = startY;
+
+    // Summary
+    doc.setFontSize(16);
+    doc.text('System Summary', 20, currentY);
+    currentY += 20;
+
+    doc.setFontSize(12);
+    doc.text(`Total Items: ${reportData.inventory.length}`, 20, currentY);
+    currentY += 10;
+    doc.text(`Total Users: ${reportData.users.length}`, 20, currentY);
+    currentY += 10;
+    doc.text(`Total Facilities: ${reportData.facilities.length}`, 20, currentY);
+    currentY += 10;
+    doc.text(`Total Transactions: ${reportData.transactions.length}`, 20, currentY);
+    currentY += 10;
+    doc.text(`Total Transfers: ${reportData.transfers.length}`, 20, currentY);
+    currentY += 20;
+
+    // Add each report section
+    if (reportData.inventory.length > 0) {
+      doc.setFontSize(14);
+      doc.text('Inventory Report', 20, currentY);
+      currentY += 10;
+      generateInventoryPDF(doc, currentY);
+      currentY = (doc as any).lastAutoTable.finalY + 20;
+    }
+
+    if (reportData.users.length > 0) {
+      doc.addPage();
+      currentY = 20;
+      doc.setFontSize(14);
+      doc.text('Users Report', 20, currentY);
+      currentY += 10;
+      generateUsersPDF(doc, currentY);
+    }
+  };
+
+  // CSV Generation Functions
+  const generateInventoryCSV = () => {
+    const headers = ['Item Name', 'SKU', 'Category', 'Stock', 'Cost', 'Facility', 'Status', 'Description'];
+    const rows = reportData.inventory.map(item => [
+      item.name,
+      item.sku,
+      item.category,
+      `${item.currentStock} ${item.unit}`,
+      item.cost,
+      item.facility,
+      item.status,
+      item.description
+    ]);
+    return [headers, ...rows].map(row => row.map(cell => `"${cell}"`).join(',')).join('\n');
+  };
+
+  const generateUsersCSV = () => {
+    const headers = ['Name', 'Email', 'Role', 'Facility', 'Status', 'Region', 'District', 'Phone'];
+    const rows = reportData.users.map(user => [
+      user.name,
+      user.email,
+      user.role,
+      user.facilityName || '',
+      user.status,
+      user.region || '',
+      user.district || '',
+      user.phone || ''
+    ]);
+    return [headers, ...rows].map(row => row.map(cell => `"${cell}"`).join(',')).join('\n');
+  };
+
+  const generateFacilitiesCSV = () => {
+    const headers = ['Facility Name', 'Type', 'Location', 'Manager', 'Status', 'Capacity'];
+    const rows = reportData.facilities.map(facility => [
+      facility.name,
+      facility.type,
+      facility.location,
+      facility.manager || '',
+      facility.status,
+      facility.capacity || ''
+    ]);
+    return [headers, ...rows].map(row => row.map(cell => `"${cell}"`).join(',')).join('\n');
+  };
+
+  const generateTransactionsCSV = () => {
+    const headers = ['Date', 'Type', 'Item', 'Quantity', 'Facility', 'Status', 'Notes'];
+    const rows = reportData.transactions.map(transaction => [
+      new Date(transaction.date).toLocaleDateString(),
+      transaction.type,
+      transaction.itemName,
+      transaction.quantity,
+      transaction.facility,
+      transaction.status,
+      transaction.notes || ''
+    ]);
+    return [headers, ...rows].map(row => row.map(cell => `"${cell}"`).join(',')).join('\n');
+  };
+
+  const generateTransfersCSV = () => {
+    const headers = ['Date', 'From', 'To', 'Item', 'Quantity', 'Status', 'Notes'];
+    const rows = reportData.transfers.map(transfer => [
+      new Date(transfer.date).toLocaleDateString(),
+      transfer.fromFacility,
+      transfer.toFacility,
+      transfer.itemName,
+      transfer.quantity,
+      transfer.status,
+      transfer.notes || ''
+    ]);
+    return [headers, ...rows].map(row => row.map(cell => `"${cell}"`).join(',')).join('\n');
+  };
+
+  const generateAllReportsCSV = () => {
+    const sections = [
+      { title: 'INVENTORY REPORT', data: generateInventoryCSV() },
+      { title: 'USERS REPORT', data: generateUsersCSV() },
+      { title: 'FACILITIES REPORT', data: generateFacilitiesCSV() },
+      { title: 'TRANSACTIONS REPORT', data: generateTransactionsCSV() },
+      { title: 'TRANSFERS REPORT', data: generateTransfersCSV() }
+    ];
+
+    return sections.map(section => 
+      `\n${'='.repeat(50)}\n${section.title}\n${'='.repeat(50)}\n\n${section.data}`
+    ).join('\n');
+  };
+
+  const getReportTitle = () => {
+    const titles = {
+      inventory: 'Inventory Report',
+      users: 'Users Report',
+      facilities: 'Facilities Report',
+      transactions: 'Transactions Report',
+      transfers: 'Transfers Report',
+      all: 'Complete System Report'
+    };
+    return titles[reportConfig.type];
+  };
+
+  const handleGenerateReport = () => {
+    if (reportConfig.format === 'pdf') {
+      generatePDFReport();
+    } else {
+      generateCSVReport();
+    }
+  };
+
+  const getReportStats = () => {
+    const stats = {
+      inventory: {
+        total: reportData.inventory.length,
+        lowStock: reportData.inventory.filter(item => item.currentStock <= item.minStock).length,
+        active: reportData.inventory.filter(item => item.status === 'active').length
+      },
+      users: {
+        total: reportData.users.length,
+        active: reportData.users.filter(user => user.status === 'active').length,
+        byRole: reportData.users.reduce((acc, user) => {
+          acc[user.role] = (acc[user.role] || 0) + 1;
+          return acc;
+        }, {} as any)
+      },
+      facilities: {
+        total: reportData.facilities.length,
+        active: reportData.facilities.filter(facility => facility.status === 'active').length
+      },
+      transactions: {
+        total: reportData.transactions.length,
+        thisMonth: reportData.transactions.filter(t => 
+          new Date(t.date).getMonth() === new Date().getMonth()
+        ).length
+      },
+      transfers: {
+        total: reportData.transfers.length,
+        pending: reportData.transfers.filter(t => t.status === 'pending').length
+      }
+    };
+    return stats;
+  };
+
+  const stats = getReportStats();
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-uganda-black">Reports & Analytics</h1>
-          <p className="text-gray-600 mt-1">Generate comprehensive reports and insights</p>
+          <h1 className="text-3xl font-bold text-gray-900">Reports & Analytics</h1>
+          <p className="text-gray-600 mt-2">Generate comprehensive reports for all system data</p>
         </div>
-        <button
-          onClick={handleExportReport}
-          className="mt-4 sm:mt-0 inline-flex items-center px-4 py-2 bg-uganda-yellow text-uganda-black font-medium rounded-lg hover:bg-yellow-500 transition-colors"
-        >
-          <Download className="w-5 h-5 mr-2" />
-          Export Report
-        </button>
-      </div>
-
-      {/* Filters */}
-      <div className="bg-white rounded-lg shadow-sm p-6">
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="sm:w-64">
-            <label className="block text-sm font-medium text-gray-700 mb-1">Report Type</label>
-            <select
-              value={selectedReport}
-              onChange={(e) => setSelectedReport(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
-            >
-              {reportTypes.map(type => (
-                <option key={type.value} value={type.value}>
-                  {type.label}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="sm:w-48">
-            <label className="block text-sm font-medium text-gray-700 mb-1">Date Range</label>
-            <select
-              value={dateRange}
-              onChange={(e) => setDateRange(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
-            >
-              {dateRanges.map(range => (
-                <option key={range.value} value={range.value}>
-                  {range.label}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="sm:w-48">
-            <label className="block text-sm font-medium text-gray-700 mb-1">Facility</label>
-            <select
-              value={selectedFacility}
-              onChange={(e) => setSelectedFacility(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
-            >
-              {facilities.map(facility => (
-                <option key={facility.value} value={facility.value}>
-                  {facility.label}
-                </option>
-              ))}
-            </select>
-          </div>
+        <div className="flex items-center space-x-2">
+          <RefreshCw className={`w-5 h-5 text-gray-500 ${loading ? 'animate-spin' : ''}`} />
+          <span className="text-sm text-gray-500">Last updated: {new Date().toLocaleString()}</span>
         </div>
       </div>
 
-      {/* Report Content */}
-      {renderReportContent()}
+      {/* Quick Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+        <div className="bg-white rounded-lg shadow p-4">
+          <div className="flex items-center">
+            <Package className="w-8 h-8 text-blue-600" />
+            <div className="ml-3">
+              <p className="text-sm font-medium text-gray-600">Inventory Items</p>
+              <p className="text-2xl font-bold text-gray-900">{stats.inventory.total}</p>
+              <p className="text-xs text-red-600">{stats.inventory.lowStock} low stock</p>
+            </div>
+          </div>
+        </div>
 
-      {/* Detail Modal */}
-      {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between p-6 border-b border-gray-200">
-              <h3 className="text-lg font-semibold text-uganda-black">
-                Record Details
-              </h3>
-              <button
-                onClick={() => setShowModal(false)}
-                className="text-gray-400 hover:text-gray-600"
+        <div className="bg-white rounded-lg shadow p-4">
+          <div className="flex items-center">
+            <Users className="w-8 h-8 text-green-600" />
+            <div className="ml-3">
+              <p className="text-sm font-medium text-gray-600">Users</p>
+              <p className="text-2xl font-bold text-gray-900">{stats.users.total}</p>
+              <p className="text-xs text-green-600">{stats.users.active} active</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-lg shadow p-4">
+          <div className="flex items-center">
+            <Building className="w-8 h-8 text-purple-600" />
+            <div className="ml-3">
+              <p className="text-sm font-medium text-gray-600">Facilities</p>
+              <p className="text-2xl font-bold text-gray-900">{stats.facilities.total}</p>
+              <p className="text-xs text-green-600">{stats.facilities.active} active</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-lg shadow p-4">
+          <div className="flex items-center">
+            <TrendingUp className="w-8 h-8 text-orange-600" />
+            <div className="ml-3">
+              <p className="text-sm font-medium text-gray-600">Transactions</p>
+              <p className="text-2xl font-bold text-gray-900">{stats.transactions.total}</p>
+              <p className="text-xs text-blue-600">{stats.transactions.thisMonth} this month</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-lg shadow p-4">
+          <div className="flex items-center">
+            <Calendar className="w-8 h-8 text-indigo-600" />
+            <div className="ml-3">
+              <p className="text-sm font-medium text-gray-600">Transfers</p>
+              <p className="text-2xl font-bold text-gray-900">{stats.transfers.total}</p>
+              <p className="text-xs text-yellow-600">{stats.transfers.pending} pending</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Report Configuration */}
+      <div className="bg-white rounded-lg shadow">
+        <div className="p-6 border-b border-gray-200">
+          <h2 className="text-lg font-medium text-gray-900">Generate Report</h2>
+          <p className="text-sm text-gray-600 mt-1">Configure and generate PDF or CSV reports</p>
+        </div>
+
+        <div className="p-6 space-y-6">
+          {/* Report Type Selection */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Report Type</label>
+              <select
+                value={reportConfig.type}
+                onChange={(e) => setReportConfig(prev => ({ ...prev, type: e.target.value as any }))}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-uganda-yellow focus:border-transparent"
               >
-                <X className="w-6 h-6" />
-              </button>
+                <option value="inventory">Inventory Report</option>
+                <option value="users">Users Report</option>
+                <option value="facilities">Facilities Report</option>
+                <option value="transactions">Transactions Report</option>
+                <option value="transfers">Transfers Report</option>
+                <option value="all">Complete System Report</option>
+              </select>
             </div>
-            
-            <div className="p-6">
-              {renderModalContent()}
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Export Format</label>
+              <div className="flex space-x-4">
+                <label className="flex items-center">
+                  <input
+                    type="radio"
+                    value="pdf"
+                    checked={reportConfig.format === 'pdf'}
+                    onChange={(e) => setReportConfig(prev => ({ ...prev, format: e.target.value as 'pdf' | 'csv' }))}
+                    className="w-4 h-4 text-uganda-yellow border-gray-300 focus:ring-uganda-yellow"
+                  />
+                  <FilePdf className="w-4 h-4 ml-2 text-red-600" />
+                  <span className="ml-2 text-sm">PDF</span>
+                </label>
+                <label className="flex items-center">
+                  <input
+                    type="radio"
+                    value="csv"
+                    checked={reportConfig.format === 'csv'}
+                    onChange={(e) => setReportConfig(prev => ({ ...prev, format: e.target.value as 'pdf' | 'csv' }))}
+                    className="w-4 h-4 text-uganda-yellow border-gray-300 focus:ring-uganda-yellow"
+                  />
+                  <FileSpreadsheet className="w-4 h-4 ml-2 text-green-600" />
+                  <span className="ml-2 text-sm">CSV</span>
+                </label>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Date Range</label>
+              <select
+                value={reportConfig.dateRange}
+                onChange={(e) => setReportConfig(prev => ({ ...prev, dateRange: e.target.value as any }))}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-uganda-yellow focus:border-transparent"
+              >
+                <option value="all">All Time</option>
+                <option value="today">Today</option>
+                <option value="week">This Week</option>
+                <option value="month">This Month</option>
+                <option value="year">This Year</option>
+              </select>
             </div>
           </div>
+
+          {/* Filters */}
+          <div className="border-t border-gray-200 pt-4">
+            <h3 className="text-sm font-medium text-gray-700 mb-3">Filters (Optional)</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-xs text-gray-600 mb-1">Status</label>
+                <select
+                  value={reportConfig.filters.status || ''}
+                  onChange={(e) => setReportConfig(prev => ({ 
+                    ...prev, 
+                    filters: { ...prev.filters, status: e.target.value || undefined }
+                  }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-uganda-yellow focus:border-transparent text-sm"
+                >
+                  <option value="">All Statuses</option>
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
+                  <option value="pending">Pending</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs text-gray-600 mb-1">Category</label>
+                <select
+                  value={reportConfig.filters.category || ''}
+                  onChange={(e) => setReportConfig(prev => ({ 
+                    ...prev, 
+                    filters: { ...prev.filters, category: e.target.value || undefined }
+                  }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-uganda-yellow focus:border-transparent text-sm"
+                >
+                  <option value="">All Categories</option>
+                  <option value="electronics">Electronics</option>
+                  <option value="medical">Medical</option>
+                  <option value="office">Office Supplies</option>
+                  <option value="equipment">Equipment</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs text-gray-600 mb-1">Facility</label>
+                <select
+                  value={reportConfig.filters.facility || ''}
+                  onChange={(e) => setReportConfig(prev => ({ 
+                    ...prev, 
+                    filters: { ...prev.filters, facility: e.target.value || undefined }
+                  }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-uganda-yellow focus:border-transparent text-sm"
+                >
+                  <option value="">All Facilities</option>
+                  {reportData.facilities.map(facility => (
+                    <option key={facility.id} value={facility.name}>{facility.name}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {/* Generate Button */}
+          <div className="flex items-center justify-between pt-4 border-t border-gray-200">
+            <div className="text-sm text-gray-600">
+              <p>Report: <span className="font-medium">{getReportTitle()}</span></p>
+              <p>Format: <span className="font-medium">{reportConfig.format.toUpperCase()}</span></p>
+            </div>
+            <button
+              onClick={handleGenerateReport}
+              disabled={isGenerating}
+              className="px-6 py-3 bg-uganda-yellow text-white font-medium rounded-lg hover:bg-yellow-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+            >
+              {isGenerating ? (
+                <>
+                  <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <Download className="w-4 h-4 mr-2" />
+                  Generate Report
+                </>
+              )}
+            </button>
+          </div>
         </div>
-      )}
+      </div>
+
+      {/* Report Templates */}
+      <div className="bg-white rounded-lg shadow">
+        <div className="p-6 border-b border-gray-200">
+          <h2 className="text-lg font-medium text-gray-900">Quick Report Templates</h2>
+          <p className="text-sm text-gray-600 mt-1">Pre-configured reports for common needs</p>
+        </div>
+
+        <div className="p-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {[
+              { title: 'Low Stock Alert', type: 'inventory', icon: AlertTriangle, color: 'text-red-600' },
+              { title: 'User Activity', type: 'users', icon: Users, color: 'text-blue-600' },
+              { title: 'Facility Overview', type: 'facilities', icon: Building, color: 'text-purple-600' },
+              { title: 'Transaction Summary', type: 'transactions', icon: TrendingUp, color: 'text-orange-600' },
+              { title: 'Transfer Status', type: 'transfers', icon: Calendar, color: 'text-indigo-600' },
+              { title: 'Complete System', type: 'all', icon: BarChart3, color: 'text-green-600' }
+            ].map((template) => (
+              <button
+                key={template.type}
+                onClick={() => {
+                  setReportConfig(prev => ({ ...prev, type: template.type as any }));
+                  setSelectedReport(template.title);
+                }}
+                className={`p-4 border-2 rounded-lg transition-all hover:shadow-md ${
+                  selectedReport === template.title 
+                    ? 'border-uganda-yellow bg-yellow-50' 
+                    : 'border-gray-200 hover:border-gray-300'
+                }`}
+              >
+                <div className="flex items-center space-x-3">
+                  <template.icon className={`w-6 h-6 ${template.color}`} />
+                  <div className="text-left">
+                    <h3 className="font-medium text-gray-900">{template.title}</h3>
+                    <p className="text-sm text-gray-600">Quick {template.type} report</p>
+                  </div>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Recent Reports */}
+      <div className="bg-white rounded-lg shadow">
+        <div className="p-6 border-b border-gray-200">
+          <h2 className="text-lg font-medium text-gray-900">Recent Reports</h2>
+          <p className="text-sm text-gray-600 mt-1">Your recently generated reports</p>
+        </div>
+
+        <div className="p-6">
+          <div className="text-center py-8 text-gray-500">
+            <FileText className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+            <p className="text-sm">No recent reports</p>
+            <p className="text-xs text-gray-400">Generate your first report to see it here</p>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
