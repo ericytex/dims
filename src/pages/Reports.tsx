@@ -62,6 +62,165 @@ export default function Reports() {
   });
   const [isGenerating, setIsGenerating] = useState(false);
   const [selectedReport, setSelectedReport] = useState<string>('');
+  const [dataLoaded, setDataLoaded] = useState(false);
+
+  // Sample data for demonstration
+  const sampleData = {
+    inventory: [
+      {
+        id: '1',
+        name: 'Paracetamol 500mg',
+        sku: 'MED001',
+        category: 'Medication',
+        currentStock: 150,
+        minStock: 50,
+        cost: 2500,
+        supplier: 'Pharma Ltd',
+        facility: 'Main Warehouse',
+        status: 'active',
+        expiryDate: '2025-12-31'
+      },
+      {
+        id: '2',
+        name: 'Amoxicillin 250mg',
+        sku: 'MED002',
+        category: 'Antibiotics',
+        currentStock: 75,
+        minStock: 100,
+        cost: 3500,
+        supplier: 'MediCorp',
+        facility: 'Regional Office',
+        status: 'active',
+        expiryDate: '2025-10-15'
+      },
+      {
+        id: '3',
+        name: 'Bandages 10cm',
+        sku: 'SUP001',
+        category: 'Supplies',
+        currentStock: 200,
+        minStock: 50,
+        cost: 500,
+        supplier: 'Health Supplies Co',
+        facility: 'Distribution Center',
+        status: 'active',
+        expiryDate: '2026-06-30'
+      },
+      {
+        id: '4',
+        name: 'Syringes 5ml',
+        sku: 'SUP002',
+        category: 'Supplies',
+        currentStock: 25,
+        minStock: 100,
+        cost: 150,
+        supplier: 'Medical Supplies Ltd',
+        facility: 'Main Warehouse',
+        status: 'active',
+        expiryDate: '2025-11-30'
+      }
+    ],
+    users: [
+      {
+        id: '1',
+        name: 'John Doe',
+        email: 'john@example.com',
+        role: 'admin',
+        status: 'active',
+        phone: '+256700000001'
+      },
+      {
+        id: '2',
+        name: 'Jane Smith',
+        email: 'jane@example.com',
+        role: 'facility_manager',
+        status: 'active',
+        phone: '+256700000002'
+      },
+      {
+        id: '3',
+        name: 'Mike Johnson',
+        email: 'mike@example.com',
+        role: 'regional_supervisor',
+        status: 'active',
+        phone: '+256700000003'
+      }
+    ],
+    facilities: [
+      {
+        id: '1',
+        name: 'Main Warehouse',
+        type: 'warehouse',
+        status: 'active',
+        location: 'Kampala'
+      },
+      {
+        id: '2',
+        name: 'Regional Office',
+        type: 'office',
+        status: 'active',
+        location: 'Entebbe'
+      },
+      {
+        id: '3',
+        name: 'Distribution Center',
+        type: 'distribution',
+        status: 'active',
+        location: 'Jinja'
+      }
+    ],
+    transactions: [
+      {
+        id: '1',
+        itemId: '1',
+        itemName: 'Paracetamol 500mg',
+        type: 'in',
+        quantity: 100,
+        date: new Date().toISOString(),
+        facility: 'Main Warehouse'
+      },
+      {
+        id: '2',
+        itemId: '2',
+        itemName: 'Amoxicillin 250mg',
+        type: 'out',
+        quantity: 25,
+        date: new Date().toISOString(),
+        facility: 'Regional Office'
+      },
+      {
+        id: '3',
+        itemId: '3',
+        itemName: 'Bandages 10cm',
+        type: 'in',
+        quantity: 50,
+        date: new Date().toISOString(),
+        facility: 'Distribution Center'
+      }
+    ],
+    transfers: [
+      {
+        id: '1',
+        itemId: '1',
+        itemName: 'Paracetamol 500mg',
+        fromFacility: 'Main Warehouse',
+        toFacility: 'Regional Office',
+        quantity: 50,
+        status: 'completed',
+        date: new Date().toISOString()
+      },
+      {
+        id: '2',
+        itemId: '2',
+        itemName: 'Amoxicillin 250mg',
+        fromFacility: 'Regional Office',
+        toFacility: 'Distribution Center',
+        quantity: 30,
+        status: 'pending',
+        date: new Date().toISOString()
+      }
+    ]
+  };
 
   // Load all data for reports
   useEffect(() => {
@@ -69,134 +228,42 @@ export default function Reports() {
       try {
         console.log('Loading report data...');
         
-        const [users, facilities, transactions, transfers] = await Promise.all([
-          FirebaseDatabaseService.getUsers(),
-          FirebaseDatabaseService.getFacilities(),
-          FirebaseDatabaseService.getTransactions(),
-          FirebaseDatabaseService.getTransfers()
-        ]);
-
-        console.log('Loaded data:', {
-          inventory: inventoryItems?.length || 0,
-          users: users?.length || 0,
-          facilities: facilities?.length || 0,
-          transactions: transactions?.length || 0,
-          transfers: transfers?.length || 0
-        });
-
-        // If no data exists, create sample data for demonstration
-        const sampleData = {
-          inventory: inventoryItems?.length > 0 ? inventoryItems : [
-            {
-              id: '1',
-              name: 'Paracetamol 500mg',
-              sku: 'MED001',
-              category: 'Medication',
-              currentStock: 150,
-              minStock: 50,
-              cost: 2500,
-              supplier: 'Pharma Ltd',
-              facility: 'Main Warehouse',
-              status: 'active',
-              expiryDate: '2025-12-31'
-            },
-            {
-              id: '2',
-              name: 'Amoxicillin 250mg',
-              sku: 'MED002',
-              category: 'Antibiotics',
-              currentStock: 75,
-              minStock: 100,
-              cost: 3500,
-              supplier: 'MediCorp',
-              facility: 'Regional Office',
-              status: 'active',
-              expiryDate: '2025-10-15'
-            },
-            {
-              id: '3',
-              name: 'Bandages 10cm',
-              sku: 'SUP001',
-              category: 'Supplies',
-              currentStock: 200,
-              minStock: 50,
-              cost: 500,
-              supplier: 'Health Supplies Co',
-              facility: 'Distribution Center',
-              status: 'active',
-              expiryDate: '2026-06-30'
-            }
-          ],
-          users: users?.length > 0 ? users : [
-            {
-              id: '1',
-              name: 'John Doe',
-              email: 'john@example.com',
-              role: 'admin',
-              status: 'active',
-              phone: '+256700000001'
-            },
-            {
-              id: '2',
-              name: 'Jane Smith',
-              email: 'jane@example.com',
-              role: 'facility_manager',
-              status: 'active',
-              phone: '+256700000002'
-            }
-          ],
-          facilities: facilities?.length > 0 ? facilities : [
-            {
-              id: '1',
-              name: 'Main Warehouse',
-              type: 'warehouse',
-              status: 'active',
-              location: 'Kampala'
-            },
-            {
-              id: '2',
-              name: 'Regional Office',
-              type: 'office',
-              status: 'active',
-              location: 'Entebbe'
-            }
-          ],
-          transactions: transactions?.length > 0 ? transactions : [
-            {
-              id: '1',
-              itemId: '1',
-              itemName: 'Paracetamol 500mg',
-              type: 'in',
-              quantity: 100,
-              date: new Date().toISOString(),
-              facility: 'Main Warehouse'
-            },
-            {
-              id: '2',
-              itemId: '2',
-              itemName: 'Amoxicillin 250mg',
-              type: 'out',
-              quantity: 25,
-              date: new Date().toISOString(),
-              facility: 'Regional Office'
-            }
-          ],
-          transfers: transfers?.length > 0 ? transfers : [
-            {
-              id: '1',
-              itemId: '1',
-              itemName: 'Paracetamol 500mg',
-              fromFacility: 'Main Warehouse',
-              toFacility: 'Regional Office',
-              quantity: 50,
-              status: 'completed',
-              date: new Date().toISOString()
-            }
-          ]
-        };
-
+        // For now, always use sample data for demonstration
         setReportData(sampleData);
-        console.log('Report data set:', sampleData);
+        setDataLoaded(true);
+        console.log('Sample data loaded:', sampleData);
+        
+        // Try to load real data in background
+        try {
+          const [users, facilities, transactions, transfers] = await Promise.all([
+            FirebaseDatabaseService.getUsers(),
+            FirebaseDatabaseService.getFacilities(),
+            FirebaseDatabaseService.getTransactions(),
+            FirebaseDatabaseService.getTransfers()
+          ]);
+
+          console.log('Real data loaded:', {
+            inventory: inventoryItems?.length || 0,
+            users: users?.length || 0,
+            facilities: facilities?.length || 0,
+            transactions: transactions?.length || 0,
+            transfers: transfers?.length || 0
+          });
+
+          // If real data exists, use it instead of sample data
+          if (inventoryItems?.length > 0 || users?.length > 0) {
+            setReportData({
+              inventory: inventoryItems || sampleData.inventory,
+              users: users || sampleData.users,
+              facilities: facilities || sampleData.facilities,
+              transactions: transactions || sampleData.transactions,
+              transfers: transfers || sampleData.transfers
+            });
+            console.log('Using real data instead of sample data');
+          }
+        } catch (error) {
+          console.log('Real data loading failed, using sample data:', error);
+        }
       } catch (error) {
         console.error('Error loading report data:', error);
       }
@@ -625,11 +692,22 @@ export default function Reports() {
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
           <h3 className="text-sm font-medium text-yellow-800 mb-2">Debug Info (Development Only)</h3>
           <div className="text-xs text-yellow-700 space-y-1">
-            <p>Inventory Items: {reportData.inventory.length}</p>
-            <p>Users: {reportData.users.length}</p>
-            <p>Facilities: {reportData.facilities.length}</p>
-            <p>Transactions: {reportData.transactions.length}</p>
-            <p>Transfers: {reportData.transfers.length}</p>
+            <p>Data Loaded: {dataLoaded ? 'Yes' : 'No'}</p>
+            <p>Inventory Items: {reportData.inventory?.length || 0}</p>
+            <p>Users: {reportData.users?.length || 0}</p>
+            <p>Facilities: {reportData.facilities?.length || 0}</p>
+            <p>Transactions: {reportData.transactions?.length || 0}</p>
+            <p>Transfers: {reportData.transfers?.length || 0}</p>
+            <button 
+              onClick={() => {
+                setReportData(sampleData);
+                setDataLoaded(true);
+                console.log('Manually loaded sample data');
+              }}
+              className="mt-2 px-3 py-1 bg-yellow-600 text-white text-xs rounded hover:bg-yellow-700"
+            >
+              Load Sample Data
+            </button>
           </div>
         </div>
       )}
