@@ -1,13 +1,16 @@
 import React from 'react';
 import { useFirebaseAuth } from '../hooks/useFirebaseAuth';
+import { useAlerts } from '../contexts/AlertsContext';
 import { Menu, Bell, LogOut } from 'lucide-react';
 
 interface HeaderProps {
   onMenuClick: () => void;
+  onAlertsClick: () => void;
 }
 
-export default function Header({ onMenuClick }: HeaderProps) {
+export default function Header({ onMenuClick, onAlertsClick }: HeaderProps) {
   const { user, logout } = useFirebaseAuth();
+  const { unreadCount } = useAlerts();
 
   return (
     <header className="bg-white shadow-sm border-b border-gray-200">
@@ -28,11 +31,17 @@ export default function Header({ onMenuClick }: HeaderProps) {
         </div>
 
         <div className="flex items-center space-x-4">
-          <button className="relative p-2 hover:bg-gray-100 rounded-lg">
+          <button 
+            onClick={onAlertsClick}
+            className="relative p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            title="View Alerts"
+          >
             <Bell className="w-5 h-5 text-gray-600" />
-            <span className="absolute -top-1 -right-1 w-4 h-4 bg-uganda-red text-white text-xs rounded-full flex items-center justify-center">
-              3
-            </span>
+            {unreadCount > 0 && (
+              <span className="absolute -top-1 -right-1 w-4 h-4 bg-uganda-red text-white text-xs rounded-full flex items-center justify-center">
+                {unreadCount > 9 ? '9+' : unreadCount}
+              </span>
+            )}
           </button>
 
           <div className="flex items-center space-x-3">

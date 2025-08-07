@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { FirebaseAuthProvider, useFirebaseAuth } from './hooks/useFirebaseAuth';
 import { NotificationProvider } from './contexts/NotificationContext';
 import { OfflineProvider } from './contexts/OfflineContext';
+import { AlertsProvider } from './contexts/AlertsContext';
 import LoginPage from './pages/LoginPage';
 import Dashboard from './pages/Dashboard';
 import UserManagement from './pages/UserManagement';
@@ -118,7 +119,9 @@ function App() {
       <FirebaseAuthProvider>
         <NotificationProvider>
           <OfflineProvider>
-          <AppContent />
+            <AlertsProvider>
+              <AppContent />
+            </AlertsProvider>
           </OfflineProvider>
         </NotificationProvider>
       </FirebaseAuthProvider>
