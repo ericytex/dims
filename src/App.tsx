@@ -1,6 +1,6 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { FirebaseAuthProvider } from './contexts/FirebaseAuthContext';
+import { FirebaseAuthProvider } from './hooks/useFirebaseAuth';
 import { NotificationProvider } from './contexts/NotificationContext';
 import { OfflineProvider } from './contexts/OfflineContext';
 import { AlertsProvider } from './contexts/AlertsContext';
@@ -15,6 +15,9 @@ import InventoryManagement from './pages/InventoryManagement';
 import StockTransactions from './pages/StockTransactions';
 import TransferManagement from './pages/TransferManagement';
 import Reports from './pages/Reports';
+import OfflineStatus from './components/OfflineStatus';
+import NotificationContainer from './components/NotificationContainer';
+import { useFirebaseAuth } from './hooks/useFirebaseAuth';
 
 function AppContent() {
   const { user } = useFirebaseAuth();
