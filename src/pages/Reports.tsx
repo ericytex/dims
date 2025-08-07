@@ -438,11 +438,18 @@ export default function Reports() {
   };
 
   const handleGenerateReport = () => {
+    console.log('Generating report:', reportConfig);
     if (reportConfig.format === 'pdf') {
       generatePDFReport();
     } else {
       generateCSVReport();
     }
+  };
+
+  // Simple test function for debugging
+  const testGenerateReport = () => {
+    console.log('Test generate report clicked');
+    alert('Generate Report button is working! Report config: ' + JSON.stringify(reportConfig));
   };
 
   const getReportStats = () => {
@@ -552,158 +559,98 @@ export default function Reports() {
         </div>
       </div>
 
-      {/* Report Configuration */}
-      <div className="bg-white rounded-lg shadow">
-        <div className="p-6 border-b border-gray-200">
-          <h2 className="text-lg font-medium text-gray-900">Generate Report</h2>
-          <p className="text-sm text-gray-600 mt-1">Configure and generate PDF or CSV reports</p>
+      {/* Quick Generate Report Section */}
+      <div className="bg-white rounded-lg shadow p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-medium text-gray-900">Quick Report Generation</h2>
+          <div className="flex items-center space-x-2">
+            <FilePdf className="w-5 h-5 text-red-600" />
+            <FileSpreadsheet className="w-5 h-5 text-green-600" />
+          </div>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Report Type</label>
+            <select
+              value={reportConfig.type}
+              onChange={(e) => setReportConfig(prev => ({ ...prev, type: e.target.value as any }))}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-uganda-yellow focus:border-transparent"
+            >
+              <option value="inventory">Inventory Report</option>
+              <option value="users">Users Report</option>
+              <option value="facilities">Facilities Report</option>
+              <option value="transactions">Transactions Report</option>
+              <option value="transfers">Transfers Report</option>
+              <option value="all">Complete System Report</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Export Format</label>
+            <div className="flex space-x-4">
+              <label className="flex items-center">
+                <input
+                  type="radio"
+                  value="pdf"
+                  checked={reportConfig.format === 'pdf'}
+                  onChange={(e) => setReportConfig(prev => ({ ...prev, format: e.target.value as 'pdf' | 'csv' }))}
+                  className="w-4 h-4 text-uganda-yellow border-gray-300 focus:ring-uganda-yellow"
+                />
+                <span className="ml-2 text-sm">PDF</span>
+              </label>
+              <label className="flex items-center">
+                <input
+                  type="radio"
+                  value="csv"
+                  checked={reportConfig.format === 'csv'}
+                  onChange={(e) => setReportConfig(prev => ({ ...prev, format: e.target.value as 'pdf' | 'csv' }))}
+                  className="w-4 h-4 text-uganda-yellow border-gray-300 focus:ring-uganda-yellow"
+                />
+                <span className="ml-2 text-sm">CSV</span>
+              </label>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Date Range</label>
+            <select
+              value={reportConfig.dateRange}
+              onChange={(e) => setReportConfig(prev => ({ ...prev, dateRange: e.target.value as any }))}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-uganda-yellow focus:border-transparent"
+            >
+              <option value="all">All Time</option>
+              <option value="today">Today</option>
+              <option value="week">This Week</option>
+              <option value="month">This Month</option>
+              <option value="year">This Year</option>
+            </select>
+          </div>
         </div>
 
-        <div className="p-6 space-y-6">
-          {/* Report Type Selection */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Report Type</label>
-              <select
-                value={reportConfig.type}
-                onChange={(e) => setReportConfig(prev => ({ ...prev, type: e.target.value as any }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-uganda-yellow focus:border-transparent"
-              >
-                <option value="inventory">Inventory Report</option>
-                <option value="users">Users Report</option>
-                <option value="facilities">Facilities Report</option>
-                <option value="transactions">Transactions Report</option>
-                <option value="transfers">Transfers Report</option>
-                <option value="all">Complete System Report</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Export Format</label>
-              <div className="flex space-x-4">
-                <label className="flex items-center">
-                  <input
-                    type="radio"
-                    value="pdf"
-                    checked={reportConfig.format === 'pdf'}
-                    onChange={(e) => setReportConfig(prev => ({ ...prev, format: e.target.value as 'pdf' | 'csv' }))}
-                    className="w-4 h-4 text-uganda-yellow border-gray-300 focus:ring-uganda-yellow"
-                  />
-                  <FilePdf className="w-4 h-4 ml-2 text-red-600" />
-                  <span className="ml-2 text-sm">PDF</span>
-                </label>
-                <label className="flex items-center">
-                  <input
-                    type="radio"
-                    value="csv"
-                    checked={reportConfig.format === 'csv'}
-                    onChange={(e) => setReportConfig(prev => ({ ...prev, format: e.target.value as 'pdf' | 'csv' }))}
-                    className="w-4 h-4 text-uganda-yellow border-gray-300 focus:ring-uganda-yellow"
-                  />
-                  <FileSpreadsheet className="w-4 h-4 ml-2 text-green-600" />
-                  <span className="ml-2 text-sm">CSV</span>
-                </label>
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Date Range</label>
-              <select
-                value={reportConfig.dateRange}
-                onChange={(e) => setReportConfig(prev => ({ ...prev, dateRange: e.target.value as any }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-uganda-yellow focus:border-transparent"
-              >
-                <option value="all">All Time</option>
-                <option value="today">Today</option>
-                <option value="week">This Week</option>
-                <option value="month">This Month</option>
-                <option value="year">This Year</option>
-              </select>
-            </div>
+        {/* Generate Button */}
+        <div className="flex items-center justify-between">
+          <div className="text-sm text-gray-600">
+            <p>Report: <span className="font-medium">{getReportTitle()}</span></p>
+            <p>Format: <span className="font-medium">{reportConfig.format.toUpperCase()}</span></p>
           </div>
-
-          {/* Filters */}
-          <div className="border-t border-gray-200 pt-4">
-            <h3 className="text-sm font-medium text-gray-700 mb-3">Filters (Optional)</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-xs text-gray-600 mb-1">Status</label>
-                <select
-                  value={reportConfig.filters.status || ''}
-                  onChange={(e) => setReportConfig(prev => ({ 
-                    ...prev, 
-                    filters: { ...prev.filters, status: e.target.value || undefined }
-                  }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-uganda-yellow focus:border-transparent text-sm"
-                >
-                  <option value="">All Statuses</option>
-                  <option value="active">Active</option>
-                  <option value="inactive">Inactive</option>
-                  <option value="pending">Pending</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs text-gray-600 mb-1">Category</label>
-                <select
-                  value={reportConfig.filters.category || ''}
-                  onChange={(e) => setReportConfig(prev => ({ 
-                    ...prev, 
-                    filters: { ...prev.filters, category: e.target.value || undefined }
-                  }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-uganda-yellow focus:border-transparent text-sm"
-                >
-                  <option value="">All Categories</option>
-                  <option value="electronics">Electronics</option>
-                  <option value="medical">Medical</option>
-                  <option value="office">Office Supplies</option>
-                  <option value="equipment">Equipment</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs text-gray-600 mb-1">Facility</label>
-                <select
-                  value={reportConfig.filters.facility || ''}
-                  onChange={(e) => setReportConfig(prev => ({ 
-                    ...prev, 
-                    filters: { ...prev.filters, facility: e.target.value || undefined }
-                  }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-uganda-yellow focus:border-transparent text-sm"
-                >
-                  <option value="">All Facilities</option>
-                  {reportData.facilities.map(facility => (
-                    <option key={facility.id} value={facility.name}>{facility.name}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-          </div>
-
-          {/* Generate Button */}
-          <div className="flex items-center justify-between pt-4 border-t border-gray-200">
-            <div className="text-sm text-gray-600">
-              <p>Report: <span className="font-medium">{getReportTitle()}</span></p>
-              <p>Format: <span className="font-medium">{reportConfig.format.toUpperCase()}</span></p>
-            </div>
-            <button
-              onClick={handleGenerateReport}
-              disabled={isGenerating}
-              className="px-6 py-3 bg-uganda-yellow text-white font-medium rounded-lg hover:bg-yellow-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
-            >
-              {isGenerating ? (
-                <>
-                  <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                  Generating...
-                </>
-              ) : (
-                <>
-                  <Download className="w-4 h-4 mr-2" />
-                  Generate Report
-                </>
-              )}
-            </button>
-          </div>
+          <button
+            onClick={handleGenerateReport}
+            disabled={isGenerating}
+            className="px-8 py-3 bg-uganda-yellow text-white font-medium rounded-lg hover:bg-yellow-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center text-lg"
+          >
+            {isGenerating ? (
+              <>
+                <RefreshCw className="w-5 h-5 mr-2 animate-spin" />
+                Generating Report...
+              </>
+            ) : (
+              <>
+                <Download className="w-5 h-5 mr-2" />
+                Generate Report
+              </>
+            )}
+          </button>
         </div>
       </div>
 
