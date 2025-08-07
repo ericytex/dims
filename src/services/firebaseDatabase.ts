@@ -442,7 +442,11 @@ export class FirebaseDatabaseService {
   }
 
   static async updateTransfer(id: string, transfer: Partial<Transfer>): Promise<void> {
-    return this.updateDocument<Transfer>('transfers', id, transfer);
+    return this.updateDocument('transfers', id, transfer);
+  }
+
+  static async deleteTransfer(id: string): Promise<void> {
+    return this.deleteDocument('transfers', id);
   }
 
   // Real-time listeners

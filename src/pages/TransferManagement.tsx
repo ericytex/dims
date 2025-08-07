@@ -1,6 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNotification } from '../contexts/NotificationContext';
 import { useOffline } from '../contexts/OfflineContext';
+import { useFirebaseDatabase } from '../hooks/useFirebaseDatabase';
+import { useFirebaseAuth } from '../hooks/useFirebaseAuth';
+import { FirebaseDatabaseService } from '../services/firebaseDatabase';
 import {
   Plus,
   Search,
@@ -14,19 +17,23 @@ import {
   Calendar,
   Eye,
   Check,
-  X
+  X,
+  Filter,
+  Download,
+  RefreshCw,
+  Edit
 } from 'lucide-react';
 
 interface Transfer {
-  id: string;
-  itemName: string;
+  id?: string;
   itemId: string;
+  itemName?: string;
   quantity: number;
   unit: string;
-  fromFacility: string;
   fromFacilityId: string;
-  toFacility: string;
+  fromFacility?: string;
   toFacilityId: string;
+  toFacility?: string;
   requestedBy: string;
   requestDate: string;
   status: 'pending' | 'approved' | 'rejected' | 'in_transit' | 'delivered' | 'cancelled';
@@ -37,184 +44,246 @@ interface Transfer {
   priority: 'low' | 'medium' | 'high' | 'urgent';
   notes?: string;
   trackingNumber?: string;
+  createdAt?: any;
+  updatedAt?: any;
 }
 
 export default function TransferManagement() {
-  const [transfers, setTransfers] = useState<Transfer[]>([
-    {
-      id: '1',
-      itemName: 'Laptop Computers',
-      itemId: '1',
-      quantity: 25,
-      unit: 'units',
-      fromFacility: 'Main Warehouse',
-      fromFacilityId: '1',
-      toFacility: 'Regional Office',
-      toFacilityId: '2',
-      requestedBy: 'John Mukasa',
-      requestDate: '2025-01-09',
-      status: 'pending',
-      reason: 'New office setup',
-      priority: 'high',
-      notes: 'Urgent request for new branch opening',
-      trackingNumber: 'TRK-2025-001'
-    },
-    {
-      id: '2',
-      itemName: 'Office Chairs',
-      itemId: '2',
-      quantity: 50,
-      unit: 'units',
-      fromFacility: 'Distribution Center',
-      fromFacilityId: '3',
-      toFacility: 'Retail Store',
-      toFacilityId: '4',
-      requestedBy: 'Sarah Nakato',
-      requestDate: '2025-01-08',
-      status: 'approved',
-      approvedBy: 'James Ssebunya',
-      approvalDate: '2025-01-09',
-      reason: 'Store expansion',
-      priority: 'medium',
-      notes: 'Regular inventory transfer for new store section',
-      trackingNumber: 'TRK-2025-002'
-    },
-    {
-      id: '3',
-      itemName: 'Printer Cartridges',
-      itemId: '4',
-      quantity: 100,
-      unit: 'units',
-      fromFacility: 'Main Warehouse',
-      fromFacilityId: '1',
-      toFacility: 'Manufacturing Plant',
-      toFacilityId: '3',
-      requestedBy: 'David Okello',
-      requestDate: '2025-01-08',
-      status: 'delivered',
-      approvedBy: 'Mary Nambi',
-      approvalDate: '2025-01-08',
-      deliveryDate: '2025-01-09',
-      reason: 'Production requirement',
-      priority: 'urgent',
-      notes: 'Critical for production line operations',
-      trackingNumber: 'TRK-2025-003'
-    },
-    {
-      id: '4',
-      itemName: 'Network Cables',
-      itemId: '5',
-      quantity: 200,
-      unit: 'meters',
-      fromFacility: 'Regional Office',
-      fromFacilityId: '2',
-      toFacility: 'Retail Store',
-      toFacilityId: '4',
-      requestedBy: 'Sarah Nakato',
-      requestDate: '2025-01-07',
-      status: 'rejected',
-      approvedBy: 'John Mukasa',
-      approvalDate: '2025-01-08',
-      reason: 'IT infrastructure setup',
-      priority: 'low',
-      notes: 'Rejected - insufficient stock at source facility',
-      trackingNumber: 'TRK-2025-004'
-    }
-  ]);
-
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedStatus, setSelectedStatus] = useState('all');
-  const [selectedPriority, setSelectedPriority] = useState('all');
-  const [showModal, setShowModal] = useState(false);
-  const [modalType, setModalType] = useState<'add' | 'view'>('add');
-  const [selectedTransfer, setSelectedTransfer] = useState<Transfer | null>(null);
   const { addNotification } = useNotification();
-  const { isOnline, addOfflineTransfer } = useOffline();
-
-  const statuses = [
-    { value: 'all', label: 'All Status' },
-    { value: 'pending', label: 'Pending' },
-    { value: 'approved', label: 'Approved' },
-    { value: 'rejected', label: 'Rejected' },
-    { value: 'in_transit', label: 'In Transit' },
-    { value: 'delivered', label: 'Delivered' },
-    { value: 'cancelled', label: 'Cancelled' }
-  ];
-
-  const priorities = [
-    { value: 'all', label: 'All Priorities' },
-    { value: 'low', label: 'Low' },
-    { value: 'medium', label: 'Medium' },
-    { value: 'high', label: 'High' },
-    { value: 'urgent', label: 'Urgent' }
-  ];
-
-  const filteredTransfers = transfers.filter(transfer => {
-    const matchesSearch = transfer.itemName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         transfer.fromFacility.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         transfer.toFacility.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         transfer.requestedBy.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = selectedStatus === 'all' || transfer.status === selectedStatus;
-    const matchesPriority = selectedPriority === 'all' || transfer.priority === selectedPriority;
-    return matchesSearch && matchesStatus && matchesPriority;
+  const { isOnline } = useOffline();
+  const { user } = useFirebaseAuth();
+  const { transfers, facilities, inventoryItems, loading } = useFirebaseDatabase();
+  
+  const [filteredTransfers, setFilteredTransfers] = useState<Transfer[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [priorityFilter, setPriorityFilter] = useState<string>('all');
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [showViewModal, setShowViewModal] = useState(false);
+  const [selectedTransfer, setSelectedTransfer] = useState<Transfer | null>(null);
+  const [formData, setFormData] = useState<Partial<Transfer>>({
+    itemId: '',
+    quantity: 0,
+    unit: '',
+    fromFacilityId: '',
+    toFacilityId: '',
+    reason: '',
+    priority: 'medium',
+    notes: ''
   });
 
+  // Load transfers and enhance with item and facility names
+  useEffect(() => {
+    const enhanceTransfers = async () => {
+      if (transfers && facilities && inventoryItems) {
+        const enhanced = transfers.map(transfer => {
+          const item = inventoryItems.find(item => item.id === transfer.itemId);
+          const fromFacility = facilities.find(f => f.id === transfer.fromFacilityId);
+          const toFacility = facilities.find(f => f.id === transfer.toFacilityId);
+          
+          return {
+            ...transfer,
+            itemName: item?.name || 'Unknown Item',
+            fromFacility: fromFacility?.name || 'Unknown Facility',
+            toFacility: toFacility?.name || 'Unknown Facility'
+          };
+        });
+        
+        setFilteredTransfers(enhanced);
+      }
+    };
+
+    enhanceTransfers();
+  }, [transfers, facilities, inventoryItems]);
+
+  // Filter transfers based on search and filters
+  useEffect(() => {
+    let filtered = filteredTransfers;
+
+    if (searchTerm) {
+      filtered = filtered.filter(transfer =>
+        transfer.itemName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        transfer.fromFacility?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        transfer.toFacility?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        transfer.trackingNumber?.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+
+    if (statusFilter !== 'all') {
+      filtered = filtered.filter(transfer => transfer.status === statusFilter);
+    }
+
+    if (priorityFilter !== 'all') {
+      filtered = filtered.filter(transfer => transfer.priority === priorityFilter);
+    }
+
+    setFilteredTransfers(filtered);
+  }, [searchTerm, statusFilter, priorityFilter, transfers, facilities, inventoryItems]);
+
   const handleAddTransfer = () => {
-    setModalType('add');
-    setSelectedTransfer(null);
-    setShowModal(true);
+    setFormData({
+      itemId: '',
+      quantity: 0,
+      unit: '',
+      fromFacilityId: '',
+      toFacilityId: '',
+      reason: '',
+      priority: 'medium',
+      notes: ''
+    });
+    setShowAddModal(true);
+  };
+
+  const handleSaveTransfer = async () => {
+    try {
+      if (!formData.itemId || !formData.fromFacilityId || !formData.toFacilityId) {
+        addNotification('Please fill in all required fields', 'error');
+        return;
+      }
+
+      const transferData = {
+        ...formData,
+        requestedBy: user?.displayName || user?.email || 'Unknown',
+        requestDate: new Date().toISOString(),
+        status: 'pending' as const,
+        trackingNumber: `TRK-${Date.now()}`
+      };
+
+      await FirebaseDatabaseService.addTransfer(transferData);
+      addNotification('Transfer request created successfully', 'success');
+      setShowAddModal(false);
+      setFormData({});
+    } catch (error) {
+      console.error('Error creating transfer:', error);
+      addNotification('Failed to create transfer request', 'error');
+    }
   };
 
   const handleViewTransfer = (transfer: Transfer) => {
-    setModalType('view');
     setSelectedTransfer(transfer);
-    setShowModal(true);
+    setShowViewModal(true);
   };
 
-  const handleApproveTransfer = (transfer: Transfer) => {
-    const updatedTransfer = {
-      ...transfer,
-      status: 'approved' as const,
-      approvedBy: 'Current User',
-      approvalDate: '2025-01-09'
-    };
+  const handleApproveTransfer = async (transfer: Transfer) => {
+    try {
+      if (!transfer.id) return;
 
-    setTransfers(transfers.map(t => 
-      t.id === transfer.id ? updatedTransfer : t
-    ));
+      const updatedTransfer = {
+        ...transfer,
+        status: 'approved' as const,
+        approvedBy: user?.displayName || user?.email || 'Unknown',
+        approvalDate: new Date().toISOString()
+      };
 
-    if (!isOnline) {
-      addOfflineTransfer({
-        type: 'approval',
-        transfer: updatedTransfer
-      });
-      addNotification(`Transfer approved offline. Will sync when online.`, 'info');
-    } else {
-      addNotification(`Transfer request for ${transfer.itemName} has been approved.`);
+      await FirebaseDatabaseService.updateTransfer(transfer.id, updatedTransfer);
+      addNotification('Transfer approved successfully', 'success');
+    } catch (error) {
+      console.error('Error approving transfer:', error);
+      addNotification('Failed to approve transfer', 'error');
     }
   };
 
-  const handleRejectTransfer = (transfer: Transfer) => {
-    const updatedTransfer = {
-      ...transfer,
-      status: 'rejected' as const,
-      approvedBy: 'Current User',
-      approvalDate: '2025-01-09'
-    };
+  const handleRejectTransfer = async (transfer: Transfer) => {
+    try {
+      if (!transfer.id) return;
 
-    setTransfers(transfers.map(t => 
-      t.id === transfer.id ? updatedTransfer : t
-    ));
+      const updatedTransfer = {
+        ...transfer,
+        status: 'rejected' as const,
+        approvedBy: user?.displayName || user?.email || 'Unknown',
+        approvalDate: new Date().toISOString()
+      };
 
-    if (!isOnline) {
-      addOfflineTransfer({
-        type: 'rejection',
-        transfer: updatedTransfer
-      });
-      addNotification(`Transfer rejected offline. Will sync when online.`, 'warning');
-    } else {
-      addNotification(`Transfer request for ${transfer.itemName} has been rejected.`, 'warning');
+      await FirebaseDatabaseService.updateTransfer(transfer.id, updatedTransfer);
+      addNotification('Transfer rejected successfully', 'success');
+    } catch (error) {
+      console.error('Error rejecting transfer:', error);
+      addNotification('Failed to reject transfer', 'error');
     }
+  };
+
+  const handleStartTransit = async (transfer: Transfer) => {
+    try {
+      if (!transfer.id) return;
+
+      const updatedTransfer = {
+        ...transfer,
+        status: 'in_transit' as const
+      };
+
+      await FirebaseDatabaseService.updateTransfer(transfer.id, updatedTransfer);
+      addNotification('Transfer marked as in transit', 'success');
+    } catch (error) {
+      console.error('Error starting transit:', error);
+      addNotification('Failed to start transit', 'error');
+    }
+  };
+
+  const handleDeliverTransfer = async (transfer: Transfer) => {
+    try {
+      if (!transfer.id) return;
+
+      const updatedTransfer = {
+        ...transfer,
+        status: 'delivered' as const,
+        deliveryDate: new Date().toISOString()
+      };
+
+      await FirebaseDatabaseService.updateTransfer(transfer.id, updatedTransfer);
+      addNotification('Transfer marked as delivered', 'success');
+    } catch (error) {
+      console.error('Error delivering transfer:', error);
+      addNotification('Failed to mark as delivered', 'error');
+    }
+  };
+
+  const handleCancelTransfer = async (transfer: Transfer) => {
+    try {
+      if (!transfer.id) return;
+
+      const updatedTransfer = {
+        ...transfer,
+        status: 'cancelled' as const
+      };
+
+      await FirebaseDatabaseService.updateTransfer(transfer.id, updatedTransfer);
+      addNotification('Transfer cancelled successfully', 'success');
+    } catch (error) {
+      console.error('Error cancelling transfer:', error);
+      addNotification('Failed to cancel transfer', 'error');
+    }
+  };
+
+  const handleDeleteTransfer = async (transfer: Transfer) => {
+    try {
+      if (!transfer.id) return;
+
+      await FirebaseDatabaseService.deleteTransfer(transfer.id);
+      addNotification('Transfer deleted successfully', 'success');
+    } catch (error) {
+      console.error('Error deleting transfer:', error);
+      addNotification('Failed to delete transfer', 'error');
+    }
+  };
+
+  const handleEditTransfer = (transfer: Transfer) => {
+    setSelectedTransfer(transfer);
+    setFormData({
+      itemId: transfer.itemId,
+      quantity: transfer.quantity,
+      unit: transfer.unit,
+      fromFacilityId: transfer.fromFacilityId,
+      toFacilityId: transfer.toFacilityId,
+      reason: transfer.reason,
+      priority: transfer.priority,
+      notes: transfer.notes,
+      status: transfer.status,
+      approvedBy: transfer.approvedBy,
+      approvalDate: transfer.approvalDate,
+      deliveryDate: transfer.deliveryDate,
+      trackingNumber: transfer.trackingNumber
+    });
+    setShowAddModal(true); // Use add modal for editing
   };
 
   const getStatusColor = (status: string) => {
@@ -266,10 +335,10 @@ export default function TransferManagement() {
     }
   };
 
-  const pendingTransfers = transfers.filter(t => t.status === 'pending').length;
-  const approvedTransfers = transfers.filter(t => t.status === 'approved').length;
-  const deliveredTransfers = transfers.filter(t => t.status === 'delivered').length;
-  const urgentTransfers = transfers.filter(t => t.priority === 'urgent' && t.status === 'pending').length;
+  const pendingTransfers = filteredTransfers.filter(t => t.status === 'pending').length;
+  const approvedTransfers = filteredTransfers.filter(t => t.status === 'approved').length;
+  const deliveredTransfers = filteredTransfers.filter(t => t.status === 'delivered').length;
+  const urgentTransfers = filteredTransfers.filter(t => t.priority === 'urgent' && t.status === 'pending').length;
 
   return (
     <div className="space-y-6">
@@ -356,26 +425,26 @@ export default function TransferManagement() {
           </div>
           <div className="sm:w-48">
             <select
-              value={selectedStatus}
-              onChange={(e) => setSelectedStatus(e.target.value)}
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
             >
-              {statuses.map(status => (
-                <option key={status.value} value={status.value}>
-                  {status.label}
+              {['all', 'pending', 'approved', 'rejected', 'in_transit', 'delivered', 'cancelled'].map(status => (
+                <option key={status} value={status}>
+                  {status.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
                 </option>
               ))}
             </select>
           </div>
           <div className="sm:w-48">
             <select
-              value={selectedPriority}
-              onChange={(e) => setSelectedPriority(e.target.value)}
+              value={priorityFilter}
+              onChange={(e) => setPriorityFilter(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
             >
-              {priorities.map(priority => (
-                <option key={priority.value} value={priority.value}>
-                  {priority.label}
+              {['all', 'low', 'medium', 'high', 'urgent'].map(priority => (
+                <option key={priority} value={priority}>
+                  {priority.replace(/\b\w/g, l => l.toUpperCase())}
                 </option>
               ))}
             </select>
@@ -487,6 +556,22 @@ export default function TransferManagement() {
                       </button>
                     </>
                   )}
+                  {transfer.status !== 'pending' && (
+                    <button
+                      onClick={() => handleEditTransfer(transfer)}
+                      className="p-2 text-uganda-blue hover:text-blue-700 rounded-lg hover:bg-blue-50"
+                      title="Edit transfer"
+                    >
+                      <Edit className="w-4 h-4" />
+                    </button>
+                  )}
+                  <button
+                    onClick={() => handleDeleteTransfer(transfer)}
+                    className="p-2 text-uganda-red hover:text-red-700 rounded-lg hover:bg-red-50"
+                    title="Delete transfer"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
                 </div>
               </div>
             </div>
@@ -503,15 +588,15 @@ export default function TransferManagement() {
       </div>
 
       {/* Modal */}
-      {showModal && (
+      {showAddModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between p-6 border-b border-gray-200">
               <h3 className="text-lg font-semibold text-uganda-black">
-                {modalType === 'add' ? 'Request Transfer' : 'Transfer Details'}
+                {selectedTransfer ? 'Edit Transfer' : 'Request Transfer'}
               </h3>
               <button
-                onClick={() => setShowModal(false)}
+                onClick={() => setShowAddModal(false)}
                 className="text-gray-400 hover:text-gray-600"
               >
                 <X className="w-6 h-6" />
@@ -519,7 +604,7 @@ export default function TransferManagement() {
             </div>
             
             <div className="p-6">
-              {modalType === 'view' && selectedTransfer ? (
+              {selectedTransfer ? (
                 <div className="space-y-6">
                   <div className="flex items-center justify-between">
                     <h4 className="text-xl font-semibold text-uganda-black">
@@ -601,10 +686,118 @@ export default function TransferManagement() {
               ) : (
                 <div className="space-y-4">
                   <h4 className="text-lg font-semibold text-uganda-black">Request Transfer</h4>
-                  <p className="text-gray-600">
-                    Transfer request functionality will be available in the next update.
-                    This will allow facilities to request inventory transfers from other locations.
-                  </p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label htmlFor="itemId" className="block text-sm font-medium text-gray-700">Item</label>
+                      <select
+                        id="itemId"
+                        value={formData.itemId}
+                        onChange={(e) => setFormData(prev => ({ ...prev, itemId: e.target.value }))}
+                        className="mt-1 block w-full pl-3 pr-10 py-2 border border-gray-300 rounded-md leading-5 focus:outline-none focus:ring-uganda-yellow focus:border-uganda-yellow sm:text-sm"
+                      >
+                        <option value="">Select an item</option>
+                        {inventoryItems?.map(item => (
+                          <option key={item.id} value={item.id}>{item.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label htmlFor="quantity" className="block text-sm font-medium text-gray-700">Quantity</label>
+                      <input
+                        type="number"
+                        id="quantity"
+                        value={formData.quantity}
+                        onChange={(e) => setFormData(prev => ({ ...prev, quantity: Number(e.target.value) }))}
+                        className="mt-1 block w-full pl-3 pr-10 py-2 border border-gray-300 rounded-md leading-5 focus:outline-none focus:ring-uganda-yellow focus:border-uganda-yellow sm:text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="unit" className="block text-sm font-medium text-gray-700">Unit</label>
+                      <input
+                        type="text"
+                        id="unit"
+                        value={formData.unit}
+                        onChange={(e) => setFormData(prev => ({ ...prev, unit: e.target.value }))}
+                        className="mt-1 block w-full pl-3 pr-10 py-2 border border-gray-300 rounded-md leading-5 focus:outline-none focus:ring-uganda-yellow focus:border-uganda-yellow sm:text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="fromFacilityId" className="block text-sm font-medium text-gray-700">From Facility</label>
+                      <select
+                        id="fromFacilityId"
+                        value={formData.fromFacilityId}
+                        onChange={(e) => setFormData(prev => ({ ...prev, fromFacilityId: e.target.value }))}
+                        className="mt-1 block w-full pl-3 pr-10 py-2 border border-gray-300 rounded-md leading-5 focus:outline-none focus:ring-uganda-yellow focus:border-uganda-yellow sm:text-sm"
+                      >
+                        <option value="">Select a facility</option>
+                        {facilities?.map(f => (
+                          <option key={f.id} value={f.id}>{f.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label htmlFor="toFacilityId" className="block text-sm font-medium text-gray-700">To Facility</label>
+                      <select
+                        id="toFacilityId"
+                        value={formData.toFacilityId}
+                        onChange={(e) => setFormData(prev => ({ ...prev, toFacilityId: e.target.value }))}
+                        className="mt-1 block w-full pl-3 pr-10 py-2 border border-gray-300 rounded-md leading-5 focus:outline-none focus:ring-uganda-yellow focus:border-uganda-yellow sm:text-sm"
+                      >
+                        <option value="">Select a facility</option>
+                        {facilities?.map(f => (
+                          <option key={f.id} value={f.id}>{f.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label htmlFor="reason" className="block text-sm font-medium text-gray-700">Reason</label>
+                      <textarea
+                        id="reason"
+                        value={formData.reason}
+                        onChange={(e) => setFormData(prev => ({ ...prev, reason: e.target.value }))}
+                        className="mt-1 block w-full pl-3 pr-10 py-2 border border-gray-300 rounded-md leading-5 focus:outline-none focus:ring-uganda-yellow focus:border-uganda-yellow sm:text-sm"
+                        rows={3}
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="priority" className="block text-sm font-medium text-gray-700">Priority</label>
+                      <select
+                        id="priority"
+                        value={formData.priority}
+                        onChange={(e) => setFormData(prev => ({ ...prev, priority: e.target.value as 'low' | 'medium' | 'high' | 'urgent' }))}
+                        className="mt-1 block w-full pl-3 pr-10 py-2 border border-gray-300 rounded-md leading-5 focus:outline-none focus:ring-uganda-yellow focus:border-uganda-yellow sm:text-sm"
+                      >
+                        <option value="medium">Medium</option>
+                        <option value="low">Low</option>
+                        <option value="high">High</option>
+                        <option value="urgent">Urgent</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label htmlFor="notes" className="block text-sm font-medium text-gray-700">Notes</label>
+                      <textarea
+                        id="notes"
+                        value={formData.notes}
+                        onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
+                        className="mt-1 block w-full pl-3 pr-10 py-2 border border-gray-300 rounded-md leading-5 focus:outline-none focus:ring-uganda-yellow focus:border-uganda-yellow sm:text-sm"
+                        rows={3}
+                      />
+                    </div>
+                  </div>
+                  <div className="flex justify-end space-x-2">
+                    <button
+                      onClick={() => setShowAddModal(false)}
+                      className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleSaveTransfer}
+                      className="px-4 py-2 bg-uganda-yellow text-uganda-black font-medium rounded-lg hover:bg-yellow-500 transition-colors"
+                    >
+                      {selectedTransfer ? 'Update Transfer' : 'Save Transfer'}
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
