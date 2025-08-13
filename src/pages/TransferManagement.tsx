@@ -75,7 +75,14 @@ export default function TransferManagement() {
   // Load transfers and enhance with item and facility names
   useEffect(() => {
     const enhanceTransfers = async () => {
+      console.log('TransferManagement: Data received:', {
+        transfers: transfers?.length || 0,
+        facilities: facilities?.length || 0,
+        inventoryItems: inventoryItems?.length || 0
+      });
+      
       if (transfers && facilities && inventoryItems) {
+        console.log('TransferManagement: Enhancing transfers...');
         const enhanced = transfers.map(transfer => {
           const item = inventoryItems.find(item => item.id === transfer.itemId);
           const fromFacility = facilities.find(f => f.id === transfer.fromFacilityId);
@@ -89,7 +96,10 @@ export default function TransferManagement() {
           };
         });
         
+        console.log('TransferManagement: Enhanced transfers:', enhanced);
         setFilteredTransfers(enhanced);
+      } else {
+        console.log('TransferManagement: Missing data for enhancement');
       }
     };
 
@@ -534,6 +544,30 @@ export default function TransferManagement() {
           </div>
         </div>
       </div>
+
+      {/* Debug Information */}
+      {process.env.NODE_ENV === 'development' && (
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+          <h3 className="text-sm font-medium text-yellow-800 mb-2">Debug Info (Development Only)</h3>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
+            <div>
+              <span className="font-medium">Transfers:</span> {transfers?.length || 0}
+            </div>
+            <div>
+              <span className="font-medium">Facilities:</span> {facilities?.length || 0}
+            </div>
+            <div>
+              <span className="font-medium">Inventory Items:</span> {inventoryItems?.length || 0}
+            </div>
+            <div>
+              <span className="font-medium">Enhanced:</span> {filteredTransfers.length}
+            </div>
+          </div>
+          <div className="mt-2 text-xs text-yellow-700">
+            <span className="font-medium">Loading:</span> {loading ? 'Yes' : 'No'}
+          </div>
+        </div>
+      )}
 
       {/* Transfers List */}
       <div className="bg-white rounded-lg shadow-sm">

@@ -45,11 +45,13 @@ export const useFirebaseDatabase = () => {
   useEffect(() => {
     const unsubscribeInventory = FirebaseDatabaseService.onInventoryItemsChange(setInventoryItems);
     const unsubscribeTransactions = FirebaseDatabaseService.onStockTransactionsChange(setStockTransactions);
+    const unsubscribeTransfers = FirebaseDatabaseService.onTransfersChange(setTransfers);
     const unsubscribeUsers = FirebaseDatabaseService.onUsersChange(setUsers);
 
     return () => {
       unsubscribeInventory();
       unsubscribeTransactions();
+      unsubscribeTransfers();
       unsubscribeUsers();
     };
   }, []);

@@ -578,6 +578,24 @@ export class FirebaseDatabaseService {
     return this.getDocument<Transfer>('transfers', id);
   }
 
+  // Real-time transfer updates
+  static onTransfersChange(callback: (transfers: Transfer[]) => void): () => void {
+    const q = query(collection(db, 'transfers'), orderBy('createdAt', 'desc'));
+    
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      const transfers = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Transfer[];
+      
+      callback(transfers);
+    }, (error) => {
+      console.error('Error listening to transfers:', error);
+    });
+    
+    return unsubscribe;
+  }
+
   static async addTransfer(transfer: Omit<Transfer, 'id'>): Promise<string> {
     try {
       // Add the transfer record
