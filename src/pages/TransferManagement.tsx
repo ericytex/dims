@@ -121,6 +121,8 @@ export default function TransferManagement() {
   }, [searchTerm, statusFilter, priorityFilter, transfers, facilities, inventoryItems]);
 
   const handleAddTransfer = () => {
+    setShowAddModal(true);
+    setSelectedTransfer(null);
     setFormData({
       itemId: '',
       quantity: 0,
@@ -131,7 +133,16 @@ export default function TransferManagement() {
       priority: 'medium',
       notes: ''
     });
-    setShowAddModal(true);
+  };
+
+  const handleGenerateSampleTransfers = async () => {
+    try {
+      await FirebaseDatabaseService.generateSampleTransfers();
+      addNotification('Sample transfers generated successfully!', 'success');
+    } catch (error) {
+      console.error('Error generating sample transfers:', error);
+      addNotification('Failed to generate sample transfers. Please try again.', 'error');
+    }
   };
 
   const handleSaveTransfer = async () => {
@@ -407,13 +418,22 @@ export default function TransferManagement() {
           <h1 className="text-2xl font-bold text-uganda-black">Transfer Management</h1>
           <p className="text-gray-600 mt-1">Manage inter-facility inventory transfers</p>
         </div>
-        <button
-          onClick={handleAddTransfer}
-          className="mt-4 sm:mt-0 inline-flex items-center px-4 py-2 bg-uganda-yellow text-uganda-black font-medium rounded-lg hover:bg-yellow-500 transition-colors"
-        >
-          <Plus className="w-5 h-5 mr-2" />
-          Request Transfer
-        </button>
+        <div className="flex space-x-3 mt-4 sm:mt-0">
+          <button
+            onClick={handleGenerateSampleTransfers}
+            className="inline-flex items-center px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            <RefreshCw className="w-5 h-5 mr-2" />
+            Generate Sample Data
+          </button>
+          <button
+            onClick={handleAddTransfer}
+            className="inline-flex items-center px-4 py-2 bg-uganda-yellow text-uganda-black font-medium rounded-lg hover:bg-yellow-500 transition-colors"
+          >
+            <Plus className="w-5 h-5 mr-2" />
+            Request Transfer
+          </button>
+        </div>
       </div>
 
       {/* Stats Cards */}

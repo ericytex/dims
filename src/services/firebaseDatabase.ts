@@ -569,7 +569,7 @@ export class FirebaseDatabaseService {
     return this.deleteDocument('facilities', id);
   }
 
-  // Transfers
+  // Enhanced Transfer Management with Automatic Transaction Generation
   static async getTransfers(): Promise<Transfer[]> {
     return this.getCollection<Transfer>('transfers');
   }
@@ -579,15 +579,98 @@ export class FirebaseDatabaseService {
   }
 
   static async addTransfer(transfer: Omit<Transfer, 'id'>): Promise<string> {
-    return this.addDocument<Transfer>('transfers', transfer);
+    try {
+      // Add the transfer record
+      const transferId = await this.addDocument<Transfer>('transfers', transfer);
+      
+      // Automatically create transfer transactions
+      // Stock out from source facility
+      const stockOutTransaction: Omit<StockTransaction, 'id'> = {
+        itemId: transfer.itemId,
+        facilityId: transfer.fromFacilityId,
+        type: 'stock_out',
+        quantity: transfer.quantity,
+        unit: transfer.unit,
+        source: '',
+        destination: `Transfer to ${transfer.toFacilityId}`,
+        reason: `Transfer: ${transfer.reason}`,
+        notes: `Automatically generated for transfer ${transferId}`,
+        userId: transfer.requestedBy,
+        transactionDate: transfer.requestDate
+      };
+      
+      // Stock in to destination facility
+      const stockInTransaction: Omit<StockTransaction, 'id'> = {
+        itemId: transfer.itemId,
+        facilityId: transfer.toFacilityId,
+        type: 'stock_in',
+        quantity: transfer.quantity,
+        unit: transfer.unit,
+        source: `Transfer from ${transfer.fromFacilityId}`,
+        destination: '',
+        reason: `Transfer: ${transfer.reason}`,
+        notes: `Automatically generated for transfer ${transferId}`,
+        userId: transfer.requestedBy,
+        transactionDate: transfer.requestDate
+      };
+      
+      // Add both transactions
+      await this.addDocument<StockTransaction>('transactions', stockOutTransaction);
+      await this.addDocument<StockTransaction>('transactions', stockInTransaction);
+      
+      return transferId;
+    } catch (error) {
+      console.error('Error adding transfer with auto-transactions:', error);
+      throw error;
+    }
   }
 
   static async updateTransfer(id: string, transfer: Partial<Transfer>): Promise<void> {
-    return this.updateDocument('transfers', id, transfer);
+    try {
+      // Get current transfer to compare
+      const currentTransfer = await this.getTransfer(id);
+      if (!currentTransfer) {
+        throw new Error('Transfer not found');
+      }
+      
+      // Update the transfer
+      await this.updateDocument<Transfer>('transfers', id, transfer);
+      
+      // If status changed to 'delivered', update inventory quantities
+      if (transfer.status === 'delivered' && currentTransfer.status !== 'delivered') {
+        // Update source facility inventory (decrease)
+        await this.updateInventoryFromTransfer(currentTransfer, 'out');
+        // Update destination facility inventory (increase)
+        await this.updateInventoryFromTransfer(currentTransfer, 'in');
+      }
+    } catch (error) {
+      console.error('Error updating transfer:', error);
+      throw error;
+    }
   }
 
   static async deleteTransfer(id: string): Promise<void> {
-    return this.deleteDocument('transfers', id);
+    try {
+      // Get the transfer before deletion
+      const transfer = await this.getTransfer(id);
+      if (!transfer) {
+        throw new Error('Transfer not found');
+      }
+      
+      // If transfer was delivered, reverse the inventory changes
+      if (transfer.status === 'delivered') {
+        // Reverse source facility inventory (increase)
+        await this.updateInventoryFromTransfer(transfer, 'in');
+        // Reverse destination facility inventory (decrease)
+        await this.updateInventoryFromTransfer(transfer, 'out');
+      }
+      
+      // Delete the transfer
+      await this.deleteDocument('transfers', id);
+    } catch (error) {
+      console.error('Error deleting transfer:', error);
+      throw error;
+    }
   }
 
   // Real-time listeners
@@ -856,6 +939,107 @@ export class FirebaseDatabaseService {
       console.log(`Inventory reversed for item ${transaction.itemId}: ${currentInventory.currentStock} → ${newQuantity}`);
     } catch (error) {
       console.error('Error reversing inventory from transaction:', error);
+      throw error;
+    }
+  }
+
+  // Helper function to update inventory from transfer
+  private static async updateInventoryFromTransfer(transfer: Transfer, direction: 'in' | 'out'): Promise<void> {
+    try {
+      const facilityId = direction === 'in' ? transfer.fromFacilityId : transfer.toFacilityId;
+      const inventoryRef = doc(db, 'inventory_items', transfer.itemId);
+      const inventorySnap = await getDoc(inventoryRef);
+      
+      if (!inventorySnap.exists()) {
+        console.error('Inventory item not found for transfer:', transfer.itemId);
+        return;
+      }
+      
+      const currentInventory = inventorySnap.data() as InventoryItem;
+      let newQuantity = currentInventory.currentStock;
+      
+      if (direction === 'in') {
+        newQuantity += transfer.quantity; // Restore to source
+      } else {
+        newQuantity -= transfer.quantity; // Remove from source
+      }
+      
+      newQuantity = Math.max(0, newQuantity);
+      
+      await updateDoc(inventoryRef, {
+        currentStock: newQuantity,
+        updatedAt: serverTimestamp()
+      });
+    } catch (error) {
+      console.error('Error updating inventory from transfer:', error);
+      throw error;
+    }
+  }
+
+  // Generate sample transfer data
+  static async generateSampleTransfers(): Promise<void> {
+    try {
+      // Get existing facilities and inventory items
+      const facilities = await this.getFacilities();
+      const inventoryItems = await this.getInventoryItems();
+      
+      if (facilities.length < 2 || inventoryItems.length === 0) {
+        throw new Error('Need at least 2 facilities and 1 inventory item to create sample transfers');
+      }
+      
+      const sampleTransfers = [
+        {
+          itemId: inventoryItems[0].id,
+          quantity: Math.floor(Math.random() * 20) + 5,
+          unit: inventoryItems[0].unit,
+          fromFacilityId: facilities[0].id,
+          toFacilityId: facilities[1].id,
+          requestedBy: 'sample-user',
+          requestDate: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+          status: 'delivered' as const,
+          reason: 'Regular supply distribution',
+          priority: 'medium' as const,
+          notes: 'Sample transfer for demonstration',
+          trackingNumber: `TRF-${Date.now()}-001`
+        },
+        {
+          itemId: inventoryItems[Math.min(1, inventoryItems.length - 1)].id,
+          quantity: Math.floor(Math.random() * 15) + 3,
+          unit: inventoryItems[Math.min(1, inventoryItems.length - 1)].unit,
+          fromFacilityId: facilities[1].id,
+          toFacilityId: facilities[0].id,
+          requestedBy: 'sample-user',
+          requestDate: new Date(Date.now() - Math.random() * 20 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+          status: 'in_transit' as const,
+          reason: 'Inventory rebalancing',
+          priority: 'high' as const,
+          notes: 'Sample transfer in progress',
+          trackingNumber: `TRF-${Date.now()}-002`
+        },
+        {
+          itemId: inventoryItems[Math.min(2, inventoryItems.length - 1)].id,
+          quantity: Math.floor(Math.random() * 10) + 2,
+          unit: inventoryItems[Math.min(2, inventoryItems.length - 1)].unit,
+          fromFacilityId: facilities[0].id,
+          toFacilityId: facilities[Math.min(2, facilities.length - 1)].id,
+          requestedBy: 'sample-user',
+          requestDate: new Date(Date.now() - Math.random() * 10 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+          status: 'pending' as const,
+          reason: 'New facility setup',
+          priority: 'urgent' as const,
+          notes: 'Sample pending transfer',
+          trackingNumber: `TRF-${Date.now()}-003`
+        }
+      ];
+      
+      // Add sample transfers
+      for (const transfer of sampleTransfers) {
+        await this.addTransfer(transfer);
+      }
+      
+      console.log('Sample transfers generated successfully');
+    } catch (error) {
+      console.error('Error generating sample transfers:', error);
       throw error;
     }
   }
