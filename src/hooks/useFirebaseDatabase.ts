@@ -171,6 +171,16 @@ export const useFirebaseDatabase = () => {
     }
   }, []);
 
+  const deleteTransfer = useCallback(async (id: string) => {
+    try {
+      setError(null);
+      await FirebaseDatabaseService.deleteTransfer(id);
+    } catch (error: any) {
+      setError(error.message);
+      throw error;
+    }
+  }, []);
+
   // Search and filtering
   const searchInventoryItems = useCallback(async (searchTerm: string) => {
     try {
@@ -271,6 +281,10 @@ export const useFirebaseDatabase = () => {
     deleteUser,
     
     // Utility methods
+    searchInventoryItems,
+    getLowStockItems,
+    getTransactions,
+    batchUpdate,
     syncAuthUsersToFirestore: FirebaseDatabaseService.syncAuthUsersToFirestore,
     syncAllAuthUsersToFirestore: FirebaseDatabaseService.syncAllAuthUsersToFirestore
   };
