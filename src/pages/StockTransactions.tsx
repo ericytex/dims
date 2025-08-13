@@ -53,6 +53,36 @@ export default function StockTransactions() {
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
   const [transactionToDelete, setTransactionToDelete] = useState<Transaction | null>(null);
   const [selectedInventoryItem, setSelectedInventoryItem] = useState<string>('');
+
+  // Calculate item quantity totals
+  const getItemQuantityTotals = () => {
+    if (!inventoryItems || !stockTransactions) return [];
+    
+    return inventoryItems.map(item => {
+      const itemTransactions = stockTransactions.filter(t => t.itemId === item.id);
+      const stockInTotal = itemTransactions
+        .filter(t => t.type === 'stock_in')
+        .reduce((sum, t) => sum + t.quantity, 0);
+      const stockOutTotal = itemTransactions
+        .filter(t => t.type === 'stock_out')
+        .reduce((sum, t) => sum + t.quantity, 0);
+      
+      const lastTransaction = itemTransactions
+        .sort((a, b) => new Date(b.transactionDate).getTime() - new Date(a.transactionDate).getTime())[0];
+      
+      return {
+        itemId: item.id!,
+        itemName: item.name,
+        currentStock: item.currentStock,
+        unit: item.unit,
+        netChange: stockInTotal - stockOutTotal,
+        lastTransactionDate: lastTransaction?.transactionDate || null
+      };
+    });
+  };
+
+  const itemQuantityTotals = getItemQuantityTotals();
+
   const [formData, setFormData] = useState({
     type: 'stock_in' as const,
     item: '',
@@ -327,43 +357,6 @@ export default function StockTransactions() {
         return 'text-gray-600 bg-gray-100';
     }
   };
-
-  // Calculate real-time quantity totals for each item
-  const getItemQuantityTotals = () => {
-    if (!inventoryItems || !stockTransactions) return [];
-    
-    return inventoryItems.map(item => {
-      // Get all transactions for this item
-      const itemTransactions = stockTransactions.filter(tx => tx.itemId === item.id);
-      
-      // Calculate net quantity change
-      let netQuantity = 0;
-      itemTransactions.forEach(tx => {
-        if (tx.type === 'stock_in') {
-          netQuantity += tx.quantity;
-        } else if (tx.type === 'stock_out') {
-          netQuantity -= tx.quantity;
-        }
-        // Note: transfers and adjustments are handled separately
-      });
-      
-      // Get the most recent transaction date
-      const lastTransaction = itemTransactions
-        .sort((a, b) => new Date(b.transactionDate).getTime() - new Date(a.transactionDate).getTime())[0];
-      
-      return {
-        id: item.id,
-        name: item.name,
-        currentStock: item.currentStock,
-        netQuantity,
-        lastTransaction: lastTransaction?.transactionDate || 'No transactions',
-        unit: item.unit,
-        status: item.status
-      };
-    }).sort((a, b) => b.currentStock - a.currentStock); // Sort by current stock (highest first)
-  };
-
-  const itemQuantityTotals = getItemQuantityTotals();
 
   const stats = [
     {
