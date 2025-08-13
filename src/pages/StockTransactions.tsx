@@ -184,18 +184,70 @@ export default function StockTransactions() {
       return;
     }
 
-    if (!facilities || facilities.length === 0) {
-      addNotification('No facilities found. Please add some facilities first.', 'error');
-      return;
-    }
-
     try {
+      // If no facilities exist, create sample facilities first
+      if (!facilities || facilities.length === 0) {
+        addNotification('No facilities found. Creating sample facilities first...', 'info');
+        
+        const sampleFacilities = [
+          {
+            name: 'Main Warehouse',
+            type: 'warehouse' as const,
+            region: 'Central',
+            district: 'Kampala',
+            address: 'Industrial Area, Kampala',
+            gpsCoordinates: '0.3354,32.5851',
+            contactPerson: 'John Mukasa',
+            contactPhone: '+256700000001',
+            status: 'active' as const
+          },
+          {
+            name: 'Distribution Center',
+            type: 'distribution_center' as const,
+            region: 'Central',
+            district: 'Kampala',
+            address: 'Nakawa Division, Kampala',
+            gpsCoordinates: '0.3676,32.5851',
+            contactPerson: 'Mary Nambi',
+            contactPhone: '+256700000002',
+            status: 'active' as const
+          },
+          {
+            name: 'Regional Warehouse',
+            type: 'warehouse' as const,
+            region: 'Central',
+            district: 'Kampala',
+            address: 'Makindye Division, Kampala',
+            gpsCoordinates: '0.2743,32.5851',
+            contactPerson: 'Sarah Nakato',
+            contactPhone: '+256700000003',
+            status: 'active' as const
+          }
+        ];
+        
+        for (const facility of sampleFacilities) {
+          await addFacility(facility);
+        }
+        
+        addNotification('Sample facilities created successfully!', 'success');
+        
+        // Wait a moment for the facilities to be loaded
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+
+      // Now create sample transactions
+      const currentFacilities = facilities || [];
+      if (currentFacilities.length === 0) {
+        addNotification('Still no facilities available. Please try again.', 'error');
+        return;
+      }
+
       const sampleTransactions = [];
       
       // Create sample transactions for each inventory item
       for (let i = 0; i < Math.min(inventoryItems.length, 5); i++) {
         const item = inventoryItems[i];
-        const facility = facilities[i % facilities.length];
+        const facility = currentFacilities[i % currentFacilities.length];
         
         // Stock In transaction
         const stockInTransaction = {
