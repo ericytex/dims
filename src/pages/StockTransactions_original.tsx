@@ -1,7 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNotification } from '../contexts/NotificationContext';
 import { useOffline } from '../contexts/OfflineContext';
-import { useFirebaseDatabase } from '../hooks/useFirebaseDatabase';
 import {
   Plus,
   Search,
@@ -36,8 +35,96 @@ interface Transaction {
 }
 
 export default function StockTransactions() {
-  const { stockTransactions, facilities, inventoryItems, users, addStockTransaction, updateStockTransaction, deleteStockTransaction } = useFirebaseDatabase();
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [transactions, setTransactions] = useState<Transaction[]>([
+    {
+      id: '1',
+      type: 'stock_in',
+      item: 'Laptop Computers',
+      quantity: 50,
+      unit: 'units',
+      facility: 'Main Warehouse',
+      source: 'Tech Supplies Ltd',
+      reason: 'New stock received',
+      user: 'John Mukasa',
+      date: '2025-01-09',
+      time: '14:30',
+      status: 'completed'
+    },
+    {
+      id: '2',
+      type: 'stock_out',
+      item: 'Office Supplies',
+      quantity: 200,
+      unit: 'pieces',
+      facility: 'Distribution Center',
+      destination: 'Office Allocation',
+      reason: 'Regular office supplies',
+      notes: 'For daily office operations',
+      user: 'Mary Nambi',
+      date: '2025-01-09',
+      time: '13:15',
+      status: 'completed'
+    },
+    {
+      id: '3',
+      type: 'transfer',
+      item: 'Electronics',
+      quantity: 25,
+      unit: 'units',
+      facility: 'Regional Warehouse',
+      source: 'Main Warehouse',
+      destination: 'Regional Warehouse',
+      reason: 'Inter-facility transfer',
+      user: 'Sarah Nakato',
+      date: '2025-01-09',
+      time: '11:45',
+      status: 'completed'
+    },
+    {
+      id: '4',
+      type: 'stock_in',
+      item: 'Safety Equipment',
+      quantity: 100,
+      unit: 'pieces',
+      facility: 'Main Warehouse',
+      source: 'Safety Gear Co',
+      reason: 'Safety equipment restock',
+      user: 'James Ssebunya',
+      date: '2025-01-08',
+      time: '16:20',
+      status: 'completed'
+    },
+    {
+      id: '5',
+      type: 'stock_out',
+      item: 'Industrial Fans',
+      quantity: 10,
+      unit: 'units',
+      facility: 'Main Warehouse',
+      destination: 'Manufacturing Plant',
+      reason: 'Equipment installation',
+      notes: 'For new production line',
+      user: 'John Mukasa',
+      date: '2025-01-08',
+      time: '10:30',
+      status: 'completed'
+    },
+    {
+      id: '6',
+      type: 'adjustment',
+      item: 'LED Light Bulbs',
+      quantity: -5,
+      unit: 'pieces',
+      facility: 'Distribution Center',
+      reason: 'Damaged items removed',
+      notes: 'Found damaged during inspection',
+      user: 'Mary Nambi',
+      date: '2025-01-08',
+      time: '09:15',
+      status: 'completed'
+    }
+  ]);
+
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedType, setSelectedType] = useState('all');
   const [selectedStatus, setSelectedStatus] = useState('all');
@@ -60,29 +147,6 @@ export default function StockTransactions() {
   const { addNotification } = useNotification();
   const { isOnline, addOfflineTransaction } = useOffline();
 
-  // Load real data from Firebase
-  useEffect(() => {
-    if (stockTransactions && stockTransactions.length > 0) {
-      const mappedTransactions: Transaction[] = stockTransactions.map(tx => ({
-        id: tx.id,
-        type: tx.type as 'stock_in' | 'stock_out' | 'transfer' | 'adjustment',
-        item: tx.itemName || tx.item,
-        quantity: tx.quantity,
-        unit: tx.unit,
-        facility: tx.facilityName || tx.facility,
-        source: tx.source,
-        destination: tx.destination,
-        reason: tx.reason,
-        notes: tx.notes,
-        user: tx.userName || tx.user,
-        date: tx.date,
-        time: tx.time,
-        status: tx.status as 'completed' | 'pending' | 'cancelled'
-      }));
-      setTransactions(mappedTransactions);
-    }
-  }, [stockTransactions]);
-
   const transactionTypes = [
     { value: 'all', label: 'All Types' },
     { value: 'stock_in', label: 'Stock In' },
@@ -91,10 +155,12 @@ export default function StockTransactions() {
     { value: 'adjustment', label: 'Adjustment' }
   ];
 
-  // Use real facilities from Firebase
-  const facilityOptions = [
+  const facilities = [
     { value: 'all', label: 'All Facilities' },
-    ...(facilities || []).map(f => ({ value: f.name, label: f.name }))
+    { value: 'Main Warehouse', label: 'Main Warehouse' },
+    { value: 'Distribution Center', label: 'Distribution Center' },
+    { value: 'Regional Warehouse', label: 'Regional Warehouse' },
+    { value: 'Retail Store', label: 'Retail Store' }
   ];
 
   const statuses = [
@@ -117,13 +183,12 @@ export default function StockTransactions() {
   const handleAddTransaction = () => {
     setModalType('add');
     setSelectedTransaction(null);
-    const defaultFacility = facilities && facilities.length > 0 ? facilities[0].name : 'Main Warehouse';
     setFormData({
       type: 'stock_in',
       item: '',
       quantity: 0,
       unit: 'pieces',
-      facility: defaultFacility,
+      facility: 'Main Warehouse',
       source: '',
       destination: '',
       reason: '',
@@ -157,59 +222,63 @@ export default function StockTransactions() {
     setShowModal(true);
   };
 
-  const handleDeleteTransaction = async (transaction: Transaction) => {
+  const handleDeleteTransaction = (transaction: Transaction) => {
     if (window.confirm(`Are you sure you want to delete this transaction?`)) {
-      try {
-        await deleteStockTransaction(transaction.id);
-        addNotification('Transaction deleted successfully', 'success');
-      } catch (error) {
-        console.error('Error deleting transaction:', error);
-        addNotification('Failed to delete transaction. Please try again.', 'error');
-      }
+      setTransactions(transactions.filter(t => t.id !== transaction.id));
+      addNotification('Transaction deleted successfully', 'success');
     }
   };
 
-  const handleSaveTransaction = async () => {
+  const handleSaveTransaction = () => {
     if (!formData.item || !formData.reason || formData.quantity === 0) {
       addNotification('Please fill in all required fields', 'error');
       return;
     }
 
-    try {
-      if (modalType === 'add') {
-        const newTransaction = {
-          type: formData.type,
-          item: formData.item,
-          quantity: formData.quantity,
-          unit: formData.unit,
-          facility: formData.facility,
-          source: formData.source,
-          destination: formData.destination,
-          reason: formData.reason,
-          notes: formData.notes,
-          status: formData.status,
-          user: 'Current User', // TODO: Get from auth context
-          date: new Date().toISOString().split('T')[0],
-          time: new Date().toLocaleTimeString('en-US', { hour12: false })
-        };
+    const transactionData = {
+      type: modalType,
+      transaction: modalType === 'add' ? {
+        id: Date.now().toString(),
+        ...formData,
+        user: 'Current User',
+        date: new Date().toISOString().split('T')[0],
+        time: new Date().toLocaleTimeString('en-US', { hour12: false })
+      } : selectedTransaction ? {
+        ...selectedTransaction,
+        ...formData
+      } : null
+    };
 
-        await addStockTransaction(newTransaction);
+    if (modalType === 'add') {
+      const newTransaction: Transaction = {
+        id: Date.now().toString(),
+        ...formData,
+        user: 'Current User',
+        date: new Date().toISOString().split('T')[0],
+        time: new Date().toLocaleTimeString('en-US', { hour12: false })
+      };
+      setTransactions([newTransaction, ...transactions]);
+      
+      if (!isOnline) {
+        addOfflineTransaction(transactionData);
+        addNotification('Transaction added offline. Will sync when online.', 'info');
+      } else {
         addNotification('Transaction added successfully', 'success');
-      } else if (modalType === 'edit' && selectedTransaction) {
-        const updatedTransaction = {
-          ...selectedTransaction,
-          ...formData
-        };
-
-        await updateStockTransaction(selectedTransaction.id, updatedTransaction);
+      }
+    } else if (modalType === 'edit' && selectedTransaction) {
+      setTransactions(transactions.map(t => 
+        t.id === selectedTransaction.id ? { ...t, ...formData } : t
+      ));
+      
+      if (!isOnline) {
+        addOfflineTransaction(transactionData);
+        addNotification('Transaction updated offline. Will sync when online.', 'info');
+      } else {
         addNotification('Transaction updated successfully', 'success');
       }
-
-      setShowModal(false);
-    } catch (error) {
-      console.error('Error saving transaction:', error);
-      addNotification('Failed to save transaction. Please try again.', 'error');
     }
+
+    setShowModal(false);
   };
 
   const getTransactionTypeColor = (type: string) => {
@@ -390,7 +459,7 @@ export default function StockTransactions() {
               onChange={(e) => setSelectedFacility(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
             >
-              {facilityOptions.map(facility => (
+              {facilities.map(facility => (
                 <option key={facility.value} value={facility.value}>{facility.label}</option>
               ))}
             </select>
@@ -768,11 +837,12 @@ export default function StockTransactions() {
                       onChange={(e) => setFormData({...formData, facility: e.target.value})}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
                     >
-                      {facilityOptions.filter(f => f.value !== 'all').map(facility => (
-                        <option key={facility.value} value={facility.value}>{facility.label}</option>
-                      ))}
+                      <option value="Main Warehouse">Main Warehouse</option>
+                      <option value="Distribution Center">Distribution Center</option>
+                      <option value="Regional Warehouse">Regional Warehouse</option>
+                      <option value="Retail Store">Retail Store</option>
                     </select>
-                  </div>
+        </div>
 
                   {(formData.type === 'stock_in' || formData.type === 'transfer') && (
                     <div>
