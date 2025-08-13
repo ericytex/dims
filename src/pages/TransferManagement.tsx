@@ -108,7 +108,9 @@ export default function TransferManagement() {
 
   // Filter transfers based on search and filters
   useEffect(() => {
-    let filtered = filteredTransfers;
+    if (!filteredTransfers.length) return; // Don't filter if no transfers loaded yet
+    
+    let filtered = [...filteredTransfers]; // Create a copy to avoid mutation
 
     if (searchTerm) {
       filtered = filtered.filter(transfer =>
@@ -127,8 +129,9 @@ export default function TransferManagement() {
       filtered = filtered.filter(transfer => transfer.priority === priorityFilter);
     }
 
+    // Update the filtered results without overriding the main filteredTransfers
     setFilteredTransfers(filtered);
-  }, [searchTerm, statusFilter, priorityFilter, transfers, facilities, inventoryItems]);
+  }, [searchTerm, statusFilter, priorityFilter]);
 
   const handleAddTransfer = () => {
     setShowAddModal(true);
@@ -229,11 +232,12 @@ export default function TransferManagement() {
 
       const updatedTransfer = {
         ...transfer,
-        status: 'in_transit' as const
+        status: 'in_transit' as const,
+        updatedAt: new Date().toISOString()
       };
 
       await FirebaseDatabaseService.updateTransfer(transfer.id, updatedTransfer);
-      addNotification('Transfer marked as in transit', 'success');
+      addNotification('Transfer started in transit', 'success');
     } catch (error) {
       console.error('Error starting transit:', error);
       addNotification('Failed to start transit', 'error');
@@ -247,11 +251,12 @@ export default function TransferManagement() {
       const updatedTransfer = {
         ...transfer,
         status: 'delivered' as const,
-        deliveryDate: new Date().toISOString()
+        deliveryDate: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
       };
 
       await FirebaseDatabaseService.updateTransfer(transfer.id, updatedTransfer);
-      addNotification('Transfer marked as delivered', 'success');
+      addNotification('Transfer delivered successfully', 'success');
     } catch (error) {
       console.error('Error delivering transfer:', error);
       addNotification('Failed to mark as delivered', 'error');
@@ -264,7 +269,8 @@ export default function TransferManagement() {
 
       const updatedTransfer = {
         ...transfer,
-        status: 'cancelled' as const
+        status: 'cancelled' as const,
+        updatedAt: new Date().toISOString()
       };
 
       await FirebaseDatabaseService.updateTransfer(transfer.id, updatedTransfer);
@@ -569,171 +575,188 @@ export default function TransferManagement() {
         </div>
       )}
 
-      {/* Transfers List */}
+      {/* Transfers Table */}
       <div className="bg-white rounded-lg shadow-sm">
         <div className="p-6 border-b border-gray-200">
           <h2 className="text-lg font-semibold text-uganda-black">
             Transfer Requests ({filteredTransfers.length})
           </h2>
         </div>
-        <div className="divide-y divide-gray-200">
-          {filteredTransfers.map((transfer) => (
-            <div key={transfer.id} className="p-6 hover:bg-gray-50">
-              <div className="flex items-start justify-between">
-                <div className="flex items-start space-x-4 flex-1">
-                  <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center">
-                    {getStatusIcon(transfer.status)}
-                  </div>
-                  
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-2 mb-2">
-                      <h3 className="text-lg font-medium text-uganda-black">
-                        {transfer.itemName}
-                      </h3>
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(transfer.status)}`}>
-                        {transfer.status.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                      </span>
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getPriorityColor(transfer.priority)}`}>
-                        {transfer.priority.replace(/\b\w/g, l => l.toUpperCase())}
-                      </span>
-                    </div>
+        
+        {filteredTransfers.length > 0 ? (
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Item & Details
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Route
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Status & Priority
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Request Info
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {filteredTransfers.map((transfer) => (
+                  <tr key={transfer.id} className="hover:bg-gray-50">
+                    {/* Item & Details Column */}
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center mr-3">
+                          {getStatusIcon(transfer.status)}
+                        </div>
+                        <div>
+                          <div className="text-sm font-medium text-gray-900">
+                            {transfer.itemName}
+                          </div>
+                          <div className="text-sm text-gray-500">
+                            {transfer.quantity} {transfer.unit}
+                          </div>
+                          {transfer.trackingNumber && (
+                            <div className="text-xs text-gray-400 font-mono">
+                              {transfer.trackingNumber}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </td>
                     
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3">
+                    {/* Route Column */}
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900">
+                        <div className="font-medium">{transfer.fromFacility}</div>
+                        <div className="text-gray-500">→</div>
+                        <div className="font-medium">{transfer.toFacility}</div>
+                      </div>
+                    </td>
+                    
+                    {/* Status & Priority Column */}
+                    <td className="px-6 py-4 whitespace-nowrap">
                       <div className="space-y-2">
-                        <div className="flex items-center text-sm text-gray-600">
-                          <Package className="w-4 h-4 mr-2" />
-                          <span className="font-medium">{transfer.quantity.toLocaleString()} {transfer.unit}</span>
-                        </div>
-                        <div className="flex items-center text-sm text-gray-600">
-                          <ArrowRightLeft className="w-4 h-4 mr-2" />
-                          <span>{transfer.fromFacility} → {transfer.toFacility}</span>
-                        </div>
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <div className="flex items-center text-sm text-gray-600">
-                          <User className="w-4 h-4 mr-2" />
-                          <span>Requested by {transfer.requestedBy}</span>
-                        </div>
-                        <div className="flex items-center text-sm text-gray-600">
-                          <Calendar className="w-4 h-4 mr-2" />
-                          <span>{transfer.requestDate}</span>
+                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(transfer.status)}`}>
+                          {transfer.status.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                        </span>
+                        <div>
+                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getPriorityColor(transfer.priority)}`}>
+                            {transfer.priority.replace(/\b\w/g, l => l.toUpperCase())}
+                          </span>
                         </div>
                       </div>
-                    </div>
-
-                    <div className="text-sm text-gray-600 mb-2">
-                      <span className="font-medium">Reason:</span> {transfer.reason}
-                    </div>
-
-                    {transfer.trackingNumber && (
-                      <div className="text-sm text-gray-500">
-                        <span className="font-medium">Tracking:</span> {transfer.trackingNumber}
+                    </td>
+                    
+                    {/* Request Info Column */}
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900">
+                        <div className="font-medium">{transfer.requestedBy}</div>
+                        <div className="text-gray-500">{transfer.requestDate}</div>
+                        {transfer.approvedBy && (
+                          <div className="text-xs text-gray-400">
+                            Approved by {transfer.approvedBy}
+                          </div>
+                        )}
                       </div>
-                    )}
-
-                    {transfer.notes && (
-                      <div className="text-sm text-gray-600 mt-2 italic">
-                        {transfer.notes}
+                    </td>
+                    
+                    {/* Actions Column */}
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      <div className="flex items-center space-x-2">
+                        <button
+                          onClick={() => handleViewTransfer(transfer)}
+                          className="p-1 text-gray-600 hover:text-uganda-black rounded hover:bg-gray-100"
+                          title="View details"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </button>
+                        
+                        {/* Pending transfers - can be approved or rejected */}
+                        {transfer.status === 'pending' && (
+                          <>
+                            <button
+                              onClick={() => handleApproveTransfer(transfer)}
+                              className="p-1 text-green-600 hover:text-green-700 rounded hover:bg-green-50"
+                              title="Approve transfer"
+                            >
+                              <Check className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => handleRejectTransfer(transfer)}
+                              className="p-1 text-uganda-red hover:text-red-700 rounded hover:bg-red-50"
+                              title="Reject transfer"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          </>
+                        )}
+                        
+                        {/* Approved transfers - can start transit */}
+                        {transfer.status === 'approved' && (
+                          <button
+                            onClick={() => handleStartTransit(transfer)}
+                            className="p-1 text-blue-600 hover:text-blue-700 rounded hover:bg-blue-50"
+                            title="Start transit"
+                          >
+                            <Package className="w-4 h-4" />
+                          </button>
+                        )}
+                        
+                        {/* In transit transfers - can be delivered */}
+                        {transfer.status === 'in_transit' && (
+                          <button
+                            onClick={() => handleDeliverTransfer(transfer)}
+                            className="p-1 text-green-600 hover:text-green-700 rounded hover:bg-green-50"
+                            title="Mark as delivered"
+                          >
+                            <Check className="w-4 h-4" />
+                          </button>
+                        )}
+                        
+                        {/* Pending and approved transfers - can be cancelled */}
+                        {(transfer.status === 'pending' || transfer.status === 'approved') && (
+                          <button
+                            onClick={() => handleCancelTransfer(transfer)}
+                            className="p-1 text-orange-600 hover:text-orange-700 rounded hover:bg-orange-50"
+                            title="Cancel transfer"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        )}
+                        
+                        {/* All transfers except delivered - can be edited */}
+                        {transfer.status !== 'delivered' && transfer.status !== 'cancelled' && (
+                          <button
+                            onClick={() => handleEditTransfer(transfer)}
+                            className="p-1 text-uganda-blue hover:text-blue-700 rounded hover:bg-blue-50"
+                            title="Edit transfer"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </button>
+                        )}
+                        
+                        {/* All transfers can be deleted */}
+                        <button
+                          onClick={() => handleDeleteTransfer(transfer)}
+                          className="p-1 text-uganda-red hover:text-red-700 rounded hover:bg-red-50"
+                          title="Delete transfer"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
                       </div>
-                    )}
-
-                    {transfer.approvedBy && (
-                      <div className="text-sm text-gray-500 mt-2">
-                        {transfer.status === 'approved' ? 'Approved' : 'Processed'} by {transfer.approvedBy} on {transfer.approvalDate}
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                <div className="flex items-center space-x-2 ml-4">
-                  <button
-                    onClick={() => handleViewTransfer(transfer)}
-                    className="p-2 text-gray-600 hover:text-uganda-black rounded-lg hover:bg-gray-100"
-                    title="View details"
-                  >
-                    <Eye className="w-4 h-4" />
-                  </button>
-                  
-                  {/* Pending transfers - can be approved or rejected */}
-                  {transfer.status === 'pending' && (
-                    <>
-                      <button
-                        onClick={() => handleApproveTransfer(transfer)}
-                        className="p-2 text-green-600 hover:text-green-700 rounded-lg hover:bg-green-50"
-                        title="Approve transfer"
-                      >
-                        <Check className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => handleRejectTransfer(transfer)}
-                        className="p-2 text-uganda-red hover:text-red-700 rounded-lg hover:bg-red-50"
-                        title="Reject transfer"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    </>
-                  )}
-                  
-                  {/* Approved transfers - can start transit */}
-                  {transfer.status === 'approved' && (
-                    <button
-                      onClick={() => handleStartTransit(transfer)}
-                      className="p-2 text-blue-600 hover:text-blue-700 rounded-lg hover:bg-blue-50"
-                      title="Start transit"
-                    >
-                      <Package className="w-4 h-4" />
-                    </button>
-                  )}
-                  
-                  {/* In transit transfers - can be delivered */}
-                  {transfer.status === 'in_transit' && (
-                    <button
-                      onClick={() => handleDeliverTransfer(transfer)}
-                      className="p-2 text-green-600 hover:text-green-700 rounded-lg hover:bg-green-50"
-                      title="Mark as delivered"
-                    >
-                      <Check className="w-4 h-4" />
-                    </button>
-                  )}
-                  
-                  {/* Pending and approved transfers - can be cancelled */}
-                  {(transfer.status === 'pending' || transfer.status === 'approved') && (
-                    <button
-                      onClick={() => handleCancelTransfer(transfer)}
-                      className="p-2 text-orange-600 hover:text-orange-700 rounded-lg hover:bg-orange-50"
-                      title="Cancel transfer"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  )}
-                  
-                  {/* All transfers except delivered - can be edited */}
-                  {transfer.status !== 'delivered' && transfer.status !== 'cancelled' && (
-                    <button
-                      onClick={() => handleEditTransfer(transfer)}
-                      className="p-2 text-uganda-blue hover:text-blue-700 rounded-lg hover:bg-blue-50"
-                      title="Edit transfer"
-                    >
-                      <Edit className="w-4 h-4" />
-                    </button>
-                  )}
-                  
-                  {/* All transfers can be deleted */}
-                  <button
-                    onClick={() => handleDeleteTransfer(transfer)}
-                    className="p-2 text-uganda-red hover:text-red-700 rounded-lg hover:bg-red-50"
-                    title="Delete transfer"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {filteredTransfers.length === 0 && (
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
           <div className="p-12 text-center">
             <ArrowRightLeft className="w-12 h-12 mx-auto text-gray-400 mb-4" />
             <h3 className="text-lg font-medium text-gray-900 mb-2">No transfers found</h3>
