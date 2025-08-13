@@ -392,19 +392,19 @@ export class FirebaseDatabaseService {
 
   // Stock Transactions
   static async getStockTransactions(): Promise<StockTransaction[]> {
-    return this.getCollection<StockTransaction>('stock_transactions');
+    return this.getCollection<StockTransaction>('transactions');
   }
 
   static async getStockTransaction(id: string): Promise<StockTransaction | null> {
-    return this.getDocument<StockTransaction>('stock_transactions', id);
+    return this.getDocument<StockTransaction>('transactions', id);
   }
 
   static async addStockTransaction(transaction: Omit<StockTransaction, 'id'>): Promise<string> {
-    return this.addDocument<StockTransaction>('stock_transactions', transaction);
+    return this.addDocument<StockTransaction>('transactions', transaction);
   }
 
   static async updateStockTransaction(id: string, transaction: Partial<StockTransaction>): Promise<void> {
-    return this.updateDocument<StockTransaction>('stock_transactions', id, transaction);
+    return this.updateDocument<StockTransaction>('transactions', id, transaction);
   }
 
   // Facilities
@@ -461,7 +461,7 @@ export class FirebaseDatabaseService {
   }
 
   static onStockTransactionsChange(callback: (transactions: StockTransaction[]) => void): () => void {
-    return onSnapshot(collection(db, 'stock_transactions'), (snapshot) => {
+    return onSnapshot(collection(db, 'transactions'), (snapshot) => {
       const transactions = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
