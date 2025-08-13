@@ -242,17 +242,32 @@ export default function StockTransactions() {
         return;
       }
 
+      // Filter inventory items to only use those with valid IDs
+      const validInventoryItems = inventoryItems.filter(item => item.id && item.id.trim() !== '');
+      
+      if (validInventoryItems.length === 0) {
+        addNotification('No inventory items with valid IDs found. Please check your inventory data.', 'error');
+        return;
+      }
+
+      addNotification(`Found ${validInventoryItems.length} valid inventory items. Creating sample transactions...`, 'info');
+
       const sampleTransactions = [];
       
-      // Create sample transactions for each inventory item
-      for (let i = 0; i < Math.min(inventoryItems.length, 5); i++) {
-        const item = inventoryItems[i];
+      // Create sample transactions for each valid inventory item
+      for (let i = 0; i < Math.min(validInventoryItems.length, 5); i++) {
+        const item = validInventoryItems[i];
         const facility = currentFacilities[i % currentFacilities.length];
+        
+        if (!item.id || !facility.id) {
+          console.warn('Skipping item or facility without ID:', { item, facility });
+          continue;
+        }
         
         // Stock In transaction
         const stockInTransaction = {
-          itemId: item.id!,
-          facilityId: facility.id!,
+          itemId: item.id,
+          facilityId: facility.id,
           type: 'stock_in' as const,
           quantity: Math.floor(Math.random() * 50) + 10,
           unit: item.unit,
@@ -269,8 +284,8 @@ export default function StockTransactions() {
         // Stock Out transaction (if item has stock)
         if (item.currentStock > 0) {
           const stockOutTransaction = {
-            itemId: item.id!,
-            facilityId: facility.id!,
+            itemId: item.id,
+            facilityId: facility.id,
             type: 'stock_out' as const,
             quantity: Math.min(Math.floor(Math.random() * 20) + 5, item.currentStock),
             unit: item.unit,
@@ -286,9 +301,19 @@ export default function StockTransactions() {
         }
       }
       
+      if (sampleTransactions.length === 0) {
+        addNotification('No valid transactions could be created. Please check your data.', 'error');
+        return;
+      }
+      
       // Add all sample transactions
       for (const transaction of sampleTransactions) {
-        await addTransaction(transaction);
+        try {
+          await addTransaction(transaction);
+          console.log('Successfully created transaction for item:', transaction.itemId);
+        } catch (error) {
+          console.error('Failed to create transaction for item:', transaction.itemId, error);
+        }
       }
       
       addNotification(`Created ${sampleTransactions.length} sample transactions successfully!`, 'success');
