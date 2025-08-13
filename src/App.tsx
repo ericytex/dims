@@ -19,14 +19,30 @@ import NotificationContainer from './components/NotificationContainer';
 import { useFirebaseAuth } from './hooks/useFirebaseAuth';
 
 function AppContent() {
-  const { user } = useFirebaseAuth();
+  const { user, loading } = useFirebaseAuth();
+
+  // Show loading spinner while checking authentication
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-uganda-red mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
       <NotificationContainer />
       <Routes>
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+        <Route path="/login" element={
+          user ? <Navigate to="/dashboard" replace /> : <LoginPage />
+        } />
+        <Route path="/" element={
+          user ? <Navigate to="/dashboard" replace /> : <Navigate to="/login" replace />
+        } />
         
         <Route path="/dashboard" element={
           <ProtectedRoute allowedRoles={['admin', 'regional_supervisor', 'district_health_officer', 'facility_manager', 'village_health_worker']}>

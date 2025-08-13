@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useFirebaseAuth } from '../hooks/useFirebaseAuth';
 import { useNotification } from '../contexts/NotificationContext';
@@ -11,9 +11,21 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [showDemoAccounts, setShowDemoAccounts] = useState(false);
-  const { login } = useFirebaseAuth();
+  const { login, user, loading } = useFirebaseAuth();
   const { addNotification } = useNotification();
   const navigate = useNavigate();
+
+  // Automatic redirection when user is authenticated
+  useEffect(() => {
+    if (user && !loading) {
+      navigate('/dashboard', { replace: true });
+    }
+  }, [user, loading, navigate]);
+
+  // Don't render login form if user is already authenticated
+  if (user && !loading) {
+    return null; // Will redirect automatically
+  }
 
   const demoUsers = [
     { email: 'admin@ims.com', role: 'System Administrator', password: 'admin123' },
@@ -37,7 +49,7 @@ export default function LoginPage() {
       const success = await login(email, password);
       if (success) {
         addNotification('Login successful', 'success');
-        navigate('/dashboard');
+        // Remove manual navigation - let useEffect handle redirection
       } else {
         addNotification('Invalid email or password', 'error');
       }
