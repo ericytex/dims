@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNotification } from '../contexts/NotificationContext';
 import { useOffline } from '../contexts/OfflineContext';
 import { useFirebaseDatabase } from '../hooks/useFirebaseDatabase';
@@ -52,6 +52,7 @@ export default function StockTransactions() {
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
   const [transactionToDelete, setTransactionToDelete] = useState<Transaction | null>(null);
+  const [selectedInventoryItem, setSelectedInventoryItem] = useState<string>('');
   const [formData, setFormData] = useState({
     type: 'stock_in' as const,
     item: '',
@@ -192,6 +193,33 @@ export default function StockTransactions() {
       addNotification('Failed to delete transaction. Please try again.', 'error');
     }
   };
+
+  // Get selected item details for detailed view
+  const selectedItemDetails = useMemo(() => {
+    if (!selectedInventoryItem) return null;
+    
+    const item = itemQuantityTotals.find(item => item.itemId === selectedInventoryItem);
+    if (!item) return null;
+
+    // Get recent transactions for this item
+    const itemTransactions = stockTransactions.filter(t => t.itemId === item.itemId);
+    const recentTransactions = itemTransactions
+      .sort((a, b) => new Date(b.transactionDate).getTime() - new Date(a.transactionDate).getTime())
+      .slice(0, 5)
+      .map(t => ({
+        date: t.transactionDate,
+        type: t.type,
+        quantity: t.quantity
+      }));
+
+    return {
+      ...item,
+      recentTransactions,
+      totalTransactions: itemTransactions.length,
+      stockInCount: itemTransactions.filter(t => t.type === 'stock_in').length,
+      stockOutCount: itemTransactions.filter(t => t.type === 'stock_out').length
+    };
+  }, [selectedInventoryItem, itemQuantityTotals, stockTransactions]);
 
   const handleSaveTransaction = async () => {
     if (!formData.item || !formData.reason || formData.quantity === 0) {
@@ -391,54 +419,156 @@ export default function StockTransactions() {
         </div>
       </div>
 
-      {/* Real-time Quantity Totals */}
-      {itemQuantityTotals.length > 0 && (
-        <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Live Inventory Quantities</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {itemQuantityTotals.map((item) => (
-              <div key={item.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
-                <div className="flex items-center justify-between mb-2">
-                  <h4 className="font-medium text-gray-900 truncate" title={item.name}>
-                    {item.name}
-                  </h4>
-                  <span className={`px-2 py-1 text-xs rounded-full ${
-                    item.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-                  }`}>
-                    {item.status}
-                  </span>
+      {/* Live Inventory Quantities Section */}
+      <div className="bg-white rounded-lg shadow-sm">
+        <div className="p-6 border-b border-gray-200">
+          <h2 className="text-lg font-semibold text-uganda-black">
+            Live Inventory Quantities
+          </h2>
+          <p className="text-sm text-gray-600 mt-1">Select an item to view detailed quantity information</p>
+        </div>
+        
+        <div className="p-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Item Selector */}
+            <div className="lg:col-span-1">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Select Inventory Item
+              </label>
+              <select
+                value={selectedInventoryItem || ''}
+                onChange={(e) => setSelectedInventoryItem(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
+              >
+                <option value="">Choose an item...</option>
+                {itemQuantityTotals.map((item) => (
+                  <option key={item.itemId} value={item.itemId}>
+                    {item.itemName} ({item.currentStock} {item.unit})
+                  </option>
+                ))}
+              </select>
+              
+              {selectedInventoryItem && (
+                <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+                  <h4 className="text-sm font-medium text-gray-900 mb-2">Quick Summary</h4>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Current Stock:</span>
+                      <span className="font-medium">{selectedItemDetails?.currentStock} {selectedItemDetails?.unit}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Net Change:</span>
+                      <span className={`font-medium ${selectedItemDetails?.netChange >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                        {selectedItemDetails?.netChange >= 0 ? '+' : ''}{selectedItemDetails?.netChange} {selectedItemDetails?.unit}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Last Transaction:</span>
+                      <span className="font-medium">{selectedItemDetails?.lastTransactionDate || 'None'}</span>
+                    </div>
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">Current Stock:</span>
-                    <span className="font-semibold text-gray-900">
-                      {item.currentStock} {item.unit}
-                    </span>
+              )}
+            </div>
+            
+            {/* Detailed View Panel */}
+            <div className="lg:col-span-2">
+              {selectedInventoryItem && selectedItemDetails ? (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+                  <h3 className="text-lg font-semibold text-blue-900 mb-4">
+                    {selectedItemDetails.itemName} - Detailed Analysis
+                  </h3>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Stock Information */}
+                    <div>
+                      <h4 className="text-sm font-medium text-blue-800 mb-3">Stock Information</h4>
+                      <div className="space-y-3">
+                        <div className="flex justify-between">
+                          <span className="text-blue-700">Current Stock:</span>
+                          <span className="font-semibold text-blue-900">
+                            {selectedItemDetails.currentStock} {selectedItemDetails.unit}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-blue-700">Net Change:</span>
+                          <span className={`font-semibold ${selectedItemDetails.netChange >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                            {selectedItemDetails.netChange >= 0 ? '+' : ''}{selectedItemDetails.netChange} {selectedItemDetails.unit}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-blue-700">Last Transaction:</span>
+                          <span className="font-semibold text-blue-900">
+                            {selectedItemDetails.lastTransactionDate || 'None'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Transaction Summary */}
+                    <div>
+                      <h4 className="text-sm font-medium text-blue-800 mb-3">Transaction Summary</h4>
+                      <div className="space-y-3">
+                        <div className="flex justify-between">
+                          <span className="text-blue-700">Total Transactions:</span>
+                          <span className="font-semibold text-blue-900">
+                            {selectedItemDetails.totalTransactions}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-blue-700">Stock In:</span>
+                          <span className="font-semibold text-green-600">
+                            {selectedItemDetails.stockInCount}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-blue-700">Stock Out:</span>
+                          <span className="font-semibold text-red-600">
+                            {selectedItemDetails.stockOutCount}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">Net Change:</span>
-                    <span className={`font-semibold ${
-                      item.netQuantity > 0 ? 'text-green-600' : 
-                      item.netQuantity < 0 ? 'text-red-600' : 'text-gray-600'
-                    }`}>
-                      {item.netQuantity > 0 ? '+' : ''}{item.netQuantity} {item.unit}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">Last Transaction:</span>
-                    <span className="text-sm text-gray-500">
-                      {item.lastTransaction !== 'No transactions' 
-                        ? new Date(item.lastTransaction).toLocaleDateString() 
-                        : 'None'
-                      }
-                    </span>
+                  
+                  {/* Recent Transactions */}
+                  <div className="mt-6">
+                    <h4 className="text-sm font-medium text-blue-800 mb-3">Recent Transactions</h4>
+                    <div className="bg-white rounded-lg border border-blue-200 p-4">
+                      {selectedItemDetails.recentTransactions && selectedItemDetails.recentTransactions.length > 0 ? (
+                        <div className="space-y-2">
+                          {selectedItemDetails.recentTransactions.slice(0, 3).map((transaction, index) => (
+                            <div key={index} className="flex justify-between items-center text-sm">
+                              <span className="text-blue-700">{transaction.date}</span>
+                              <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                transaction.type === 'stock_in' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                              }`}>
+                                {transaction.type === 'stock_in' ? 'Stock In' : 'Stock Out'}
+                              </span>
+                              <span className="font-medium text-blue-900">
+                                {transaction.quantity} {selectedItemDetails.unit}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-blue-600 text-sm">No recent transactions found</p>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              ) : (
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-6 flex items-center justify-center">
+                  <div className="text-center">
+                    <Package className="w-12 h-12 mx-auto text-gray-400 mb-3" />
+                    <p className="text-gray-500">Select an inventory item to view detailed information</p>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
-      )}
+      </div>
 
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
