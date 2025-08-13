@@ -81,25 +81,38 @@ export const useFirebaseDatabase = () => {
   }, []);
 
   // Stock transaction operations
-  const addStockTransaction = useCallback(async (transaction: Omit<StockTransaction, 'id'>) => {
+  const addTransaction = useCallback(async (transaction: Omit<StockTransaction, 'id'>) => {
     try {
       setError(null);
-      await FirebaseDatabaseService.addStockTransaction(transaction);
+      await FirebaseDatabaseService.addTransaction(transaction);
     } catch (error: any) {
       setError(error.message);
       throw error;
     }
   }, []);
 
-  const updateStockTransaction = useCallback(async (id: string, transaction: Partial<StockTransaction>) => {
+  const updateTransaction = useCallback(async (id: string, transaction: Partial<StockTransaction>) => {
     try {
       setError(null);
-      await FirebaseDatabaseService.updateStockTransaction(id, transaction);
+      await FirebaseDatabaseService.updateTransaction(id, transaction);
     } catch (error: any) {
       setError(error.message);
       throw error;
     }
   }, []);
+
+  const deleteTransaction = useCallback(async (id: string) => {
+    try {
+      setError(null);
+      await FirebaseDatabaseService.deleteTransaction(id);
+    } catch (error: any) {
+      setError(error.message);
+      throw error;
+    }
+  }, []);
+
+  // Get transactions (alias for backward compatibility)
+  const getTransactions = useCallback(() => stockTransactions, [stockTransactions]);
 
   // Facility operations
   const addFacility = useCallback(async (facility: Omit<Facility, 'id'>) => {
@@ -191,24 +204,38 @@ export const useFirebaseDatabase = () => {
     stockTransactions,
     facilities,
     transfers,
-    
-    // State
+    users,
     loading,
     error,
     
-    // Operations
+    // Inventory operations
     addInventoryItem,
     updateInventoryItem,
     deleteInventoryItem,
-    addStockTransaction,
-    updateStockTransaction,
+    
+    // Transaction operations
+    transactions: stockTransactions, // Alias for backward compatibility
+    addTransaction,
+    updateTransaction,
+    deleteTransaction,
+    
+    // Facility operations
     addFacility,
     updateFacility,
     deleteFacility,
+    
+    // Transfer operations
     addTransfer,
     updateTransfer,
-    searchInventoryItems,
-    getLowStockItems,
-    batchUpdate
+    deleteTransfer,
+    
+    // User operations
+    addUser,
+    updateUser,
+    deleteUser,
+    
+    // Utility methods
+    syncAuthUsersToFirestore: FirebaseDatabaseService.syncAuthUsersToFirestore,
+    syncAllAuthUsersToFirestore: FirebaseDatabaseService.syncAllAuthUsersToFirestore
   };
 }; 

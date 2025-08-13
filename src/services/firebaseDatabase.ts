@@ -523,4 +523,199 @@ export class FirebaseDatabaseService {
       throw error;
     }
   }
+
+  // Stock Transaction Management
+  static async getTransactions(): Promise<StockTransaction[]> {
+    try {
+      const querySnapshot = await getDocs(collection(db, 'transactions'));
+      return querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as StockTransaction[];
+    } catch (error) {
+      console.error('Error getting transactions:', error);
+      return [];
+    }
+  }
+
+  static async addTransaction(transaction: Omit<StockTransaction, 'id' | 'createdAt'>): Promise<string> {
+    try {
+      const transactionData = {
+        ...transaction,
+        createdAt: serverTimestamp()
+      };
+      
+      const docRef = await addDoc(collection(db, 'transactions'), transactionData);
+      
+      // Update inventory quantity based on transaction type
+      await this.updateInventoryFromTransaction(transaction);
+      
+      console.log('Transaction added successfully:', docRef.id);
+      return docRef.id;
+    } catch (error) {
+      console.error('Error adding transaction:', error);
+      throw error;
+    }
+  }
+
+  static async updateTransaction(id: string, updates: Partial<StockTransaction>): Promise<void> {
+    try {
+      const docRef = doc(db, 'transactions', id);
+      await updateDoc(docRef, {
+        ...updates,
+        updatedAt: serverTimestamp()
+      });
+      
+      // If quantity changed, update inventory accordingly
+      if (updates.quantity !== undefined) {
+        await this.updateInventoryFromTransaction(updates as StockTransaction);
+      }
+      
+      console.log('Transaction updated successfully:', id);
+    } catch (error) {
+      console.error('Error updating transaction:', error);
+      throw error;
+    }
+  }
+
+  static async deleteTransaction(id: string): Promise<void> {
+    try {
+      // Get transaction before deleting to reverse inventory changes
+      const transaction = await this.getTransactionById(id);
+      if (transaction) {
+        await this.reverseInventoryFromTransaction(transaction);
+      }
+      
+      await deleteDoc(doc(db, 'transactions', id));
+      console.log('Transaction deleted successfully:', id);
+    } catch (error) {
+      console.error('Error deleting transaction:', error);
+      throw error;
+    }
+  }
+
+  static async getTransactionById(id: string): Promise<StockTransaction | null> {
+    try {
+      const docRef = doc(db, 'transactions', id);
+      const docSnap = await getDoc(docRef);
+      
+      if (docSnap.exists()) {
+        return { id: docSnap.id, ...docSnap.data() } as StockTransaction;
+      }
+      return null;
+    } catch (error) {
+      console.error('Error getting transaction:', error);
+      return null;
+    }
+  }
+
+  // Real-time transaction updates
+  static onTransactionsChange(callback: (transactions: StockTransaction[]) => void): () => void {
+    const q = query(collection(db, 'transactions'), orderBy('createdAt', 'desc'));
+    
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      const transactions = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as StockTransaction[];
+      
+      callback(transactions);
+    }, (error) => {
+      console.error('Error listening to transactions:', error);
+    });
+    
+    return unsubscribe;
+  }
+
+  // Critical: Update inventory quantities when transactions occur
+  private static async updateInventoryFromTransaction(transaction: StockTransaction): Promise<void> {
+    try {
+      const inventoryRef = doc(db, 'inventory', transaction.itemId);
+      const inventorySnap = await getDoc(inventoryRef);
+      
+      if (!inventorySnap.exists()) {
+        console.error('Inventory item not found for transaction:', transaction.itemId);
+        return;
+      }
+      
+      const currentInventory = inventorySnap.data() as InventoryItem;
+      let newQuantity = currentInventory.currentStock;
+      
+      // Calculate new quantity based on transaction type
+      switch (transaction.type) {
+        case 'stock_in':
+          newQuantity += transaction.quantity;
+          break;
+        case 'stock_out':
+          newQuantity -= transaction.quantity;
+          break;
+        case 'transfer':
+          // For transfers, we need to handle both source and destination
+          // This will be handled in the transfer logic
+          break;
+        case 'adjustment':
+          newQuantity = transaction.quantity; // Direct quantity set
+          break;
+      }
+      
+      // Ensure quantity doesn't go below 0
+      newQuantity = Math.max(0, newQuantity);
+      
+      // Update inventory with new quantity
+      await updateDoc(inventoryRef, {
+        currentStock: newQuantity,
+        updatedAt: serverTimestamp()
+      });
+      
+      console.log(`Inventory updated for item ${transaction.itemId}: ${currentInventory.currentStock} → ${newQuantity}`);
+    } catch (error) {
+      console.error('Error updating inventory from transaction:', error);
+      throw error;
+    }
+  }
+
+  // Reverse inventory changes when transaction is deleted
+  private static async reverseInventoryFromTransaction(transaction: StockTransaction): Promise<void> {
+    try {
+      const inventoryRef = doc(db, 'inventory', transaction.itemId);
+      const inventorySnap = await getDoc(inventoryRef);
+      
+      if (!inventorySnap.exists()) {
+        console.error('Inventory item not found for transaction reversal:', transaction.itemId);
+        return;
+      }
+      
+      const currentInventory = inventorySnap.data() as InventoryItem;
+      let newQuantity = currentInventory.currentStock;
+      
+      // Reverse the transaction effect
+      switch (transaction.type) {
+        case 'stock_in':
+          newQuantity -= transaction.quantity;
+          break;
+        case 'stock_out':
+          newQuantity += transaction.quantity;
+          break;
+        case 'adjustment':
+          // For adjustments, we need to restore the previous quantity
+          // This is complex and might require storing previous values
+          console.warn('Cannot reverse adjustment transaction without previous quantity');
+          return;
+      }
+      
+      // Ensure quantity doesn't go below 0
+      newQuantity = Math.max(0, newQuantity);
+      
+      // Update inventory with reversed quantity
+      await updateDoc(inventoryRef, {
+        currentStock: newQuantity,
+        updatedAt: serverTimestamp()
+      });
+      
+      console.log(`Inventory reversed for item ${transaction.itemId}: ${currentInventory.currentStock} → ${newQuantity}`);
+    } catch (error) {
+      console.error('Error reversing inventory from transaction:', error);
+      throw error;
+    }
+  }
 } 
