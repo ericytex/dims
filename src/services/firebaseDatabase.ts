@@ -630,7 +630,7 @@ export class FirebaseDatabaseService {
   // Critical: Update inventory quantities when transactions occur
   private static async updateInventoryFromTransaction(transaction: StockTransaction): Promise<void> {
     try {
-      const inventoryRef = doc(db, 'inventory', transaction.itemId);
+      const inventoryRef = doc(db, 'inventory_items', transaction.itemId);
       const inventorySnap = await getDoc(inventoryRef);
       
       if (!inventorySnap.exists()) {
@@ -677,7 +677,7 @@ export class FirebaseDatabaseService {
   // Reverse inventory changes when transaction is deleted
   private static async reverseInventoryFromTransaction(transaction: StockTransaction): Promise<void> {
     try {
-      const inventoryRef = doc(db, 'inventory', transaction.itemId);
+      const inventoryRef = doc(db, 'inventory_items', transaction.itemId);
       const inventorySnap = await getDoc(inventoryRef);
       
       if (!inventorySnap.exists()) {
