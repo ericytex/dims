@@ -63,25 +63,34 @@ export default function StockTransactions() {
   // Load real data from Firebase
   useEffect(() => {
     if (stockTransactions && stockTransactions.length > 0) {
-      const mappedTransactions: Transaction[] = stockTransactions.map(tx => ({
-        id: tx.id,
-        type: tx.type as 'stock_in' | 'stock_out' | 'transfer' | 'adjustment',
-        item: tx.itemName || tx.item,
-        quantity: tx.quantity,
-        unit: tx.unit,
-        facility: tx.facilityName || tx.facility,
-        source: tx.source,
-        destination: tx.destination,
-        reason: tx.reason,
-        notes: tx.notes,
-        user: tx.userName || tx.user,
-        date: tx.date,
-        time: tx.time,
-        status: tx.status as 'completed' | 'pending' | 'cancelled'
-      }));
+      const mappedTransactions: Transaction[] = stockTransactions.map(tx => {
+        // Find the related inventory item
+        const inventoryItem = inventoryItems?.find(item => item.id === tx.itemId);
+        // Find the related facility
+        const facility = facilities?.find(f => f.id === tx.facilityId);
+        // Find the related user
+        const user = users?.find(u => u.id === tx.userId);
+        
+        return {
+          id: tx.id || '',
+          type: tx.type as 'stock_in' | 'stock_out' | 'transfer' | 'adjustment',
+          item: inventoryItem?.name || `Item ID: ${tx.itemId}`,
+          quantity: tx.quantity,
+          unit: tx.unit,
+          facility: facility?.name || `Facility ID: ${tx.facilityId}`,
+          source: tx.source,
+          destination: tx.destination,
+          reason: tx.reason,
+          notes: tx.notes,
+          user: user?.name || `User ID: ${tx.userId}`,
+          date: tx.transactionDate || new Date().toISOString().split('T')[0],
+          time: new Date().toLocaleTimeString('en-US', { hour12: false }),
+          status: 'completed' as const // Default status since StockTransaction doesn't have status
+        };
+      });
       setTransactions(mappedTransactions);
     }
-  }, [stockTransactions]);
+  }, [stockTransactions, inventoryItems, facilities, users]);
 
   const transactionTypes = [
     { value: 'all', label: 'All Types' },
@@ -176,29 +185,50 @@ export default function StockTransactions() {
     }
 
     try {
+      // Find the selected inventory item and facility to get their IDs
+      const selectedInventoryItem = inventoryItems?.find(item => item.name === formData.item);
+      const selectedFacility = facilities?.find(f => f.name === formData.facility);
+      
+      if (!selectedInventoryItem) {
+        addNotification('Please select a valid inventory item', 'error');
+        return;
+      }
+      
+      if (!selectedFacility) {
+        addNotification('Please select a valid facility', 'error');
+        return;
+      }
+
       if (modalType === 'add') {
         const newTransaction = {
+          itemId: selectedInventoryItem.id!,
+          facilityId: selectedFacility.id!,
           type: formData.type,
-          item: formData.item,
           quantity: formData.quantity,
           unit: formData.unit,
-          facility: formData.facility,
           source: formData.source,
           destination: formData.destination,
           reason: formData.reason,
           notes: formData.notes,
-          status: formData.status,
-          user: 'Current User', // TODO: Get from auth context
-          date: new Date().toISOString().split('T')[0],
-          time: new Date().toLocaleTimeString('en-US', { hour12: false })
+          userId: 'current-user-id', // TODO: Get from auth context
+          transactionDate: new Date().toISOString().split('T')[0]
         };
 
         await addStockTransaction(newTransaction);
         addNotification('Transaction added successfully', 'success');
       } else if (modalType === 'edit' && selectedTransaction) {
         const updatedTransaction = {
-          ...selectedTransaction,
-          ...formData
+          itemId: selectedInventoryItem.id!,
+          facilityId: selectedFacility.id!,
+          type: formData.type,
+          quantity: formData.quantity,
+          unit: formData.unit,
+          source: formData.source,
+          destination: formData.destination,
+          reason: formData.reason,
+          notes: formData.notes,
+          userId: 'current-user-id', // TODO: Get from auth context
+          transactionDate: new Date().toISOString().split('T')[0]
         };
 
         await updateStockTransaction(selectedTransaction.id, updatedTransaction);
@@ -717,13 +747,16 @@ export default function StockTransactions() {
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Item *
                     </label>
-                    <input
-                      type="text"
+                    <select
                       value={formData.item}
                       onChange={(e) => setFormData({...formData, item: e.target.value})}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
-                      placeholder="Enter item name"
-                    />
+                    >
+                      <option value="">Select an item</option>
+                      {inventoryItems?.map(item => (
+                        <option key={item.id} value={item.name}>{item.name} (Current Stock: {item.currentStock})</option>
+                      ))}
+                    </select>
                   </div>
                   
                   <div>
