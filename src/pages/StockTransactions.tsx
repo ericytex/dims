@@ -62,7 +62,15 @@ export default function StockTransactions() {
 
   // Load real data from Firebase
   useEffect(() => {
+    console.log('StockTransactions useEffect triggered with:', {
+      stockTransactions: stockTransactions?.length || 0,
+      inventoryItems: inventoryItems?.length || 0,
+      facilities: facilities?.length || 0,
+      users: users?.length || 0
+    });
+    
     if (stockTransactions && stockTransactions.length > 0) {
+      console.log('Mapping stockTransactions:', stockTransactions);
       const mappedTransactions: Transaction[] = stockTransactions.map(tx => {
         // Find the related inventory item
         const inventoryItem = inventoryItems?.find(item => item.id === tx.itemId);
@@ -71,7 +79,7 @@ export default function StockTransactions() {
         // Find the related user
         const user = users?.find(u => u.id === tx.userId);
         
-        return {
+        const mapped = {
           id: tx.id || '',
           type: tx.type as 'stock_in' | 'stock_out' | 'transfer' | 'adjustment',
           item: inventoryItem?.name || `Item ID: ${tx.itemId}`,
@@ -87,8 +95,14 @@ export default function StockTransactions() {
           time: new Date().toLocaleTimeString('en-US', { hour12: false }),
           status: 'completed' as const // Default status since StockTransaction doesn't have status
         };
+        console.log('Mapped transaction:', mapped);
+        return mapped;
       });
+      console.log('Setting transactions state with:', mappedTransactions);
       setTransactions(mappedTransactions);
+    } else {
+      console.log('No stockTransactions available or empty array');
+      setTransactions([]);
     }
   }, [stockTransactions, inventoryItems, facilities, users]);
 
