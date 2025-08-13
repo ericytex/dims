@@ -339,8 +339,12 @@ export default function TransferManagement() {
         return <CheckCircle className="w-4 h-4" />;
       case 'rejected':
         return <XCircle className="w-4 h-4" />;
+      case 'in_transit':
+        return <Package className="w-4 h-4" />;
       case 'delivered':
         return <CheckCircle className="w-4 h-4" />;
+      case 'cancelled':
+        return <XCircle className="w-4 h-4" />;
       default:
         return <ArrowRightLeft className="w-4 h-4" />;
     }
@@ -617,6 +621,7 @@ export default function TransferManagement() {
                     <Eye className="w-4 h-4" />
                   </button>
                   
+                  {/* Pending transfers - can be approved or rejected */}
                   {transfer.status === 'pending' && (
                     <>
                       <button
@@ -635,7 +640,42 @@ export default function TransferManagement() {
                       </button>
                     </>
                   )}
-                  {transfer.status !== 'pending' && (
+                  
+                  {/* Approved transfers - can start transit */}
+                  {transfer.status === 'approved' && (
+                    <button
+                      onClick={() => handleStartTransit(transfer)}
+                      className="p-2 text-blue-600 hover:text-blue-700 rounded-lg hover:bg-blue-50"
+                      title="Start transit"
+                    >
+                      <Package className="w-4 h-4" />
+                    </button>
+                  )}
+                  
+                  {/* In transit transfers - can be delivered */}
+                  {transfer.status === 'in_transit' && (
+                    <button
+                      onClick={() => handleDeliverTransfer(transfer)}
+                      className="p-2 text-green-600 hover:text-green-700 rounded-lg hover:bg-green-50"
+                      title="Mark as delivered"
+                    >
+                      <Check className="w-4 h-4" />
+                    </button>
+                  )}
+                  
+                  {/* Pending and approved transfers - can be cancelled */}
+                  {(transfer.status === 'pending' || transfer.status === 'approved') && (
+                    <button
+                      onClick={() => handleCancelTransfer(transfer)}
+                      className="p-2 text-orange-600 hover:text-orange-700 rounded-lg hover:bg-orange-50"
+                      title="Cancel transfer"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
+                  
+                  {/* All transfers except delivered - can be edited */}
+                  {transfer.status !== 'delivered' && transfer.status !== 'cancelled' && (
                     <button
                       onClick={() => handleEditTransfer(transfer)}
                       className="p-2 text-uganda-blue hover:text-blue-700 rounded-lg hover:bg-blue-50"
@@ -644,6 +684,8 @@ export default function TransferManagement() {
                       <Edit className="w-4 h-4" />
                     </button>
                   )}
+                  
+                  {/* All transfers can be deleted */}
                   <button
                     onClick={() => handleDeleteTransfer(transfer)}
                     className="p-2 text-uganda-red hover:text-red-700 rounded-lg hover:bg-red-50"
@@ -879,6 +921,131 @@ export default function TransferManagement() {
                   </div>
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* View Transfer Modal */}
+      {showViewModal && selectedTransfer && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-3xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <h3 className="text-lg font-semibold text-uganda-black">
+                Transfer Details
+              </h3>
+              <button
+                onClick={() => setShowViewModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            
+            <div className="p-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Basic Information */}
+                <div className="space-y-4">
+                  <div>
+                    <h4 className="text-lg font-semibold text-uganda-black mb-3">Transfer Information</h4>
+                    <div className="space-y-3">
+                      <div className="flex justify-between">
+                        <span className="font-medium text-gray-600">Item:</span>
+                        <span className="text-gray-900">{selectedTransfer.itemName}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="font-medium text-gray-600">Quantity:</span>
+                        <span className="text-gray-900">{selectedTransfer.quantity} {selectedTransfer.unit}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="font-medium text-gray-600">Priority:</span>
+                        <span className={`px-2 py-1 text-xs font-semibold rounded-full ${getPriorityColor(selectedTransfer.priority)}`}>
+                          {selectedTransfer.priority.toUpperCase()}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="font-medium text-gray-600">Status:</span>
+                        <span className={`px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(selectedTransfer.status)}`}>
+                          {selectedTransfer.status.replace('_', ' ').toUpperCase()}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-lg font-semibold text-uganda-black mb-3">Route</h4>
+                    <div className="space-y-3">
+                      <div className="flex justify-between">
+                        <span className="font-medium text-gray-600">From:</span>
+                        <span className="text-gray-900">{selectedTransfer.fromFacility}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="font-medium text-gray-600">To:</span>
+                        <span className="text-gray-900">{selectedTransfer.toFacility}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Additional Details */}
+                <div className="space-y-4">
+                  <div>
+                    <h4 className="text-lg font-semibold text-uganda-black mb-3">Request Details</h4>
+                    <div className="space-y-3">
+                      <div className="flex justify-between">
+                        <span className="font-medium text-gray-600">Requested By:</span>
+                        <span className="text-gray-900">{selectedTransfer.requestedBy}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="font-medium text-gray-600">Request Date:</span>
+                        <span className="text-gray-900">{selectedTransfer.requestDate}</span>
+                      </div>
+                      {selectedTransfer.approvedBy && (
+                        <div className="flex justify-between">
+                          <span className="font-medium text-gray-600">Approved By:</span>
+                          <span className="text-gray-900">{selectedTransfer.approvedBy}</span>
+                        </div>
+                      )}
+                      {selectedTransfer.approvalDate && (
+                        <div className="flex justify-between">
+                          <span className="font-medium text-gray-600">Approval Date:</span>
+                          <span className="text-gray-900">{selectedTransfer.approvalDate}</span>
+                        </div>
+                      )}
+                      {selectedTransfer.deliveryDate && (
+                        <div className="flex justify-between">
+                          <span className="font-medium text-gray-600">Delivery Date:</span>
+                          <span className="text-gray-900">{selectedTransfer.deliveryDate}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  
+                  {selectedTransfer.trackingNumber && (
+                    <div>
+                      <h4 className="text-lg font-semibold text-uganda-black mb-3">Tracking</h4>
+                      <div className="bg-gray-50 p-3 rounded-lg">
+                        <span className="font-mono text-lg">{selectedTransfer.trackingNumber}</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+              
+              {/* Reason and Notes */}
+              <div className="mt-6 space-y-4">
+                <div>
+                  <h4 className="text-lg font-semibold text-uganda-black mb-2">Reason</h4>
+                  <p className="text-gray-700 bg-gray-50 p-3 rounded-lg">{selectedTransfer.reason}</p>
+                </div>
+                
+                {selectedTransfer.notes && (
+                  <div>
+                    <h4 className="text-lg font-semibold text-uganda-black mb-2">Notes</h4>
+                    <p className="text-gray-700 bg-gray-50 p-3 rounded-lg italic">{selectedTransfer.notes}</p>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
