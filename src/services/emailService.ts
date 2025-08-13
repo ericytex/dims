@@ -26,9 +26,9 @@ class EmailService {
   constructor() {
     // EmailJS configuration - FREE service
     // You'll need to set up EmailJS account and get these values
-    this.serviceId = process.env.REACT_APP_EMAILJS_SERVICE_ID || 'your_service_id';
-    this.templateId = process.env.REACT_APP_EMAILJS_TEMPLATE_ID || 'your_template_id';
-    this.publicKey = process.env.REACT_APP_EMAILJS_PUBLIC_KEY || 'your_public_key';
+    this.serviceId = import.meta.env.VITE_EMAILJS_SERVICE_ID || 'your_service_id';
+    this.templateId = import.meta.env.VITE_EMAILJS_TEMPLATE_ID || 'your_template_id';
+    this.publicKey = import.meta.env.VITE_EMAILJS_PUBLIC_KEY || 'your_public_key';
   }
 
   // Send user credentials email
@@ -75,7 +75,7 @@ class EmailService {
       // For development/testing, we'll use a simple approach
       // In production, replace this with your EmailJS configuration
       
-      if (process.env.NODE_ENV === 'development') {
+      if (import.meta.env.MODE === 'development') {
         // Development mode - log email details
         console.log('📧 EMAIL SENT (Development Mode - EmailJS):');
         console.log('To:', templateParams.to_email);
@@ -193,5 +193,15 @@ Please do not reply to this email.
   }
 }
 
-// Export singleton instance
-export const emailService = new EmailService(); 
+// Export singleton instance - lazy loaded to prevent instantiation errors
+let emailServiceInstance: EmailService | null = null;
+
+export const getEmailService = (): EmailService => {
+  if (!emailServiceInstance) {
+    emailServiceInstance = new EmailService();
+  }
+  return emailServiceInstance;
+};
+
+// For backward compatibility, export the service directly
+export const emailService = getEmailService(); 
