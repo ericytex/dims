@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useNotification } from '../contexts/NotificationContext';
+import { useOffline } from '../contexts/OfflineContext';
+import { useFirebaseDatabase } from '../hooks/useFirebaseDatabase';
 import { useFirebaseAuth } from '../hooks/useFirebaseAuth';
 import { FirebaseDatabaseService } from '../services/firebaseDatabase';
 import { emailService } from '../services/emailService';
+import ConfirmationDialog from '../components/ConfirmationDialog';
 import {
   Plus,
   Search,
@@ -10,13 +13,15 @@ import {
   Edit,
   Eye,
   Trash2,
-  Users,
+  User,
   Mail,
+  Phone,
+  MapPin,
   Shield,
   RefreshCw,
   X,
-  CheckCircle,
-  AlertCircle
+  Check,
+  AlertTriangle
 } from 'lucide-react';
 import RolePermissionsDisplay from '../components/RolePermissionsDisplay';
 
@@ -27,6 +32,8 @@ export default function UserManagement() {
   const [showModal, setShowModal] = useState(false);
   const [modalType, setModalType] = useState<'add' | 'edit' | 'view'>('add');
   const [selectedUser, setSelectedUser] = useState<any | null>(null); // Changed type to any
+  const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<any>(null);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -604,23 +611,34 @@ export default function UserManagement() {
     setShowModal(true);
   };
 
-  const handleDeleteUser = async (user: any) => { // Changed type to any
-    if (window.confirm(`Are you sure you want to delete ${user.name}?`)) {
-      try {
-        await FirebaseDatabaseService.deleteUser(user.id!);
-        addNotification({
-          type: 'success',
-          title: 'User Deleted',
-          message: `${user.name} has been successfully deleted.`
-        });
-      } catch (error) {
-        addNotification({
-          type: 'error',
-          title: 'Error',
-          message: 'Failed to delete user. Please try again.'
-        });
-      }
+  const handleDeleteUser = (user: any) => {
+    setUserToDelete(user);
+    setShowDeleteConfirmation(true);
+  };
+
+  const confirmDeleteUser = async () => {
+    try {
+      if (!userToDelete?.id) return;
+
+      await FirebaseDatabaseService.deleteUser(userToDelete.id);
+      addNotification({
+        type: 'success',
+        title: 'User Deleted',
+        message: `${userToDelete.name} has been successfully deleted.`
+      });
+      setUserToDelete(null);
+    } catch (error) {
+      addNotification({
+        type: 'error',
+        title: 'Error',
+        message: 'Failed to delete user. Please try again.'
+      });
     }
+  };
+
+  const handleCancelDelete = () => {
+    setShowDeleteConfirmation(false);
+    setUserToDelete(null);
   };
 
   const handleSaveUser = async () => {
@@ -763,14 +781,14 @@ export default function UserManagement() {
             onClick={() => {}}
             className="inline-flex items-center px-4 py-2 bg-uganda-yellow text-uganda-black font-medium rounded-lg hover:bg-yellow-500 transition-colors"
           >
-            <Users className="w-5 h-5 mr-2" />
+            <User className="w-5 h-5 mr-2" />
             Sync Current User
           </button>
           <button
             onClick={() => {}}
             className="inline-flex items-center px-4 py-2 bg-uganda-yellow text-uganda-black font-medium rounded-lg hover:bg-yellow-500 transition-colors"
           >
-            <Users className="w-5 h-5 mr-2" />
+            <User className="w-5 h-5 mr-2" />
             Sync All Users
           </button>
           <button
@@ -1378,6 +1396,19 @@ export default function UserManagement() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirmation && userToDelete && (
+        <ConfirmationDialog
+          isOpen={showDeleteConfirmation}
+          onClose={() => setShowDeleteConfirmation(false)}
+          onConfirm={confirmDeleteUser}
+          title="Confirm Deletion"
+          message={`Are you sure you want to delete ${userToDelete.name}? This action cannot be undone.`}
+          confirmText="Delete"
+          cancelText="Cancel"
+        />
       )}
     </div>
   );

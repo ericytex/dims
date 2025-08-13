@@ -1,21 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { useNotification } from '../contexts/NotificationContext';
+import { useOffline } from '../contexts/OfflineContext';
 import { useFirebaseDatabase } from '../hooks/useFirebaseDatabase';
 import { useFirebaseAuth } from '../hooks/useFirebaseAuth';
 import { FirebaseDatabaseService } from '../services/firebaseDatabase';
+import ConfirmationDialog from '../components/ConfirmationDialog';
 import {
   Plus,
   Search,
   Edit,
-  Eye,
-  MapPin,
+  Trash2,
   Building,
-  Users,
   Package,
-  X,
-  Map,
-  RefreshCw,
-  Database
+  MapPin,
+  Phone,
+  User,
+  Database,
+  X
 } from 'lucide-react';
 
 interface Facility {
@@ -45,6 +46,8 @@ export default function FacilityManagement() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
   const [selectedFacility, setSelectedFacility] = useState<Facility | null>(null);
+  const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
+  const [facilityToDelete, setFacilityToDelete] = useState<Facility | null>(null);
   const [formData, setFormData] = useState<Partial<Facility>>({
     name: '',
     type: 'warehouse',
@@ -207,12 +210,18 @@ export default function FacilityManagement() {
     }
   };
 
-  const handleDeleteFacility = async (facility: Facility) => {
+  const handleDeleteFacility = (facility: Facility) => {
+    setFacilityToDelete(facility);
+    setShowDeleteConfirmation(true);
+  };
+
+  const confirmDeleteFacility = async () => {
     try {
-      if (!facility.id) return;
+      if (!facilityToDelete?.id) return;
       
-      await FirebaseDatabaseService.deleteFacility(facility.id);
+      await FirebaseDatabaseService.deleteFacility(facilityToDelete.id);
       addNotification('Facility deleted successfully', 'success');
+      setFacilityToDelete(null);
     } catch (error) {
       console.error('Error deleting facility:', error);
       addNotification('Failed to delete facility', 'error');
@@ -354,13 +363,19 @@ export default function FacilityManagement() {
                     onClick={() => handleViewFacility(facility)}
                     className="p-1 text-gray-400 hover:text-gray-600"
                   >
-                    <Eye className="w-4 h-4" />
+                    <X className="w-4 h-4" />
                   </button>
                   <button
                     onClick={() => handleEditFacility(facility)}
                     className="p-1 text-gray-400 hover:text-gray-600"
                   >
                     <Edit className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => handleDeleteFacility(facility)}
+                    className="p-1 text-gray-400 hover:text-red-600"
+                  >
+                    <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
               </div>
@@ -790,6 +805,18 @@ export default function FacilityManagement() {
             </div>
           </div>
         </div>
+      )}
+
+      {showDeleteConfirmation && facilityToDelete && (
+        <ConfirmationDialog
+          isOpen={showDeleteConfirmation}
+          onClose={() => setShowDeleteConfirmation(false)}
+          onConfirm={confirmDeleteFacility}
+          title="Confirm Facility Deletion"
+          message={`Are you sure you want to delete the facility "${facilityToDelete.name}"? This action cannot be undone.`}
+          confirmText="Delete"
+          cancelText="Cancel"
+        />
       )}
     </div>
   );

@@ -5,6 +5,7 @@ import { useOffline } from '../contexts/OfflineContext';
 import { useFirebaseDatabase } from '../hooks/useFirebaseDatabase';
 import { useFirebaseAuth } from '../hooks/useFirebaseAuth';
 import { BarcodeScannerComponent } from '../components/BarcodeScanner';
+import ConfirmationDialog from '../components/ConfirmationDialog';
 import {
   Plus,
   Search,
@@ -64,6 +65,8 @@ export default function InventoryManagement() {
   // State for offline items
   const [offlineItems, setOfflineItems] = useState<InventoryItem[]>([]);
   const [highlightedItemId, setHighlightedItemId] = useState<string | null>(itemIdFromUrl);
+  const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<InventoryItem | null>(null);
 
   // Handle URL parameter changes
   useEffect(() => {
@@ -184,14 +187,20 @@ export default function InventoryManagement() {
     setShowViewModal(true);
   };
 
-  const handleDeleteItem = async (item: InventoryItem) => {
-    if (window.confirm('Are you sure you want to delete this item?')) {
-      try {
-        await deleteInventoryItem(item.id!);
-        showNotification('Item deleted successfully', 'success');
-      } catch (error) {
-        showNotification('Failed to delete item', 'error');
-      }
+  const handleDeleteItem = (item: InventoryItem) => {
+    setItemToDelete(item);
+    setShowDeleteConfirmation(true);
+  };
+
+  const confirmDeleteItem = async () => {
+    try {
+      if (!itemToDelete?.id) return;
+
+      await deleteInventoryItem(itemToDelete.id);
+      showNotification('Item deleted successfully', 'success');
+      setItemToDelete(null);
+    } catch (error) {
+      showNotification('Failed to delete item', 'error');
     }
   };
 
@@ -1590,6 +1599,15 @@ export default function InventoryManagement() {
         isOpen={showBarcodeScanner}
         onScan={handleBarcodeScan}
         onClose={() => setShowBarcodeScanner(false)}
+      />
+
+      {/* Confirmation Dialog */}
+      <ConfirmationDialog
+        isOpen={showDeleteConfirmation}
+        onClose={() => setShowDeleteConfirmation(false)}
+        onConfirm={confirmDeleteItem}
+        title="Confirm Delete"
+        message={`Are you sure you want to delete item "${itemToDelete?.name}"? This action cannot be undone.`}
       />
     </div>
   );

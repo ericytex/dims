@@ -4,6 +4,7 @@ import { useOffline } from '../contexts/OfflineContext';
 import { useFirebaseDatabase } from '../hooks/useFirebaseDatabase';
 import { useFirebaseAuth } from '../hooks/useFirebaseAuth';
 import { FirebaseDatabaseService } from '../services/firebaseDatabase';
+import ConfirmationDialog from '../components/ConfirmationDialog';
 import {
   Plus,
   Search,
@@ -61,6 +62,8 @@ export default function TransferManagement() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
   const [selectedTransfer, setSelectedTransfer] = useState<Transfer | null>(null);
+  const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
+  const [transferToDelete, setTransferToDelete] = useState<Transfer | null>(null);
   const [formData, setFormData] = useState<Partial<Transfer>>({
     itemId: '',
     quantity: 0,
@@ -281,12 +284,18 @@ export default function TransferManagement() {
     }
   };
 
-  const handleDeleteTransfer = async (transfer: Transfer) => {
-    try {
-      if (!transfer.id) return;
+  const handleDeleteTransfer = (transfer: Transfer) => {
+    setTransferToDelete(transfer);
+    setShowDeleteConfirmation(true);
+  };
 
-      await FirebaseDatabaseService.deleteTransfer(transfer.id);
+  const confirmDeleteTransfer = async () => {
+    try {
+      if (!transferToDelete?.id) return;
+
+      await FirebaseDatabaseService.deleteTransfer(transferToDelete.id);
       addNotification('Transfer deleted successfully', 'success');
+      setTransferToDelete(null);
     } catch (error) {
       console.error('Error deleting transfer:', error);
       addNotification('Failed to delete transfer', 'error');
@@ -1107,6 +1116,18 @@ export default function TransferManagement() {
           </div>
         </div>
       )}
+
+      {/* Confirmation Dialog */}
+      <ConfirmationDialog
+        isOpen={showDeleteConfirmation}
+        onClose={() => setShowDeleteConfirmation(false)}
+        onConfirm={confirmDeleteTransfer}
+        title="Delete Transfer"
+        message={`Are you sure you want to delete the transfer for "${transferToDelete?.itemName}"? This action cannot be undone and will also remove associated transaction records.`}
+        confirmText="Delete Transfer"
+        cancelText="Cancel"
+        type="danger"
+      />
     </div>
   );
 }

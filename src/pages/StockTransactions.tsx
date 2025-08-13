@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useNotification } from '../contexts/NotificationContext';
 import { useOffline } from '../contexts/OfflineContext';
 import { useFirebaseDatabase } from '../hooks/useFirebaseDatabase';
+import { useFirebaseAuth } from '../hooks/useFirebaseAuth';
+import ConfirmationDialog from '../components/ConfirmationDialog';
 import {
   Plus,
   Search,
@@ -9,13 +11,16 @@ import {
   Edit,
   Eye,
   Trash2,
-  ArrowUpDown,
+  Package,
+  AlertTriangle,
   Calendar,
   MapPin,
-  Package,
+  Users,
   TrendingUp,
   TrendingDown,
-  X
+  X,
+  ArrowRightLeft,
+  Download
 } from 'lucide-react';
 
 interface Transaction {
@@ -45,6 +50,8 @@ export default function StockTransactions() {
   const [showModal, setShowModal] = useState(false);
   const [modalType, setModalType] = useState<'add' | 'edit' | 'view'>('add');
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
+  const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
+  const [transactionToDelete, setTransactionToDelete] = useState<Transaction | null>(null);
   const [formData, setFormData] = useState({
     type: 'stock_in' as const,
     item: '',
@@ -168,15 +175,21 @@ export default function StockTransactions() {
     setShowModal(true);
   };
 
-  const handleDeleteTransaction = async (transaction: Transaction) => {
-    if (window.confirm(`Are you sure you want to delete this transaction?`)) {
-      try {
-        await deleteTransaction(transaction.id);
-        addNotification('Transaction deleted successfully', 'success');
-      } catch (error) {
-        console.error('Error deleting transaction:', error);
-        addNotification('Failed to delete transaction. Please try again.', 'error');
-      }
+  const handleDeleteTransaction = (transaction: Transaction) => {
+    setTransactionToDelete(transaction);
+    setShowDeleteConfirmation(true);
+  };
+
+  const confirmDeleteTransaction = async () => {
+    try {
+      if (!transactionToDelete?.id) return;
+
+      await deleteTransaction(transactionToDelete.id);
+      addNotification('Transaction deleted successfully', 'success');
+      setTransactionToDelete(null);
+    } catch (error) {
+      console.error('Error deleting transaction:', error);
+      addNotification('Failed to delete transaction. Please try again.', 'error');
     }
   };
 
@@ -330,7 +343,7 @@ export default function StockTransactions() {
       value: transactions.length.toString(),
       change: '+12%',
       changeType: 'increase',
-      icon: ArrowUpDown,
+      icon: ArrowRightLeft,
       color: 'bg-blue-500'
     },
     {
@@ -354,7 +367,7 @@ export default function StockTransactions() {
       value: transactions.filter(t => t.type === 'transfer').length.toString(),
       change: '+15%',
       changeType: 'increase',
-      icon: ArrowUpDown,
+      icon: ArrowRightLeft,
       color: 'bg-uganda-yellow'
     }
   ];
@@ -990,6 +1003,18 @@ export default function StockTransactions() {
           </div>
         </div>
       )}
+
+      {/* Confirmation Dialog */}
+      <ConfirmationDialog
+        isOpen={showDeleteConfirmation}
+        onClose={() => setShowDeleteConfirmation(false)}
+        onConfirm={confirmDeleteTransaction}
+        title="Delete Transaction"
+        message={`Are you sure you want to delete this transaction? This action cannot be undone and will also reverse any inventory changes.`}
+        confirmText="Delete Transaction"
+        cancelText="Cancel"
+        type="danger"
+      />
     </div>
   );
 }
