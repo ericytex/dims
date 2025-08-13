@@ -193,6 +193,13 @@ export default function StockTransactions() {
   };
 
   const handleCreateSampleTransactions = async () => {
+    console.log('handleCreateSampleTransactions: Starting...');
+    console.log('Current data:', {
+      inventoryItems: inventoryItems?.length || 0,
+      facilities: facilities?.length || 0,
+      users: users?.length || 0
+    });
+    
     if (!inventoryItems || inventoryItems.length === 0) {
       addNotification('No inventory items found. Please add some inventory items first.', 'error');
       return;
@@ -204,42 +211,13 @@ export default function StockTransactions() {
         addNotification('No facilities found. Creating sample facilities first...', 'info');
         
         const sampleFacilities = [
-          {
-            name: 'Main Warehouse',
-            type: 'warehouse' as const,
-            region: 'Central',
-            district: 'Kampala',
-            address: 'Industrial Area, Kampala',
-            gpsCoordinates: '0.3354,32.5851',
-            contactPerson: 'John Mukasa',
-            contactPhone: '+256700000001',
-            status: 'active' as const
-          },
-          {
-            name: 'Distribution Center',
-            type: 'distribution_center' as const,
-            region: 'Central',
-            district: 'Kampala',
-            address: 'Nakawa Division, Kampala',
-            gpsCoordinates: '0.3676,32.5851',
-            contactPerson: 'Mary Nambi',
-            contactPhone: '+256700000002',
-            status: 'active' as const
-          },
-          {
-            name: 'Regional Warehouse',
-            type: 'warehouse' as const,
-            region: 'Central',
-            district: 'Kampala',
-            address: 'Makindye Division, Kampala',
-            gpsCoordinates: '0.2743,32.5851',
-            contactPerson: 'Sarah Nakato',
-            contactPhone: '+256700000003',
-            status: 'active' as const
-          }
+          { name: 'Main Warehouse', type: 'warehouse' as const, region: 'Central', district: 'Kampala', address: 'Industrial Area, Kampala', gpsCoordinates: '0.3354,32.5851', contactPerson: 'John Mukasa', contactPhone: '+256700000001', status: 'active' as const },
+          { name: 'Distribution Center', type: 'distribution_center' as const, region: 'Central', district: 'Kampala', address: 'Nakawa Division, Kampala', gpsCoordinates: '0.3676,32.5851', contactPerson: 'Mary Nambi', contactPhone: '+256700000002', status: 'active' as const },
+          { name: 'Regional Warehouse', type: 'warehouse' as const, region: 'Central', district: 'Kampala', address: 'Makindye Division, Kampala', gpsCoordinates: '0.2743,32.5851', contactPerson: 'Sarah Nakato', contactPhone: '+256700000003', status: 'active' as const }
         ];
         
         for (const facility of sampleFacilities) {
+          console.log('Creating facility:', facility.name);
           await addFacility(facility);
         }
         
@@ -265,6 +243,8 @@ export default function StockTransactions() {
       }
 
       addNotification(`Found ${validInventoryItems.length} valid inventory items. Creating sample transactions...`, 'info');
+      console.log('Valid inventory items:', validInventoryItems.map(item => ({ id: item.id, name: item.name })));
+      console.log('Current facilities:', currentFacilities.map(f => ({ id: f.id, name: f.name })));
 
       const sampleTransactions = [];
       
@@ -294,6 +274,7 @@ export default function StockTransactions() {
         };
         
         sampleTransactions.push(stockInTransaction);
+        console.log('Created stock in transaction:', stockInTransaction);
         
         // Stock Out transaction (if item has stock)
         if (item.currentStock > 0) {
@@ -312,6 +293,7 @@ export default function StockTransactions() {
           };
           
           sampleTransactions.push(stockOutTransaction);
+          console.log('Created stock out transaction:', stockOutTransaction);
         }
       }
       
@@ -320,9 +302,13 @@ export default function StockTransactions() {
         return;
       }
       
+      console.log(`About to create ${sampleTransactions.length} transactions using addTransaction function`);
+      console.log('addTransaction function:', addTransaction);
+      
       // Add all sample transactions
       for (const transaction of sampleTransactions) {
         try {
+          console.log('Calling addTransaction with:', transaction);
           await addTransaction(transaction);
           console.log('Successfully created transaction for item:', transaction.itemId);
         } catch (error) {
