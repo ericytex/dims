@@ -150,7 +150,7 @@ export default function FacilityManagement() {
     { value: 'Western', label: 'Western' }
   ];
 
-  const filteredFacilities = facilities.filter(facility => {
+  const filteredFacilities = (facilities || []).filter(facility => {
     const matchesSearch = facility.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          facility.district.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesType = selectedType === 'all' || facility.type === selectedType;
@@ -340,13 +340,9 @@ export default function FacilityManagement() {
       {/* Facilities Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {loading ? (
-          <div className="col-span-full text-center py-10">
-            <p>Loading facilities...</p>
-          </div>
-        ) : filteredFacilities.length === 0 ? (
-          <div className="col-span-full text-center py-10">
-            <p>No facilities found matching your criteria.</p>
-          </div>
+          <p>Loading facilities...</p>
+        ) : (facilities || []).length === 0 ? (
+          <p>No facilities found. Add some facilities to get started.</p>
         ) : (
           filteredFacilities.map((facility) => (
             <div key={facility.id} className="bg-white rounded-lg shadow p-6">
