@@ -6,6 +6,7 @@ export const useFirebaseDatabase = () => {
   const [stockTransactions, setStockTransactions] = useState<StockTransaction[]>([]);
   const [facilities, setFacilities] = useState<Facility[]>([]);
   const [transfers, setTransfers] = useState<Transfer[]>([]);
+  const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -16,17 +17,19 @@ export const useFirebaseDatabase = () => {
         setLoading(true);
         setError(null);
         
-        const [items, transactions, facilitiesData, transfersData] = await Promise.all([
+        const [items, transactions, facilitiesData, transfersData, usersData] = await Promise.all([
           FirebaseDatabaseService.getInventoryItems(),
           FirebaseDatabaseService.getStockTransactions(),
           FirebaseDatabaseService.getFacilities(),
-          FirebaseDatabaseService.getTransfers()
+          FirebaseDatabaseService.getTransfers(),
+          FirebaseDatabaseService.getUsers()
         ]);
         
         setInventoryItems(items);
         setStockTransactions(transactions);
         setFacilities(facilitiesData);
         setTransfers(transfersData);
+        setUsers(usersData);
       } catch (error: any) {
         setError(error.message);
         console.error('Error loading initial data:', error);
@@ -42,10 +45,12 @@ export const useFirebaseDatabase = () => {
   useEffect(() => {
     const unsubscribeInventory = FirebaseDatabaseService.onInventoryItemsChange(setInventoryItems);
     const unsubscribeTransactions = FirebaseDatabaseService.onStockTransactionsChange(setStockTransactions);
+    const unsubscribeUsers = FirebaseDatabaseService.onUsersChange(setUsers);
 
     return () => {
       unsubscribeInventory();
       unsubscribeTransactions();
+      unsubscribeUsers();
     };
   }, []);
 
@@ -192,6 +197,37 @@ export const useFirebaseDatabase = () => {
     try {
       setError(null);
       await FirebaseDatabaseService.batchUpdate(updates);
+    } catch (error: any) {
+      setError(error.message);
+      throw error;
+    }
+  }, []);
+
+  // User operations
+  const addUser = useCallback(async (user: any) => {
+    try {
+      setError(null);
+      await FirebaseDatabaseService.addUser(user);
+    } catch (error: any) {
+      setError(error.message);
+      throw error;
+    }
+  }, []);
+
+  const updateUser = useCallback(async (id: string, user: Partial<any>) => {
+    try {
+      setError(null);
+      await FirebaseDatabaseService.updateUser(id, user);
+    } catch (error: any) {
+      setError(error.message);
+      throw error;
+    }
+  }, []);
+
+  const deleteUser = useCallback(async (id: string) => {
+    try {
+      setError(null);
+      await FirebaseDatabaseService.deleteUser(id);
     } catch (error: any) {
       setError(error.message);
       throw error;
