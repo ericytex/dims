@@ -430,6 +430,43 @@ export default function StockTransactions() {
     }
   };
 
+  // Calculate real-time quantity totals for each item
+  const getItemQuantityTotals = () => {
+    if (!inventoryItems || !stockTransactions) return [];
+    
+    return inventoryItems.map(item => {
+      // Get all transactions for this item
+      const itemTransactions = stockTransactions.filter(tx => tx.itemId === item.id);
+      
+      // Calculate net quantity change
+      let netQuantity = 0;
+      itemTransactions.forEach(tx => {
+        if (tx.type === 'stock_in') {
+          netQuantity += tx.quantity;
+        } else if (tx.type === 'stock_out') {
+          netQuantity -= tx.quantity;
+        }
+        // Note: transfers and adjustments are handled separately
+      });
+      
+      // Get the most recent transaction date
+      const lastTransaction = itemTransactions
+        .sort((a, b) => new Date(b.transactionDate).getTime() - new Date(a.transactionDate).getTime())[0];
+      
+      return {
+        id: item.id,
+        name: item.name,
+        currentStock: item.currentStock,
+        netQuantity,
+        lastTransaction: lastTransaction?.transactionDate || 'No transactions',
+        unit: item.unit,
+        status: item.status
+      };
+    }).sort((a, b) => b.currentStock - a.currentStock); // Sort by current stock (highest first)
+  };
+
+  const itemQuantityTotals = getItemQuantityTotals();
+
   const stats = [
     {
       name: 'Total Transactions',
@@ -490,6 +527,55 @@ export default function StockTransactions() {
           </button>
         </div>
       </div>
+
+      {/* Real-time Quantity Totals */}
+      {itemQuantityTotals.length > 0 && (
+        <div className="bg-white rounded-lg shadow p-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Live Inventory Quantities</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {itemQuantityTotals.map((item) => (
+              <div key={item.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="font-medium text-gray-900 truncate" title={item.name}>
+                    {item.name}
+                  </h4>
+                  <span className={`px-2 py-1 text-xs rounded-full ${
+                    item.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                  }`}>
+                    {item.status}
+                  </span>
+                </div>
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-600">Current Stock:</span>
+                    <span className="font-semibold text-gray-900">
+                      {item.currentStock} {item.unit}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-600">Net Change:</span>
+                    <span className={`font-semibold ${
+                      item.netQuantity > 0 ? 'text-green-600' : 
+                      item.netQuantity < 0 ? 'text-red-600' : 'text-gray-600'
+                    }`}>
+                      {item.netQuantity > 0 ? '+' : ''}{item.netQuantity} {item.unit}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-600">Last Transaction:</span>
+                    <span className="text-sm text-gray-500">
+                      {item.lastTransaction !== 'No transactions' 
+                        ? new Date(item.lastTransaction).toLocaleDateString() 
+                        : 'None'
+                      }
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
