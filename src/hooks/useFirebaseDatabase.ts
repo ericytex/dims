@@ -17,8 +17,6 @@ export const useFirebaseDatabase = () => {
         setLoading(true);
         setError(null);
         
-        console.log('useFirebaseDatabase: Loading initial data...');
-        
         const [items, transactions, facilitiesData, transfersData, usersData] = await Promise.all([
           FirebaseDatabaseService.getInventoryItems(),
           FirebaseDatabaseService.getStockTransactions(),
@@ -26,14 +24,6 @@ export const useFirebaseDatabase = () => {
           FirebaseDatabaseService.getTransfers(),
           FirebaseDatabaseService.getUsers()
         ]);
-        
-        console.log('useFirebaseDatabase: Initial data loaded:', {
-          items: items.length,
-          transactions: transactions.length,
-          facilities: facilitiesData.length,
-          transfers: transfersData.length,
-          users: usersData.length
-        });
         
         setInventoryItems(items);
         setStockTransactions(transactions);
@@ -53,25 +43,11 @@ export const useFirebaseDatabase = () => {
 
   // Real-time listeners
   useEffect(() => {
-    console.log('useFirebaseDatabase: Setting up real-time listeners...');
-    
-    const unsubscribeInventory = FirebaseDatabaseService.onInventoryItemsChange((items) => {
-      console.log('useFirebaseDatabase: Inventory items updated:', items.length);
-      setInventoryItems(items);
-    });
-    
-    const unsubscribeTransactions = FirebaseDatabaseService.onStockTransactionsChange((transactions) => {
-      console.log('useFirebaseDatabase: Stock transactions updated:', transactions.length);
-      setStockTransactions(transactions);
-    });
-    
-    const unsubscribeUsers = FirebaseDatabaseService.onUsersChange((users) => {
-      console.log('useFirebaseDatabase: Users updated:', users.length);
-      setUsers(users);
-    });
+    const unsubscribeInventory = FirebaseDatabaseService.onInventoryItemsChange(setInventoryItems);
+    const unsubscribeTransactions = FirebaseDatabaseService.onStockTransactionsChange(setStockTransactions);
+    const unsubscribeUsers = FirebaseDatabaseService.onUsersChange(setUsers);
 
     return () => {
-      console.log('useFirebaseDatabase: Cleaning up real-time listeners...');
       unsubscribeInventory();
       unsubscribeTransactions();
       unsubscribeUsers();

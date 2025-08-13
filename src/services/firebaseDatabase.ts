@@ -400,7 +400,6 @@ export class FirebaseDatabaseService {
         };
         
         await this.addDocument<StockTransaction>('transactions', initialTransaction);
-        console.log(`Auto-generated initial stock_in transaction for item ${itemId}: ${item.currentStock} ${item.unit}`);
       }
       
       return itemId;
@@ -441,7 +440,6 @@ export class FirebaseDatabaseService {
         };
         
         await this.addDocument<StockTransaction>('transactions', adjustmentTransaction);
-        console.log(`Auto-generated ${transactionType} transaction for item ${id}: ${Math.abs(quantityChange)} ${item.unit || currentItem.unit}`);
       }
     } catch (error) {
       console.error('Error updating inventory item with auto-transaction:', error);
@@ -474,7 +472,6 @@ export class FirebaseDatabaseService {
         };
         
         await this.addDocument<StockTransaction>('transactions', finalTransaction);
-        console.log(`Auto-generated final stock_out transaction for deleted item ${id}: ${currentItem.currentStock} ${currentItem.unit}`);
       }
       
       // Delete the inventory item
@@ -501,7 +498,6 @@ export class FirebaseDatabaseService {
       
       const quantityChange = newQuantity - currentItem.currentStock;
       if (quantityChange === 0) {
-        console.log('No quantity change detected, skipping adjustment');
         return;
       }
       
@@ -528,7 +524,6 @@ export class FirebaseDatabaseService {
       };
       
       await this.addDocument<StockTransaction>('transactions', adjustmentTransaction);
-      console.log(`Auto-generated ${transactionType} transaction for item ${itemId}: ${Math.abs(quantityChange)} ${currentItem.unit}`);
       
     } catch (error) {
       console.error('Error adjusting inventory stock with auto-transaction:', error);

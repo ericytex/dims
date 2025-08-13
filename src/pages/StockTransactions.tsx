@@ -62,15 +62,7 @@ export default function StockTransactions() {
 
   // Load real data from Firebase
   useEffect(() => {
-    console.log('StockTransactions useEffect triggered with:', {
-      stockTransactions: stockTransactions?.length || 0,
-      inventoryItems: inventoryItems?.length || 0,
-      facilities: facilities?.length || 0,
-      users: users?.length || 0
-    });
-    
     if (stockTransactions && stockTransactions.length > 0) {
-      console.log('Mapping stockTransactions:', stockTransactions);
       const mappedTransactions: Transaction[] = stockTransactions.map(tx => {
         // Find the related inventory item
         const inventoryItem = inventoryItems?.find(item => item.id === tx.itemId);
@@ -79,7 +71,7 @@ export default function StockTransactions() {
         // Find the related user
         const user = users?.find(u => u.id === tx.userId);
         
-        const mapped = {
+        return {
           id: tx.id || '',
           type: tx.type as 'stock_in' | 'stock_out' | 'transfer' | 'adjustment',
           item: inventoryItem?.name || `Item ID: ${tx.itemId}`,
@@ -95,13 +87,9 @@ export default function StockTransactions() {
           time: new Date().toLocaleTimeString('en-US', { hour12: false }),
           status: 'completed' as const // Default status since StockTransaction doesn't have status
         };
-        console.log('Mapped transaction:', mapped);
-        return mapped;
       });
-      console.log('Setting transactions state with:', mappedTransactions);
       setTransactions(mappedTransactions);
     } else {
-      console.log('No stockTransactions available or empty array');
       setTransactions([]);
     }
   }, [stockTransactions, inventoryItems, facilities, users]);
@@ -189,137 +177,6 @@ export default function StockTransactions() {
         console.error('Error deleting transaction:', error);
         addNotification('Failed to delete transaction. Please try again.', 'error');
       }
-    }
-  };
-
-  const handleCreateSampleTransactions = async () => {
-    console.log('handleCreateSampleTransactions: Starting...');
-    console.log('Current data:', {
-      inventoryItems: inventoryItems?.length || 0,
-      facilities: facilities?.length || 0,
-      users: users?.length || 0
-    });
-    
-    if (!inventoryItems || inventoryItems.length === 0) {
-      addNotification('No inventory items found. Please add some inventory items first.', 'error');
-      return;
-    }
-
-    try {
-      // If no facilities exist, create sample facilities first
-      if (!facilities || facilities.length === 0) {
-        addNotification('No facilities found. Creating sample facilities first...', 'info');
-        
-        const sampleFacilities = [
-          { name: 'Main Warehouse', type: 'warehouse' as const, region: 'Central', district: 'Kampala', address: 'Industrial Area, Kampala', gpsCoordinates: '0.3354,32.5851', contactPerson: 'John Mukasa', contactPhone: '+256700000001', status: 'active' as const },
-          { name: 'Distribution Center', type: 'distribution_center' as const, region: 'Central', district: 'Kampala', address: 'Nakawa Division, Kampala', gpsCoordinates: '0.3676,32.5851', contactPerson: 'Mary Nambi', contactPhone: '+256700000002', status: 'active' as const },
-          { name: 'Regional Warehouse', type: 'warehouse' as const, region: 'Central', district: 'Kampala', address: 'Makindye Division, Kampala', gpsCoordinates: '0.2743,32.5851', contactPerson: 'Sarah Nakato', contactPhone: '+256700000003', status: 'active' as const }
-        ];
-        
-        for (const facility of sampleFacilities) {
-          console.log('Creating facility:', facility.name);
-          await addFacility(facility);
-        }
-        
-        addNotification('Sample facilities created successfully!', 'success');
-        
-        // Wait a moment for the facilities to be loaded
-        await new Promise(resolve => setTimeout(resolve, 1000));
-      }
-
-      // Now create sample transactions
-      const currentFacilities = facilities || [];
-      if (currentFacilities.length === 0) {
-        addNotification('Still no facilities available. Please try again.', 'error');
-        return;
-      }
-
-      // Filter inventory items to only use those with valid IDs
-      const validInventoryItems = inventoryItems.filter(item => item.id && item.id.trim() !== '');
-      
-      if (validInventoryItems.length === 0) {
-        addNotification('No inventory items with valid IDs found. Please check your inventory data.', 'error');
-        return;
-      }
-
-      addNotification(`Found ${validInventoryItems.length} valid inventory items. Creating sample transactions...`, 'info');
-      console.log('Valid inventory items:', validInventoryItems.map(item => ({ id: item.id, name: item.name })));
-      console.log('Current facilities:', currentFacilities.map(f => ({ id: f.id, name: f.name })));
-
-      const sampleTransactions = [];
-      
-      // Create sample transactions for each valid inventory item
-      for (let i = 0; i < Math.min(validInventoryItems.length, 5); i++) {
-        const item = validInventoryItems[i];
-        const facility = currentFacilities[i % currentFacilities.length];
-        
-        if (!item.id || !facility.id) {
-          console.warn('Skipping item or facility without ID:', { item, facility });
-          continue;
-        }
-        
-        // Stock In transaction
-        const stockInTransaction = {
-          itemId: item.id,
-          facilityId: facility.id,
-          type: 'stock_in' as const,
-          quantity: Math.floor(Math.random() * 50) + 10,
-          unit: item.unit,
-          source: 'Sample Supplier',
-          destination: '',
-          reason: 'Initial stock setup',
-          notes: 'Sample transaction for demonstration',
-          userId: 'sample-user-id',
-          transactionDate: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
-        };
-        
-        sampleTransactions.push(stockInTransaction);
-        console.log('Created stock in transaction:', stockInTransaction);
-        
-        // Stock Out transaction (if item has stock)
-        if (item.currentStock > 0) {
-          const stockOutTransaction = {
-            itemId: item.id,
-            facilityId: facility.id,
-            type: 'stock_out' as const,
-            quantity: Math.min(Math.floor(Math.random() * 20) + 5, item.currentStock),
-            unit: item.unit,
-            source: '',
-            destination: 'Sample Distribution',
-            reason: 'Regular consumption',
-            notes: 'Sample transaction for demonstration',
-            userId: 'sample-user-id',
-            transactionDate: new Date(Date.now() - Math.random() * 15 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
-          };
-          
-          sampleTransactions.push(stockOutTransaction);
-          console.log('Created stock out transaction:', stockOutTransaction);
-        }
-      }
-      
-      if (sampleTransactions.length === 0) {
-        addNotification('No valid transactions could be created. Please check your data.', 'error');
-        return;
-      }
-      
-      console.log(`About to create ${sampleTransactions.length} transactions using addTransaction function`);
-      console.log('addTransaction function:', addTransaction);
-      
-      // Add all sample transactions
-      for (const transaction of sampleTransactions) {
-        try {
-          console.log('Calling addTransaction with:', transaction);
-          await addTransaction(transaction);
-          console.log('Successfully created transaction for item:', transaction.itemId);
-        } catch (error) {
-          console.error('Failed to create transaction for item:', transaction.itemId, error);
-        }
-      }
-      
-      addNotification(`Created ${sampleTransactions.length} sample transactions successfully!`, 'success');
-    } catch (error) {
-      console.error('Error creating sample transactions:', error);
-      addNotification('Failed to create sample transactions. Please try again.', 'error');
     }
   };
 
@@ -511,13 +368,6 @@ export default function StockTransactions() {
           <p className="text-gray-600 mt-1">Track and manage inventory transactions</p>
         </div>
         <div className="flex space-x-3">
-          <button
-            onClick={handleCreateSampleTransactions}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Create Sample Transactions</span>
-          </button>
           <button
             onClick={handleAddTransaction}
             className="bg-uganda-yellow text-uganda-black px-4 py-2 rounded-lg hover:bg-yellow-400 transition-colors flex items-center space-x-2"
