@@ -178,6 +178,74 @@ export default function StockTransactions() {
     }
   };
 
+  const handleCreateSampleTransactions = async () => {
+    if (!inventoryItems || inventoryItems.length === 0) {
+      addNotification('No inventory items found. Please add some inventory items first.', 'error');
+      return;
+    }
+
+    if (!facilities || facilities.length === 0) {
+      addNotification('No facilities found. Please add some facilities first.', 'error');
+      return;
+    }
+
+    try {
+      const sampleTransactions = [];
+      
+      // Create sample transactions for each inventory item
+      for (let i = 0; i < Math.min(inventoryItems.length, 5); i++) {
+        const item = inventoryItems[i];
+        const facility = facilities[i % facilities.length];
+        
+        // Stock In transaction
+        const stockInTransaction = {
+          itemId: item.id!,
+          facilityId: facility.id!,
+          type: 'stock_in' as const,
+          quantity: Math.floor(Math.random() * 50) + 10,
+          unit: item.unit,
+          source: 'Sample Supplier',
+          destination: '',
+          reason: 'Initial stock setup',
+          notes: 'Sample transaction for demonstration',
+          userId: 'sample-user-id',
+          transactionDate: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+        };
+        
+        sampleTransactions.push(stockInTransaction);
+        
+        // Stock Out transaction (if item has stock)
+        if (item.currentStock > 0) {
+          const stockOutTransaction = {
+            itemId: item.id!,
+            facilityId: facility.id!,
+            type: 'stock_out' as const,
+            quantity: Math.min(Math.floor(Math.random() * 20) + 5, item.currentStock),
+            unit: item.unit,
+            source: '',
+            destination: 'Sample Distribution',
+            reason: 'Regular consumption',
+            notes: 'Sample transaction for demonstration',
+            userId: 'sample-user-id',
+            transactionDate: new Date(Date.now() - Math.random() * 15 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+          };
+          
+          sampleTransactions.push(stockOutTransaction);
+        }
+      }
+      
+      // Add all sample transactions
+      for (const transaction of sampleTransactions) {
+        await addStockTransaction(transaction);
+      }
+      
+      addNotification(`Created ${sampleTransactions.length} sample transactions successfully!`, 'success');
+    } catch (error) {
+      console.error('Error creating sample transactions:', error);
+      addNotification('Failed to create sample transactions. Please try again.', 'error');
+    }
+  };
+
   const handleSaveTransaction = async () => {
     if (!formData.item || !formData.reason || formData.quantity === 0) {
       addNotification('Please fill in all required fields', 'error');
@@ -328,13 +396,22 @@ export default function StockTransactions() {
           <h1 className="text-2xl font-bold text-gray-900">Stock Transactions</h1>
           <p className="text-gray-600 mt-1">Track and manage inventory transactions</p>
         </div>
+        <div className="flex space-x-3">
           <button
-          onClick={handleAddTransaction}
-          className="bg-uganda-yellow text-uganda-black px-4 py-2 rounded-lg hover:bg-yellow-400 transition-colors flex items-center space-x-2"
+            onClick={handleCreateSampleTransactions}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
           >
-          <Plus className="w-4 h-4" />
-          <span>Add Transaction</span>
+            <Plus className="w-4 h-4" />
+            <span>Create Sample Transactions</span>
           </button>
+          <button
+            onClick={handleAddTransaction}
+            className="bg-uganda-yellow text-uganda-black px-4 py-2 rounded-lg hover:bg-yellow-400 transition-colors flex items-center space-x-2"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Add Transaction</span>
+          </button>
+        </div>
       </div>
 
       {/* Stats */}
