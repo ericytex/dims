@@ -369,7 +369,7 @@ export class FirebaseDatabaseService {
     }
   }
 
-  // Inventory Items
+  // Inventory Items with Automatic Transaction Generation
   static async getInventoryItems(): Promise<InventoryItem[]> {
     return this.getCollection<InventoryItem>('inventory_items');
   }
@@ -379,15 +379,161 @@ export class FirebaseDatabaseService {
   }
 
   static async addInventoryItem(item: Omit<InventoryItem, 'id'>): Promise<string> {
-    return this.addDocument<InventoryItem>('inventory_items', item);
+    try {
+      // Add the inventory item first
+      const itemId = await this.addDocument<InventoryItem>('inventory_items', item);
+      
+      // Automatically create initial stock_in transaction
+      if (item.currentStock > 0) {
+        const initialTransaction: Omit<StockTransaction, 'id'> = {
+          itemId: itemId,
+          facilityId: item.facilityId || 'default-facility',
+          type: 'stock_in',
+          quantity: item.currentStock,
+          unit: item.unit,
+          source: 'Initial Setup',
+          destination: '',
+          reason: 'Initial inventory setup',
+          notes: 'Automatically generated when item was added',
+          userId: 'system',
+          transactionDate: new Date().toISOString().split('T')[0]
+        };
+        
+        await this.addDocument<StockTransaction>('transactions', initialTransaction);
+        console.log(`Auto-generated initial stock_in transaction for item ${itemId}: ${item.currentStock} ${item.unit}`);
+      }
+      
+      return itemId;
+    } catch (error) {
+      console.error('Error adding inventory item with auto-transaction:', error);
+      throw error;
+    }
   }
 
   static async updateInventoryItem(id: string, item: Partial<InventoryItem>): Promise<void> {
-    return this.updateDocument<InventoryItem>('inventory_items', id, item);
+    try {
+      // Get the current item to compare quantities
+      const currentItem = await this.getInventoryItem(id);
+      if (!currentItem) {
+        throw new Error('Inventory item not found');
+      }
+      
+      // Update the inventory item
+      await this.updateDocument<InventoryItem>('inventory_items', id, item);
+      
+      // If quantity changed, create adjustment transaction
+      if (item.currentStock !== undefined && item.currentStock !== currentItem.currentStock) {
+        const quantityChange = item.currentStock - currentItem.currentStock;
+        const transactionType = quantityChange > 0 ? 'stock_in' : 'stock_out';
+        
+        const adjustmentTransaction: Omit<StockTransaction, 'id'> = {
+          itemId: id,
+          facilityId: item.facilityId || currentItem.facilityId || 'default-facility',
+          type: transactionType,
+          quantity: Math.abs(quantityChange),
+          unit: item.unit || currentItem.unit,
+          source: transactionType === 'stock_in' ? 'Manual Adjustment' : '',
+          destination: transactionType === 'stock_out' ? 'Manual Adjustment' : '',
+          reason: 'Quantity adjustment',
+          notes: `Quantity changed from ${currentItem.currentStock} to ${item.currentStock} ${item.unit || currentItem.unit}`,
+          userId: 'system',
+          transactionDate: new Date().toISOString().split('T')[0]
+        };
+        
+        await this.addDocument<StockTransaction>('transactions', adjustmentTransaction);
+        console.log(`Auto-generated ${transactionType} transaction for item ${id}: ${Math.abs(quantityChange)} ${item.unit || currentItem.unit}`);
+      }
+    } catch (error) {
+      console.error('Error updating inventory item with auto-transaction:', error);
+      throw error;
+    }
   }
 
   static async deleteInventoryItem(id: string): Promise<void> {
-    return this.deleteDocument('inventory_items', id);
+    try {
+      // Get the current item before deletion
+      const currentItem = await this.getInventoryItem(id);
+      if (!currentItem) {
+        throw new Error('Inventory item not found');
+      }
+      
+      // If item has stock, create final stock_out transaction
+      if (currentItem.currentStock > 0) {
+        const finalTransaction: Omit<StockTransaction, 'id'> = {
+          itemId: id,
+          facilityId: currentItem.facilityId || 'default-facility',
+          type: 'stock_out',
+          quantity: currentItem.currentStock,
+          unit: currentItem.unit,
+          source: '',
+          destination: 'Item Deletion',
+          reason: 'Final stock removal - item deleted',
+          notes: `Automatically generated when item ${currentItem.name} was deleted`,
+          userId: 'system',
+          transactionDate: new Date().toISOString().split('T')[0]
+        };
+        
+        await this.addDocument<StockTransaction>('transactions', finalTransaction);
+        console.log(`Auto-generated final stock_out transaction for deleted item ${id}: ${currentItem.currentStock} ${currentItem.unit}`);
+      }
+      
+      // Delete the inventory item
+      await this.deleteDocument('inventory_items', id);
+    } catch (error) {
+      console.error('Error deleting inventory item with auto-transaction:', error);
+      throw error;
+    }
+  }
+
+  // Manual Stock Adjustment with Automatic Transaction Generation
+  static async adjustInventoryStock(
+    itemId: string, 
+    newQuantity: number, 
+    reason: string, 
+    notes?: string,
+    userId: string = 'system'
+  ): Promise<void> {
+    try {
+      const currentItem = await this.getInventoryItem(itemId);
+      if (!currentItem) {
+        throw new Error('Inventory item not found');
+      }
+      
+      const quantityChange = newQuantity - currentItem.currentStock;
+      if (quantityChange === 0) {
+        console.log('No quantity change detected, skipping adjustment');
+        return;
+      }
+      
+      // Update inventory quantity
+      await this.updateDocument<InventoryItem>('inventory_items', itemId, {
+        currentStock: newQuantity,
+        updatedAt: serverTimestamp()
+      });
+      
+      // Create adjustment transaction
+      const transactionType = quantityChange > 0 ? 'stock_in' : 'stock_out';
+      const adjustmentTransaction: Omit<StockTransaction, 'id'> = {
+        itemId: itemId,
+        facilityId: currentItem.facilityId || 'default-facility',
+        type: transactionType,
+        quantity: Math.abs(quantityChange),
+        unit: currentItem.unit,
+        source: transactionType === 'stock_in' ? 'Manual Adjustment' : '',
+        destination: transactionType === 'stock_out' ? 'Manual Adjustment' : '',
+        reason: reason,
+        notes: notes || `Quantity adjusted from ${currentItem.currentStock} to ${newQuantity} ${currentItem.unit}`,
+        userId: userId,
+        transactionDate: new Date().toISOString().split('T')[0]
+      };
+      
+      await this.addDocument<StockTransaction>('transactions', adjustmentTransaction);
+      console.log(`Auto-generated ${transactionType} transaction for item ${itemId}: ${Math.abs(quantityChange)} ${currentItem.unit}`);
+      
+    } catch (error) {
+      console.error('Error adjusting inventory stock with auto-transaction:', error);
+      throw error;
+    }
   }
 
   // Stock Transactions
