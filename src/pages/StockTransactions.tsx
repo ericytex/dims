@@ -36,7 +36,7 @@ interface Transaction {
 }
 
 export default function StockTransactions() {
-  const { stockTransactions, facilities, inventoryItems, users, addStockTransaction, updateStockTransaction, deleteStockTransaction } = useFirebaseDatabase();
+  const { stockTransactions, facilities, inventoryItems, users, addTransaction, updateTransaction, deleteTransaction } = useFirebaseDatabase();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedType, setSelectedType] = useState('all');
@@ -169,7 +169,7 @@ export default function StockTransactions() {
   const handleDeleteTransaction = async (transaction: Transaction) => {
     if (window.confirm(`Are you sure you want to delete this transaction?`)) {
       try {
-        await deleteStockTransaction(transaction.id);
+        await deleteTransaction(transaction.id);
         addNotification('Transaction deleted successfully', 'success');
       } catch (error) {
         console.error('Error deleting transaction:', error);
@@ -288,7 +288,7 @@ export default function StockTransactions() {
       
       // Add all sample transactions
       for (const transaction of sampleTransactions) {
-        await addStockTransaction(transaction);
+        await addTransaction(transaction);
       }
       
       addNotification(`Created ${sampleTransactions.length} sample transactions successfully!`, 'success');
@@ -334,7 +334,7 @@ export default function StockTransactions() {
           transactionDate: new Date().toISOString().split('T')[0]
         };
 
-        await addStockTransaction(newTransaction);
+        await addTransaction(newTransaction);
         addNotification('Transaction added successfully', 'success');
       } else if (modalType === 'edit' && selectedTransaction) {
         const updatedTransaction = {
@@ -351,7 +351,7 @@ export default function StockTransactions() {
           transactionDate: new Date().toISOString().split('T')[0]
         };
 
-        await updateStockTransaction(selectedTransaction.id, updatedTransaction);
+        await updateTransaction(selectedTransaction.id, updatedTransaction);
         addNotification('Transaction updated successfully', 'success');
       }
 
