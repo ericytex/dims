@@ -455,13 +455,13 @@ export default function TransferManagement() {
             <RefreshCw className="w-5 h-5 mr-2" />
             Generate Sample Data
           </button>
-          <button
-            onClick={handleAddTransfer}
+        <button
+          onClick={handleAddTransfer}
             className="inline-flex items-center px-4 py-2 bg-uganda-yellow text-uganda-black font-medium rounded-lg hover:bg-yellow-500 transition-colors"
-          >
-            <Plus className="w-5 h-5 mr-2" />
-            Request Transfer
-          </button>
+        >
+          <Plus className="w-5 h-5 mr-2" />
+          Request Transfer
+        </button>
         </div>
       </div>
 
@@ -615,28 +615,28 @@ export default function TransferManagement() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {filteredTransfers.map((transfer) => (
+          {filteredTransfers.map((transfer) => (
                   <tr key={transfer.id} className="hover:bg-gray-50">
                     {/* Item & Details Column */}
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center mr-3">
-                          {getStatusIcon(transfer.status)}
-                        </div>
+                    {getStatusIcon(transfer.status)}
+                  </div>
                         <div>
                           <div className="text-sm font-medium text-gray-900">
-                            {transfer.itemName}
-                          </div>
+                        {transfer.itemName}
+                    </div>
                           <div className="text-sm text-gray-500">
                             {transfer.quantity} {transfer.unit}
-                          </div>
+                        </div>
                           {transfer.trackingNumber && (
                             <div className="text-xs text-gray-400 font-mono">
                               {transfer.trackingNumber}
-                            </div>
-                          )}
                         </div>
+                          )}
                       </div>
+                        </div>
                     </td>
                     
                     {/* Route Column */}
@@ -645,7 +645,7 @@ export default function TransferManagement() {
                         <div className="font-medium">{transfer.fromFacility}</div>
                         <div className="text-gray-500">→</div>
                         <div className="font-medium">{transfer.toFacility}</div>
-                      </div>
+                    </div>
                     </td>
                     
                     {/* Status & Priority Column */}
@@ -658,53 +658,53 @@ export default function TransferManagement() {
                           <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getPriorityColor(transfer.priority)}`}>
                             {transfer.priority.replace(/\b\w/g, l => l.toUpperCase())}
                           </span>
-                        </div>
+                      </div>
                       </div>
                     </td>
-                    
+
                     {/* Request Info Column */}
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-900">
                         <div className="font-medium">{transfer.requestedBy}</div>
                         <div className="text-gray-500">{transfer.requestDate}</div>
-                        {transfer.approvedBy && (
+                    {transfer.approvedBy && (
                           <div className="text-xs text-gray-400">
                             Approved by {transfer.approvedBy}
-                          </div>
-                        )}
                       </div>
+                    )}
+                  </div>
                     </td>
-                    
+
                     {/* Actions Column */}
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex items-center space-x-2">
-                        <button
-                          onClick={() => handleViewTransfer(transfer)}
+                  <button
+                    onClick={() => handleViewTransfer(transfer)}
                           className="p-1 text-gray-600 hover:text-uganda-black rounded hover:bg-gray-100"
-                          title="View details"
-                        >
-                          <Eye className="w-4 h-4" />
-                        </button>
-                        
+                    title="View details"
+                  >
+                    <Eye className="w-4 h-4" />
+                  </button>
+                  
                         {/* Pending transfers - can be approved or rejected */}
-                        {transfer.status === 'pending' && (
-                          <>
-                            <button
-                              onClick={() => handleApproveTransfer(transfer)}
+                  {transfer.status === 'pending' && (
+                    <>
+                      <button
+                        onClick={() => handleApproveTransfer(transfer)}
                               className="p-1 text-green-600 hover:text-green-700 rounded hover:bg-green-50"
-                              title="Approve transfer"
-                            >
-                              <Check className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={() => handleRejectTransfer(transfer)}
+                        title="Approve transfer"
+                      >
+                        <Check className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => handleRejectTransfer(transfer)}
                               className="p-1 text-uganda-red hover:text-red-700 rounded hover:bg-red-50"
-                              title="Reject transfer"
-                            >
-                              <X className="w-4 h-4" />
-                            </button>
-                          </>
-                        )}
+                        title="Reject transfer"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </>
+                  )}
                         
                         {/* Approved transfers - can start transit */}
                         {transfer.status === 'approved' && (
@@ -758,13 +758,13 @@ export default function TransferManagement() {
                         >
                           <X className="w-4 h-4" />
                         </button>
-                      </div>
+                </div>
                     </td>
                   </tr>
-                ))}
+          ))}
               </tbody>
             </table>
-          </div>
+        </div>
         ) : (
           <div className="p-12 text-center">
             <ArrowRightLeft className="w-12 h-12 mx-auto text-gray-400 mb-4" />

@@ -494,10 +494,10 @@ export default function StockTransactions() {
                           <span className="font-semibold text-blue-900">
                             {selectedItemDetails.lastTransactionDate || 'None'}
                           </span>
-                        </div>
-                      </div>
-                    </div>
-                    
+            </div>
+          </div>
+        </div>
+
                     {/* Transaction Summary */}
                     <div>
                       <h4 className="text-sm font-medium text-blue-800 mb-3">Transaction Summary</h4>
@@ -519,11 +519,11 @@ export default function StockTransactions() {
                           <span className="font-semibold text-red-600">
                             {selectedItemDetails.stockOutCount}
                           </span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  
+            </div>
+            </div>
+          </div>
+        </div>
+
                   {/* Recent Transactions */}
                   <div className="mt-6">
                     <h4 className="text-sm font-medium text-blue-800 mb-3">Recent Transactions</h4>
@@ -556,12 +556,12 @@ export default function StockTransactions() {
                     <Package className="w-12 h-12 mx-auto text-gray-400 mb-3" />
                     <p className="text-gray-500">Select an inventory item to view detailed information</p>
                   </div>
-                </div>
+            </div>
               )}
+            </div>
             </div>
           </div>
         </div>
-      </div>
 
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -772,7 +772,7 @@ export default function StockTransactions() {
           </div>
         </div>
         
-        {filteredTransactions.map((transaction) => (
+          {filteredTransactions.map((transaction) => (
           <div key={transaction.id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
             {/* Header with Transaction Type */}
             <div className="flex items-start justify-between mb-3">
@@ -870,8 +870,8 @@ export default function StockTransactions() {
             </div>
           </div>
         ))}
-      </div>
-
+                  </div>
+                  
       {/* Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -888,7 +888,7 @@ export default function StockTransactions() {
                 <X className="w-6 h-6" />
               </button>
                     </div>
-
+                    
             <div className="p-6">
               {modalType === 'view' && selectedTransaction ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -896,14 +896,14 @@ export default function StockTransactions() {
                     <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
                     <span className={`px-2 py-1 rounded-full text-xs font-medium ${getTransactionTypeColor(selectedTransaction.type)}`}>
                       {getTransactionTypeLabel(selectedTransaction.type)}
-                    </span>
+                      </span>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
                     <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(selectedTransaction.status)}`}>
                       {selectedTransaction.status}
-                    </span>
-                  </div>
+                      </span>
+                    </div>
                         <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Item</label>
                     <p className="text-gray-900">{selectedTransaction.item}</p>
@@ -1031,7 +1031,7 @@ export default function StockTransactions() {
                         <option key={facility.value} value={facility.value}>{facility.label}</option>
                       ))}
                     </select>
-                  </div>
+        </div>
 
                   {(formData.type === 'stock_in' || formData.type === 'transfer') && (
                     <div>

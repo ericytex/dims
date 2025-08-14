@@ -2,10 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { useFirebaseDatabase } from '../hooks/useFirebaseDatabase';
 import { FirebaseDatabaseService } from '../services/firebaseDatabase';
 import { useFirebaseAuth } from '../hooks/useFirebaseAuth';
-import { 
+import {
   FileText, 
   Download, 
-  BarChart3, 
+  BarChart3,
   Users, 
   Package, 
   Building, 
@@ -19,7 +19,11 @@ import {
   RefreshCw,
   AlertTriangle,
   CheckCircle,
-  Clock
+  Clock,
+  Settings,
+  X,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
@@ -48,6 +52,16 @@ interface ReportConfig {
     category?: string;
     facility?: string;
     role?: string;
+    dateFrom?: string;
+    dateTo?: string;
+    searchTerm?: string;
+  };
+  columns: {
+    inventory: string[];
+    users: string[];
+    facilities: string[];
+    transactions: string[];
+    transfers: string[];
   };
 }
 
@@ -72,10 +86,21 @@ export default function Reports() {
     type: 'inventory',
     format: 'pdf',
     dateRange: 'all',
-    filters: {}
+    filters: {},
+    columns: {
+      inventory: ['Name', 'SKU', 'Category', 'Stock', 'Min Stock', 'Cost', 'Supplier', 'Facility', 'Status'],
+      users: ['Name', 'Email', 'Role', 'Phone', 'Facility', 'Status'],
+      facilities: ['Name', 'Type', 'Location', 'Manager', 'Status', 'Capacity'],
+      transactions: ['Date', 'Type', 'Item', 'Quantity', 'Facility', 'Status', 'Notes'],
+      transfers: ['Date', 'From', 'To', 'Item', 'Quantity', 'Status', 'Notes']
+    }
   });
   const [isGenerating, setIsGenerating] = useState(false);
   const [selectedReport, setSelectedReport] = useState<string>('');
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+  const [showColumnSelector, setShowColumnSelector] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
+  const [filteredData, setFilteredData] = useState<any[]>([]);
 
   // Load all data for reports using the same source as Inventory page
   useEffect(() => {
@@ -101,6 +126,108 @@ export default function Reports() {
       loadReportData();
     }
   }, [inventoryItems, facilities, stockTransactions, transfers]);
+
+  // Apply filters to data
+  useEffect(() => {
+    const applyFilters = () => {
+      let data = reportData[reportConfig.type as keyof ReportData] || [];
+      
+      // Apply search filter
+      if (reportConfig.filters.searchTerm) {
+        const searchTerm = reportConfig.filters.searchTerm.toLowerCase();
+        data = data.filter((item: any) => {
+          return Object.values(item).some(value => 
+            String(value).toLowerCase().includes(searchTerm)
+          );
+        });
+      }
+
+      // Apply status filter
+      if (reportConfig.filters.status && reportConfig.filters.status !== 'all') {
+        data = data.filter((item: any) => item.status === reportConfig.filters.status);
+      }
+
+      // Apply facility filter
+      if (reportConfig.filters.facility && reportConfig.filters.facility !== 'all') {
+        data = data.filter((item: any) => 
+          item.facility === reportConfig.filters.facility || 
+          item.facilityName === reportConfig.filters.facility
+        );
+      }
+
+      // Apply category filter (for inventory)
+      if (reportConfig.filters.category && reportConfig.filters.category !== 'all') {
+        data = data.filter((item: any) => item.category === reportConfig.filters.category);
+      }
+
+      // Apply role filter (for users)
+      if (reportConfig.filters.role && reportConfig.filters.role !== 'all') {
+        data = data.filter((item: any) => item.role === reportConfig.filters.role);
+      }
+
+      // Apply date filters
+      if (reportConfig.filters.dateFrom || reportConfig.filters.dateTo) {
+        data = data.filter((item: any) => {
+          if (!item.date) return true;
+          const itemDate = new Date(item.date);
+          const fromDate = reportConfig.filters.dateFrom ? new Date(reportConfig.filters.dateFrom) : null;
+          const toDate = reportConfig.filters.dateTo ? new Date(reportConfig.filters.dateTo) : null;
+          
+          if (fromDate && itemDate < fromDate) return false;
+          if (toDate && itemDate > toDate) return false;
+          return true;
+        });
+      }
+
+      setFilteredData(data);
+    };
+
+    applyFilters();
+  }, [reportData, reportConfig.filters, reportConfig.type]);
+
+  // Get available filter options
+  const getFilterOptions = () => {
+    const data = reportData[reportConfig.type as keyof ReportData] || [];
+    
+    return {
+      statuses: [...new Set(data.map((item: any) => item.status).filter(Boolean))],
+      categories: [...new Set(data.map((item: any) => item.category).filter(Boolean))],
+      facilities: [...new Set(data.map((item: any) => item.facility || item.facilityName).filter(Boolean))],
+      roles: [...new Set(data.map((item: any) => item.role).filter(Boolean))]
+    };
+  };
+
+  // Clear all filters
+  const clearFilters = () => {
+    setReportConfig(prev => ({
+      ...prev,
+      filters: {}
+    }));
+  };
+
+  // Toggle column visibility
+  const toggleColumn = (column: string) => {
+    const currentColumns = reportConfig.columns[reportConfig.type as keyof typeof reportConfig.columns];
+    const newColumns = currentColumns.includes(column)
+      ? currentColumns.filter(col => col !== column)
+      : [...currentColumns, column];
+    
+    setReportConfig(prev => ({
+      ...prev,
+      columns: {
+        ...prev.columns,
+        [prev.type]: newColumns
+      }
+    }));
+  };
+
+  // Generate preview data
+  const generatePreviewData = () => {
+    const data = filteredData.slice(0, 10); // Show first 10 items
+    const columns = reportConfig.columns[reportConfig.type as keyof typeof reportConfig.columns];
+    
+    return { data, columns, totalCount: filteredData.length };
+  };
 
   // Generate PDF Report
   const generatePDFReport = async () => {
@@ -481,13 +608,15 @@ export default function Reports() {
 
       // Try autoTable first, fallback to simple PDF
       try {
-        const head = [['Item', 'Type', 'Quantity', 'Facility', 'Date']];
+        const head = [['Date', 'Type', 'Item', 'Quantity', 'Facility', 'Status', 'Notes']];
         const body = transactionsData.map(transaction => [
-          transaction.itemName || 'N/A',
+          transaction.date ? new Date(transaction.date).toLocaleDateString() : 'N/A',
           transaction.type || 'N/A',
+          transaction.itemName || 'N/A',
           transaction.quantity?.toString() || '0',
           transaction.facility || 'N/A',
-          transaction.date ? new Date(transaction.date).toLocaleDateString() : 'N/A'
+          transaction.status || 'N/A',
+          transaction.notes || ''
         ]);
 
         if (typeof doc.autoTable === 'function') {
@@ -501,26 +630,30 @@ export default function Reports() {
           });
         } else {
           // Fallback to simple PDF
-          const columns = ['Item', 'Type', 'Quantity', 'Facility', 'Date'];
+          const columns = ['Date', 'Type', 'Item', 'Quantity', 'Facility', 'Status', 'Notes'];
           const data = transactionsData.map(transaction => ({
-            Item: transaction.itemName || 'N/A',
+            Date: transaction.date ? new Date(transaction.date).toLocaleDateString() : 'N/A',
             Type: transaction.type || 'N/A',
+            Item: transaction.itemName || 'N/A',
             Quantity: transaction.quantity?.toString() || '0',
             Facility: transaction.facility || 'N/A',
-            Date: transaction.date ? new Date(transaction.date).toLocaleDateString() : 'N/A'
+            Status: transaction.status || 'N/A',
+            Notes: transaction.notes || ''
           }));
           generateSimplePDF(doc, 'Transactions Report', data, columns);
         }
       } catch (autoTableError) {
         console.error('AutoTable failed, using simple PDF:', autoTableError);
         // Fallback to simple PDF
-        const columns = ['Item', 'Type', 'Quantity', 'Facility', 'Date'];
+        const columns = ['Date', 'Type', 'Item', 'Quantity', 'Facility', 'Status', 'Notes'];
         const data = transactionsData.map(transaction => ({
-          Item: transaction.itemName || 'N/A',
+          Date: transaction.date ? new Date(transaction.date).toLocaleDateString() : 'N/A',
           Type: transaction.type || 'N/A',
+          Item: transaction.itemName || 'N/A',
           Quantity: transaction.quantity?.toString() || '0',
           Facility: transaction.facility || 'N/A',
-          Date: transaction.date ? new Date(transaction.date).toLocaleDateString() : 'N/A'
+          Status: transaction.status || 'N/A',
+          Notes: transaction.notes || ''
         }));
         generateSimplePDF(doc, 'Transactions Report', data, columns);
       }
@@ -543,14 +676,15 @@ export default function Reports() {
 
       // Try autoTable first, fallback to simple PDF
       try {
-        const head = [['Item', 'From', 'To', 'Quantity', 'Status', 'Date']];
+        const head = [['Date', 'From', 'To', 'Item', 'Quantity', 'Status', 'Notes']];
         const body = transfersData.map(transfer => [
-          transfer.itemName || 'N/A',
+          transfer.date ? new Date(transfer.date).toLocaleDateString() : 'N/A',
           transfer.fromFacility || 'N/A',
           transfer.toFacility || 'N/A',
+          transfer.itemName || 'N/A',
           transfer.quantity?.toString() || '0',
           transfer.status || 'N/A',
-          transfer.date ? new Date(transfer.date).toLocaleDateString() : 'N/A'
+          transfer.notes || ''
         ]);
 
         if (typeof doc.autoTable === 'function') {
@@ -564,28 +698,30 @@ export default function Reports() {
           });
         } else {
           // Fallback to simple PDF
-          const columns = ['Item', 'From', 'To', 'Quantity', 'Status', 'Date'];
+          const columns = ['Date', 'From', 'To', 'Item', 'Quantity', 'Status', 'Notes'];
           const data = transfersData.map(transfer => ({
-            Item: transfer.itemName || 'N/A',
+            Date: transfer.date ? new Date(transfer.date).toLocaleDateString() : 'N/A',
             From: transfer.fromFacility || 'N/A',
             To: transfer.toFacility || 'N/A',
+            Item: transfer.itemName || 'N/A',
             Quantity: transfer.quantity?.toString() || '0',
             Status: transfer.status || 'N/A',
-            Date: transfer.date ? new Date(transfer.date).toLocaleDateString() : 'N/A'
+            Notes: transfer.notes || ''
           }));
           generateSimplePDF(doc, 'Transfers Report', data, columns);
         }
       } catch (autoTableError) {
         console.error('AutoTable failed, using simple PDF:', autoTableError);
         // Fallback to simple PDF
-        const columns = ['Item', 'From', 'To', 'Quantity', 'Status', 'Date'];
+        const columns = ['Date', 'From', 'To', 'Item', 'Quantity', 'Status', 'Notes'];
         const data = transfersData.map(transfer => ({
-          Item: transfer.itemName || 'N/A',
+          Date: transfer.date ? new Date(transfer.date).toLocaleDateString() : 'N/A',
           From: transfer.fromFacility || 'N/A',
           To: transfer.toFacility || 'N/A',
+          Item: transfer.itemName || 'N/A',
           Quantity: transfer.quantity?.toString() || '0',
           Status: transfer.status || 'N/A',
-          Date: transfer.date ? new Date(transfer.date).toLocaleDateString() : 'N/A'
+          Notes: transfer.notes || ''
         }));
         generateSimplePDF(doc, 'Transfers Report', data, columns);
       }
@@ -861,100 +997,357 @@ export default function Reports() {
         </div>
       </div>
 
-      {/* Quick Generate Report Section */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-medium text-gray-900">Quick Report Generation</h2>
-          <div className="flex items-center space-x-2">
-            <FileText className="w-5 h-5 text-red-600" />
-            <FileSpreadsheet className="w-5 h-5 text-green-600" />
+              {/* Quick Generate Report Section */}
+        <div className="bg-white rounded-lg shadow p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-medium text-gray-900">Quick Report Generation</h2>
+            <div className="flex items-center space-x-2">
+              <FileText className="w-5 h-5 text-red-600" />
+              <FileSpreadsheet className="w-5 h-5 text-green-600" />
+            </div>
           </div>
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Report Type</label>
-            <select
-              value={reportConfig.type}
-              onChange={(e) => setReportConfig(prev => ({ ...prev, type: e.target.value as any }))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-uganda-yellow focus:border-transparent"
-            >
-              <option value="inventory">Inventory Report</option>
-              <option value="users">Users Report</option>
-              <option value="facilities">Facilities Report</option>
-              <option value="transactions">Transactions Report</option>
-              <option value="transfers">Transfers Report</option>
-              <option value="all">Complete System Report</option>
-            </select>
-          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Report Type</label>
+              <select
+                value={reportConfig.type}
+                onChange={(e) => setReportConfig(prev => ({ ...prev, type: e.target.value as any }))}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-uganda-yellow focus:border-transparent"
+              >
+                <option value="inventory">Inventory Report</option>
+                <option value="users">Users Report</option>
+                <option value="facilities">Facilities Report</option>
+                <option value="transactions">Transactions Report</option>
+                <option value="transfers">Transfers Report</option>
+                <option value="all">Complete System Report</option>
+              </select>
+            </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Export Format</label>
-            <div className="flex space-x-4">
-              <label className="flex items-center">
-                <input
-                  type="radio"
-                  value="pdf"
-                  checked={reportConfig.format === 'pdf'}
-                  onChange={(e) => setReportConfig(prev => ({ ...prev, format: e.target.value as 'pdf' | 'csv' }))}
-                  className="w-4 h-4 text-uganda-yellow border-gray-300 focus:ring-uganda-yellow"
-                />
-                <span className="ml-2 text-sm">PDF</span>
-              </label>
-              <label className="flex items-center">
-                <input
-                  type="radio"
-                  value="csv"
-                  checked={reportConfig.format === 'csv'}
-                  onChange={(e) => setReportConfig(prev => ({ ...prev, format: e.target.value as 'pdf' | 'csv' }))}
-                  className="w-4 h-4 text-uganda-yellow border-gray-300 focus:ring-uganda-yellow"
-                />
-                <span className="ml-2 text-sm">CSV</span>
-              </label>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Export Format</label>
+              <div className="flex space-x-4">
+                <label className="flex items-center">
+                  <input
+                    type="radio"
+                    value="pdf"
+                    checked={reportConfig.format === 'pdf'}
+                    onChange={(e) => setReportConfig(prev => ({ ...prev, format: e.target.value as 'pdf' | 'csv' }))}
+                    className="w-4 h-4 text-uganda-yellow border-gray-300 focus:ring-uganda-yellow"
+                  />
+                  <span className="ml-2 text-sm">PDF</span>
+                </label>
+                <label className="flex items-center">
+                  <input
+                    type="radio"
+                    value="csv"
+                    checked={reportConfig.format === 'pdf'}
+                    onChange={(e) => setReportConfig(prev => ({ ...prev, format: e.target.value as 'pdf' | 'csv' }))}
+                    className="w-4 h-4 text-uganda-yellow border-gray-300 focus:ring-uganda-yellow"
+                  />
+                  <span className="ml-2 text-sm">CSV</span>
+                </label>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Date Range</label>
+              <select
+                value={reportConfig.dateRange}
+                onChange={(e) => setReportConfig(prev => ({ ...prev, dateRange: e.target.value as any }))}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-uganda-yellow focus:border-transparent"
+              >
+                <option value="all">All Time</option>
+                <option value="today">Today</option>
+                <option value="week">This Week</option>
+                <option value="month">This Month</option>
+                <option value="year">This Year</option>
+              </select>
             </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Date Range</label>
-            <select
-              value={reportConfig.dateRange}
-              onChange={(e) => setReportConfig(prev => ({ ...prev, dateRange: e.target.value as any }))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-uganda-yellow focus:border-transparent"
+          {/* Advanced Filters Toggle */}
+          <div className="mb-4">
+            <button
+              onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+              className="flex items-center text-sm text-gray-600 hover:text-gray-800 transition-colors"
             >
-              <option value="all">All Time</option>
-              <option value="today">Today</option>
-              <option value="week">This Week</option>
-              <option value="month">This Month</option>
-              <option value="year">This Year</option>
-            </select>
-          </div>
-        </div>
-
-        {/* Generate Button */}
-        <div className="flex items-center justify-between">
-          <div className="text-sm text-gray-600">
-            <p>Report: <span className="font-medium">{getReportTitle()}</span></p>
-            <p>Format: <span className="font-medium">{reportConfig.format.toUpperCase()}</span></p>
-          </div>
-          <button
-            onClick={handleGenerateReport}
-            disabled={isGenerating}
-            className="px-8 py-3 bg-uganda-yellow text-white font-medium rounded-lg hover:bg-yellow-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center text-lg"
-          >
-            {isGenerating ? (
-              <>
-                <RefreshCw className="w-5 h-5 mr-2 animate-spin" />
-                Generating Report...
-              </>
-            ) : (
-              <>
-                <Download className="w-5 h-5 mr-2" />
-                Generate Report
-              </>
+              <Filter className="w-4 h-4 mr-2" />
+              Advanced Filters
+              {showAdvancedFilters ? <ChevronUp className="w-4 h-4 ml-1" /> : <ChevronDown className="w-4 h-4 ml-1" />}
+            </button>
+            
+            {/* Active Filters Summary */}
+            {Object.keys(reportConfig.filters).some(key => reportConfig.filters[key as keyof typeof reportConfig.filters]) && (
+              <div className="mt-2 flex flex-wrap gap-2">
+                {Object.entries(reportConfig.filters).map(([key, value]) => {
+                  if (!value) return null;
+                  return (
+                    <span key={key} className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                      {key === 'searchTerm' ? 'Search' : key.charAt(0).toUpperCase() + key.slice(1)}: {value}
+                      <button
+                        onClick={() => setReportConfig(prev => ({
+                          ...prev,
+                          filters: { ...prev.filters, [key]: undefined }
+                        }))}
+                        className="ml-1 text-blue-600 hover:text-blue-800"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </span>
+                  );
+                })}
+              </div>
             )}
-          </button>
+          </div>
+
+          {/* Advanced Filters Panel */}
+          {showAdvancedFilters && (
+            <div className="bg-gray-50 rounded-lg p-4 mb-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {/* Search Term */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Search</label>
+                  <div className="relative">
+                    <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                    <input
+                      type="text"
+                      placeholder="Search in data..."
+                      value={reportConfig.filters.searchTerm || ''}
+                      onChange={(e) => setReportConfig(prev => ({
+                        ...prev,
+                        filters: { ...prev.filters, searchTerm: e.target.value }
+                      }))}
+                      className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-uganda-yellow focus:border-transparent"
+                    />
+                  </div>
+                </div>
+
+                {/* Status Filter */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
+                  <select
+                    value={reportConfig.filters.status || 'all'}
+                    onChange={(e) => setReportConfig(prev => ({
+                      ...prev,
+                      filters: { ...prev.filters, status: e.target.value === 'all' ? undefined : e.target.value }
+                    }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-uganda-yellow focus:border-transparent"
+                  >
+                    <option value="all">All Statuses</option>
+                    {getFilterOptions().statuses.map(status => (
+                      <option key={status} value={status}>{status}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Facility Filter */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Facility</label>
+                  <select
+                    value={reportConfig.filters.facility || 'all'}
+                    onChange={(e) => setReportConfig(prev => ({
+                      ...prev,
+                      filters: { ...prev.filters, facility: e.target.value === 'all' ? undefined : e.target.value }
+                    }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-uganda-yellow focus:border-transparent"
+                  >
+                    <option value="all">All Facilities</option>
+                    {getFilterOptions().facilities.map(facility => (
+                      <option key={facility} value={facility}>{facility}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Category/Role Filter */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    {reportConfig.type === 'inventory' ? 'Category' : reportConfig.type === 'users' ? 'Role' : 'Type'}
+                  </label>
+                  <select
+                    value={reportConfig.filters.category || reportConfig.filters.role || 'all'}
+                    onChange={(e) => setReportConfig(prev => ({
+                      ...prev,
+                      filters: { 
+                        ...prev.filters, 
+                        category: reportConfig.type === 'inventory' ? (e.target.value === 'all' ? undefined : e.target.value) : undefined,
+                        role: reportConfig.type === 'users' ? (e.target.value === 'all' ? undefined : e.target.value) : undefined
+                      }
+                    }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-uganda-yellow focus:border-transparent"
+                  >
+                    <option value="all">All {reportConfig.type === 'inventory' ? 'Categories' : reportConfig.type === 'users' ? 'Roles' : 'Types'}</option>
+                    {(reportConfig.type === 'inventory' ? getFilterOptions().categories : 
+                      reportConfig.type === 'users' ? getFilterOptions().roles : []).map(option => (
+                      <option key={option} value={option}>{option}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Date Range Filters */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Date From</label>
+                  <input
+                    type="date"
+                    value={reportConfig.filters.dateFrom || ''}
+                    onChange={(e) => setReportConfig(prev => ({
+                      ...prev,
+                      filters: { ...prev.filters, dateFrom: e.target.value || undefined }
+                    }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-uganda-yellow focus:border-transparent"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Date To</label>
+                  <input
+                    type="date"
+                    value={reportConfig.filters.dateTo || ''}
+                    onChange={(e) => setReportConfig(prev => ({
+                      ...prev,
+                      filters: { ...prev.filters, dateTo: e.target.value || undefined }
+                    }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-uganda-yellow focus:border-transparent"
+                  />
+                </div>
+              </div>
+
+              {/* Filter Actions */}
+              <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-200">
+                <div className="text-sm text-gray-600">
+                  <span className="font-medium">{filteredData.length}</span> items match your filters
+                </div>
+                <button
+                  onClick={clearFilters}
+                  className="flex items-center text-sm text-red-600 hover:text-red-800 transition-colors"
+                >
+                  <X className="w-4 h-4 mr-1" />
+                  Clear All Filters
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Column Selector Toggle */}
+          <div className="mb-4">
+            <button
+              onClick={() => setShowColumnSelector(!showColumnSelector)}
+              className="flex items-center text-sm text-gray-600 hover:text-gray-800 transition-colors"
+            >
+              <Settings className="w-4 h-4 mr-2" />
+              Customize Columns
+              {showColumnSelector ? <ChevronUp className="w-4 h-4 ml-1" /> : <ChevronDown className="w-4 h-4 ml-1" />}
+            </button>
+          </div>
+
+          {/* Column Selector Panel */}
+          {showColumnSelector && (
+            <div className="bg-gray-50 rounded-lg p-4 mb-4">
+              <h4 className="text-sm font-medium text-gray-700 mb-3">Select columns to include in your report:</h4>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+                {reportConfig.columns[reportConfig.type as keyof typeof reportConfig.columns].map(column => (
+                  <label key={column} className="flex items-center">
+                    <input
+                      type="checkbox"
+                      checked={true}
+                      disabled={true}
+                      className="w-4 h-4 text-uganda-yellow border-gray-300 rounded focus:ring-uganda-yellow"
+                    />
+                    <span className="ml-2 text-sm text-gray-700">{column}</span>
+                  </label>
+                ))}
+              </div>
+              <p className="text-xs text-gray-500 mt-2">All columns are currently included. Column customization coming in next update.</p>
+            </div>
+          )}
+
+          {/* Report Summary */}
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h4 className="text-sm font-medium text-blue-800">Report Summary</h4>
+                <p className="text-xs text-blue-600">
+                  {filteredData.length} items found • {reportConfig.type} report • {reportConfig.format.toUpperCase()} format
+                </p>
+              </div>
+              <button
+                onClick={() => setShowPreview(!showPreview)}
+                className="flex items-center text-sm text-blue-600 hover:text-blue-800 transition-colors"
+              >
+                <Eye className="w-4 h-4 mr-2" />
+                {showPreview ? 'Hide' : 'Show'} Preview
+              </button>
+            </div>
+          </div>
+
+          {/* Data Preview */}
+          {showPreview && (
+            <div className="bg-white border border-gray-200 rounded-lg p-4 mb-4">
+              <h4 className="text-sm font-medium text-gray-700 mb-3">Data Preview (showing first 10 items)</h4>
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      {generatePreviewData().columns.map(column => (
+                        <th key={column} className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          {column}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {generatePreviewData().data.map((item, index) => (
+                      <tr key={index} className="hover:bg-gray-50">
+                        {generatePreviewData().columns.map(column => (
+                          <td key={column} className="px-3 py-2 whitespace-nowrap text-sm text-gray-900">
+                            {item[column] || item[column.toLowerCase()] || 'N/A'}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <p className="text-xs text-gray-500 mt-2">Total: {generatePreviewData().totalCount} items</p>
+            </div>
+          )}
+
+          {/* Generate Button */}
+          <div className="flex items-center justify-between">
+            <div className="text-sm text-gray-600">
+              <p>Report: <span className="font-medium">{getReportTitle()}</span></p>
+              <p>Format: <span className="font-medium">{reportConfig.format.toUpperCase()}</span></p>
+              <p>Items: <span className="font-medium">{filteredData.length}</span></p>
+            </div>
+            <div className="flex space-x-3">
+              <button
+                onClick={() => setShowPreview(!showPreview)}
+                className="px-4 py-2 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors flex items-center"
+              >
+                <Eye className="w-4 h-4 mr-2" />
+                {showPreview ? 'Hide' : 'Show'} Preview
+              </button>
+              <button
+                onClick={handleGenerateReport}
+                disabled={isGenerating}
+                className="px-8 py-3 bg-uganda-yellow text-white font-medium rounded-lg hover:bg-yellow-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center text-lg"
+              >
+                {isGenerating ? (
+                  <>
+                    <RefreshCw className="w-5 h-5 mr-2 animate-spin" />
+                    Generating Report...
+                  </>
+                ) : (
+                  <>
+                    <Download className="w-5 h-5 mr-2" />
+                    Generate Report
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
         </div>
-      </div>
 
       {/* Report Templates */}
       <div className="bg-white rounded-lg shadow">
@@ -1000,10 +1393,10 @@ export default function Reports() {
 
       {/* Recent Reports */}
       <div className="bg-white rounded-lg shadow">
-        <div className="p-6 border-b border-gray-200">
+      <div className="p-6 border-b border-gray-200">
           <h2 className="text-lg font-medium text-gray-900">Recent Reports</h2>
           <p className="text-sm text-gray-600 mt-1">Your recently generated reports</p>
-        </div>
+      </div>
 
         <div className="p-6">
           <div className="text-center py-8 text-gray-500">

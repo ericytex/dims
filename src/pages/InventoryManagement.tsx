@@ -147,13 +147,13 @@ export default function InventoryManagement() {
   // Filter inventory items
   const filteredInventory = allInventoryItems
     .filter(item => {
-      const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           item.sku.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           item.description.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesCategory = !filterCategory || item.category === filterCategory;
       const matchesStatus = !filterStatus || item.status === filterStatus;
-      return matchesSearch && matchesCategory && matchesStatus;
-    });
+    return matchesSearch && matchesCategory && matchesStatus;
+  });
 
   const handleAddItem = () => {
     clearFormFields();
@@ -208,20 +208,20 @@ export default function InventoryManagement() {
     try {
       if (!user) {
         showNotification('You must be logged in to perform this action', 'error');
-        return;
-      }
+      return;
+    }
 
       const itemData = {
-        name: formData.name,
+      name: formData.name,
         description: formData.description,
-        category: formData.category,
+      category: formData.category,
         sku: formData.sku,
-        unit: formData.unit,
-        currentStock: formData.currentStock,
+      unit: formData.unit,
+      currentStock: formData.currentStock,
         minStock: formData.minStock,
         maxStock: formData.maxStock,
-        cost: formData.cost,
-        supplier: formData.supplier,
+      cost: formData.cost,
+      supplier: formData.supplier,
         facility: formData.facility,
         location: formData.location,
         expiryDate: formData.expiryDate || undefined,
@@ -244,7 +244,7 @@ export default function InventoryManagement() {
         }
         setShowEditModal(false);
         setSelectedItem(null);
-      } else {
+    } else {
         if (isOnline) {
           await addInventoryItem(itemData);
           showNotification(`✅ Item "${formData.name}" added successfully! Ready for next item.`, 'success');
@@ -466,7 +466,7 @@ export default function InventoryManagement() {
   };
 
   if (loading) {
-    return (
+  return (
       <div className="flex items-center justify-center h-64">
         <div className="text-lg">Loading inventory...</div>
       </div>
@@ -518,17 +518,17 @@ export default function InventoryManagement() {
       <div className="bg-white shadow-sm border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
-            <div>
+        <div>
               <h1 className="text-2xl font-bold text-gray-900">Inventory Management</h1>
               <p className="text-sm text-gray-600">Manage your inventory items and stock levels</p>
-            </div>
-            <button
-              onClick={handleAddItem}
+        </div>
+        <button
+          onClick={handleAddItem}
               className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-uganda-yellow hover:bg-yellow-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-uganda-yellow transition-colors"
-            >
+        >
               <Plus className="w-4 h-4 mr-2" />
-              Add Item
-            </button>
+          Add Item
+        </button>
           </div>
         </div>
       </div>
@@ -548,12 +548,12 @@ export default function InventoryManagement() {
                     <p className="text-sm text-yellow-700">
                       You're currently offline. Items will be saved locally and synced when you're back online.
                     </p>
-                  </div>
-                </div>
+            </div>
+            </div>
                 <div className="text-sm text-yellow-700 font-medium">
                   Pending: {pendingCount} items
-                </div>
-              </div>
+          </div>
+        </div>
             </div>
           )}
 
@@ -568,8 +568,8 @@ export default function InventoryManagement() {
                     <p className="text-sm text-blue-700">
                       You have {pendingCount} offline items ready to sync.
                     </p>
-                  </div>
-                </div>
+            </div>
+          </div>
                 <button
                   onClick={syncOfflineData}
                   disabled={isSyncing}
@@ -596,22 +596,22 @@ export default function InventoryManagement() {
             return (
               <div key={index} className="bg-white overflow-hidden shadow rounded-lg">
                 <div className="p-5">
-                  <div className="flex items-center">
+          <div className="flex items-center">
                     <div className="flex-shrink-0">
                       <div className="bg-uganda-yellow rounded-md p-3">
                         <Icon className="w-6 h-6 text-white" />
-                      </div>
-                    </div>
+            </div>
+            </div>
                     <div className="ml-5 w-0 flex-1">
                       <dl>
                         <dt className="text-sm font-medium text-gray-500 truncate">{stat.name}</dt>
                         <dd className="text-lg font-medium text-gray-900">{stat.value}</dd>
                       </dl>
-                    </div>
-                  </div>
+          </div>
+        </div>
                 </div>
                 <div className="bg-gray-50 px-5 py-3">
-                  <div className="flex items-center">
+          <div className="flex items-center">
                     {stat.changeType === 'increase' ? (
                       <TrendingUp className="w-4 h-4 text-green-500" />
                     ) : (
@@ -623,12 +623,12 @@ export default function InventoryManagement() {
                       {stat.change}
                     </span>
                     <span className="ml-2 text-sm text-gray-500">from last month</span>
-                  </div>
-                </div>
-              </div>
+            </div>
+            </div>
+          </div>
             );
           })}
-        </div>
+      </div>
 
         {/* Filters and Search */}
         <div className="bg-white shadow rounded-lg mb-8">
@@ -640,12 +640,12 @@ export default function InventoryManagement() {
               {/* Search */}
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-2">Search Items</label>
-                <div className="relative">
+            <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                  <input
-                    type="text"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
                     className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-md focus:ring-uganda-yellow focus:border-uganda-yellow"
                     placeholder="Search by name, SKU, or description..."
                   />
@@ -657,12 +657,12 @@ export default function InventoryManagement() {
                       <X className="w-4 h-4" />
                     </button>
                   )}
-                </div>
+            </div>
                 {searchTerm && (
                   <div className="mt-1 text-sm text-blue-600 flex items-center">
                     <QrCode className="w-3 h-3 mr-1" />
                     Filtered by: {searchTerm}
-                  </div>
+          </div>
                 )}
               </div>
 
@@ -682,7 +682,7 @@ export default function InventoryManagement() {
               {/* Category Filter */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Category</label>
-                <select
+            <select
                   value={filterCategory}
                   onChange={(e) => setFilterCategory(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-uganda-yellow focus:border-uganda-yellow"
@@ -697,15 +697,15 @@ export default function InventoryManagement() {
                   <option value="Tools">Tools</option>
                   <option value="Clothing">Clothing</option>
                   <option value="Food & Beverages">Food & Beverages</option>
-                </select>
-              </div>
+            </select>
+          </div>
             </div>
 
             {/* Additional Filters - Mobile Responsive */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
-                <select
+            <select
                   value={filterStatus}
                   onChange={(e) => setFilterStatus(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-uganda-yellow focus:border-uganda-yellow"
@@ -714,7 +714,7 @@ export default function InventoryManagement() {
                   <option value="active">Active</option>
                   <option value="inactive">Inactive</option>
                   <option value="discontinued">Discontinued</option>
-                </select>
+            </select>
               </div>
               
               {/* Clear Filters Button - Mobile Responsive */}
@@ -732,9 +732,9 @@ export default function InventoryManagement() {
                   Clear Filters
                 </button>
               </div>
-            </div>
           </div>
         </div>
+      </div>
 
         {/* Inventory Table - Desktop */}
         <div className="hidden lg:block bg-white shadow rounded-lg">
@@ -747,48 +747,48 @@ export default function InventoryManagement() {
             </div>
           </div>
           
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Stock Level
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Item Details
-                  </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Item Details
+                </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     SKU
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Category
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Stock Level
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Stock Level
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Cost
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Facility
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Status
-                  </th>
+                </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
                 {filteredInventory.map((item) => {
                   const stockStatus = getStockStatus(item.currentStock, item.minStock);
                   const isOffline = isOfflineItem(item);
                   const stockLevel = getStockLevelIndicator(item.currentStock, item.minStock, item.maxStock);
-                  
-                  return (
+                
+                return (
                     <tr key={item.id} className={`hover:bg-gray-50 ${isOffline ? 'bg-yellow-50' : ''} ${highlightedItemId === item.id ? 'bg-blue-50' : ''}`} id={`item-${item.id}`}>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex flex-col items-center space-y-2">
                           <div className={`w-4 h-4 rounded-full ${stockLevel.color}`}></div>
                           <div className="text-xs font-medium text-gray-600 text-center">
@@ -796,39 +796,39 @@ export default function InventoryManagement() {
                             {stockLevel.level === 'low' && 'Low'}
                             {stockLevel.level === 'normal' && 'Good'}
                             {stockLevel.level === 'high' && 'High'}
-                          </div>
+                        </div>
                           {isOffline && (
                             <div className="flex items-center space-x-1 text-xs text-yellow-600">
                               <AlertTriangle className="w-3 h-3" />
                               <span>Offline</span>
                             </div>
                           )}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center space-x-2">
                             <div className="text-sm font-medium text-gray-900">{item.name}</div>
-                          </div>
+                      </div>
                           <div className="text-sm text-gray-500 mt-1">{item.description}</div>
                           <div className="flex items-center space-x-2 mt-1">
                             <span className="text-xs text-gray-400">Supplier: {item.supplier}</span>
                             {item.location && (
                               <span className="text-xs text-gray-400">• Location: {item.location}</span>
                             )}
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm font-mono text-gray-900">{item.sku}</div>
                         <div className="text-xs text-gray-500 mt-1">Last updated: {new Date(item.lastUpdated).toLocaleDateString()}</div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                           {item.category}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center space-x-3">
                           <div className="flex-1">
                             <div className="flex items-center justify-between mb-1">
@@ -838,21 +838,21 @@ export default function InventoryManagement() {
                               <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStockStatusColor(stockStatus)}`}>
                                 {stockStatus}
                               </span>
-                            </div>
+                          </div>
                             <div className="w-full bg-gray-200 rounded-full h-2">
                               <div 
                                 className={`h-2 rounded-full ${stockLevel.progressColor}`}
                                 style={{ width: `${stockLevel.percentage}%` }}
                               ></div>
-                            </div>
+                        </div>
                             <div className="flex justify-between text-xs text-gray-500 mt-1">
                               <span>Min: {item.minStock}</span>
                               <span>Max: {item.maxStock}</span>
                             </div>
                           </div>
                         </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm font-mono text-gray-900">UGX {item.cost.toLocaleString()}</div>
                         <div className="text-xs text-gray-500 mt-1">Per {item.unit}</div>
                       </td>
@@ -860,8 +860,8 @@ export default function InventoryManagement() {
                         <div className="flex items-center space-x-2">
                           <div className="w-2 h-2 bg-green-400 rounded-full"></div>
                           <span className="text-sm text-gray-900">{item.facility}</span>
-                        </div>
-                      </td>
+                      </div>
+                    </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(item.status)}`}>
                           {item.status === 'active' && <div className="w-1.5 h-1.5 bg-green-400 rounded-full mr-1.5"></div>}
@@ -872,20 +872,20 @@ export default function InventoryManagement() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                         <div className="flex items-center space-x-2">
-                          <button
-                            onClick={() => handleViewItem(item)}
+                        <button
+                          onClick={() => handleViewItem(item)}
                             className="text-gray-400 hover:text-gray-600 transition-colors p-1 rounded-md hover:bg-gray-100"
                             title="View Details"
-                          >
-                            <Eye className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => handleEditItem(item)}
+                        >
+                          <Eye className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleEditItem(item)}
                             className="text-gray-400 hover:text-gray-600 transition-colors p-1 rounded-md hover:bg-gray-100"
                             title="Edit Item"
-                          >
-                            <Edit className="w-4 h-4" />
-                          </button>
+                        >
+                          <Edit className="w-4 h-4" />
+                        </button>
                           <button
                             onClick={() => handleDeleteItem(item)}
                             className="text-red-400 hover:text-red-600 transition-colors p-1 rounded-md hover:bg-red-50"
@@ -893,15 +893,15 @@ export default function InventoryManagement() {
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
+      </div>
 
         {/* Mobile Cards View */}
         <div className="lg:hidden space-y-4">
@@ -942,7 +942,7 @@ export default function InventoryManagement() {
                     </div>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <button
+              <button
                       onClick={() => handleViewItem(item)}
                       className="text-gray-400 hover:text-gray-600 transition-colors p-2 rounded-md hover:bg-gray-100"
                       title="View Details"
@@ -962,26 +962,26 @@ export default function InventoryManagement() {
                       title="Delete Item"
                     >
                       <Trash2 className="w-4 h-4" />
-                    </button>
+              </button>
                   </div>
-                </div>
-
+            </div>
+            
                 {/* Item Details */}
-                <div className="space-y-3">
-                  <div>
+                      <div className="space-y-3">
+                        <div>
                     <p className="text-sm text-gray-600">{item.description}</p>
-                  </div>
+                        </div>
 
                   {/* SKU and Category */}
                   <div className="flex items-center justify-between">
-                    <div>
+                        <div>
                       <span className="text-xs font-medium text-gray-500">SKU:</span>
                       <span className="text-sm font-mono text-gray-900 ml-1">{item.sku}</span>
-                    </div>
+                        </div>
                     <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                       {item.category}
                     </span>
-                  </div>
+                        </div>
 
                   {/* Stock Information */}
                   <div className="bg-gray-50 rounded-lg p-3">
@@ -992,7 +992,7 @@ export default function InventoryManagement() {
                       <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStockStatusColor(stockStatus)}`}>
                         {stockStatus}
                       </span>
-                    </div>
+                          </div>
                     <div className="w-full bg-gray-200 rounded-full h-2 mb-2">
                       <div 
                         className={`h-2 rounded-full ${stockLevel.progressColor}`}
@@ -1002,8 +1002,8 @@ export default function InventoryManagement() {
                     <div className="flex justify-between text-xs text-gray-500">
                       <span>Min: {item.minStock}</span>
                       <span>Max: {item.maxStock}</span>
+                      </div>
                     </div>
-                  </div>
 
                   {/* Additional Info */}
                   <div className="grid grid-cols-2 gap-4 text-sm">
@@ -1011,24 +1011,24 @@ export default function InventoryManagement() {
                       <span className="text-gray-500">Cost:</span>
                       <span className="font-mono text-gray-900 ml-1">UGX {item.cost.toLocaleString()}</span>
                     </div>
-                    <div>
+                        <div>
                       <span className="text-gray-500">Facility:</span>
                       <span className="text-gray-900 ml-1">{item.facility}</span>
-                    </div>
-                    <div>
+                        </div>
+                        <div>
                       <span className="text-gray-500">Supplier:</span>
                       <span className="text-gray-900 ml-1">{item.supplier}</span>
-                    </div>
-                    <div>
+                        </div>
+                        <div>
                       <span className="text-gray-500">Status:</span>
                       <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ml-1 ${getStatusColor(item.status)}`}>
                         {item.status === 'active' && <div className="w-1.5 h-1.5 bg-green-400 rounded-full mr-1"></div>}
                         {item.status === 'inactive' && <div className="w-1.5 h-1.5 bg-gray-400 rounded-full mr-1"></div>}
                         {item.status === 'discontinued' && <div className="w-1.5 h-1.5 bg-red-400 rounded-full mr-1"></div>}
                         {item.status}
-                      </span>
-                    </div>
-                  </div>
+                          </span>
+                        </div>
+                      </div>
 
                   {/* Location and Last Updated */}
                   {item.location && (
@@ -1082,9 +1082,9 @@ export default function InventoryManagement() {
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-uganda-yellow focus:border-uganda-yellow"
                     placeholder="Enter item description"
                   />
-                </div>
-                
-                <div>
+                    </div>
+
+                    <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Category *</label>
                   <select
                     value={formData.category}
@@ -1104,7 +1104,7 @@ export default function InventoryManagement() {
                   </select>
                 </div>
                 
-                <div>
+                        <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">SKU *</label>
                   <div className="flex space-x-2">
                     <input
@@ -1126,10 +1126,10 @@ export default function InventoryManagement() {
                       <QrCode className="w-4 h-4 mr-2" />
                       <span className="hidden sm:inline">Scan</span>
                     </button>
-                  </div>
+                        </div>
                 </div>
                 
-                <div>
+                        <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Unit</label>
                   <select
                     value={formData.unit}
@@ -1146,9 +1146,9 @@ export default function InventoryManagement() {
                     <option value="liters">Liters</option>
                     <option value="kilograms">Kilograms</option>
                   </select>
-                </div>
+                        </div>
                 
-                <div>
+                        <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Current Stock</label>
                   <input
                     type="number"
@@ -1157,7 +1157,7 @@ export default function InventoryManagement() {
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-uganda-yellow focus:border-uganda-yellow"
                     placeholder="0"
                   />
-                </div>
+                        </div>
                 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Min Stock</label>
@@ -1168,7 +1168,7 @@ export default function InventoryManagement() {
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-uganda-yellow focus:border-uganda-yellow"
                     placeholder="0"
                   />
-                </div>
+                      </div>
                 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Max Stock</label>
@@ -1179,9 +1179,9 @@ export default function InventoryManagement() {
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-uganda-yellow focus:border-uganda-yellow"
                     placeholder="0"
                   />
-                </div>
-                
-                <div>
+                    </div>
+
+                    <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Cost (UGX)</label>
                   <input
                     type="number"
@@ -1192,7 +1192,7 @@ export default function InventoryManagement() {
                   />
                 </div>
                 
-                <div>
+                        <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Supplier *</label>
                   <input
                     type="text"
@@ -1201,9 +1201,9 @@ export default function InventoryManagement() {
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-uganda-yellow focus:border-uganda-yellow"
                     placeholder="Enter supplier name"
                   />
-                </div>
+                        </div>
                 
-                <div>
+                          <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Facility</label>
                   <select
                     value={formData.facility}
@@ -1216,9 +1216,9 @@ export default function InventoryManagement() {
                     <option value="Retail Outlet">Retail Outlet</option>
                     <option value="Regional Office">Regional Office</option>
                   </select>
-                </div>
+                          </div>
                 
-                <div>
+                        <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Location</label>
                   <input
                     type="text"
@@ -1227,7 +1227,7 @@ export default function InventoryManagement() {
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-uganda-yellow focus:border-uganda-yellow"
                     placeholder="Enter storage location"
                   />
-                </div>
+                        </div>
                 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Expiry Date</label>
@@ -1237,7 +1237,7 @@ export default function InventoryManagement() {
                     onChange={(e) => setFormData({...formData, expiryDate: e.target.value})}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-uganda-yellow focus:border-uganda-yellow"
                   />
-                </div>
+                      </div>
                 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
@@ -1250,8 +1250,8 @@ export default function InventoryManagement() {
                     <option value="inactive">Inactive</option>
                     <option value="discontinued">Discontinued</option>
                   </select>
-                </div>
-              </div>
+                    </div>
+                  </div>
               
               <div className="flex items-center justify-end space-x-3 mt-8 pt-6 border-t border-gray-200">
                 <button
@@ -1266,7 +1266,7 @@ export default function InventoryManagement() {
                 >
                   Add Item
                 </button>
-              </div>
+                </div>
             </div>
           </div>
         </div>
@@ -1287,17 +1287,17 @@ export default function InventoryManagement() {
             </div>
             
             <div className="p-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-1">Item Name *</label>
-                  <input
-                    type="text"
-                    value={formData.name}
-                    onChange={(e) => setFormData({...formData, name: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
-                    placeholder="Enter item name"
-                  />
-                </div>
+                      <input
+                        type="text"
+                        value={formData.name}
+                        onChange={(e) => setFormData({...formData, name: e.target.value})}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
+                        placeholder="Enter item name"
+                      />
+                    </div>
                 
                 <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
@@ -1309,14 +1309,14 @@ export default function InventoryManagement() {
                     placeholder="Enter item description"
                   />
                 </div>
-                
-                <div>
+                    
+                    <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Category *</label>
-                  <select
-                    value={formData.category}
-                    onChange={(e) => setFormData({...formData, category: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
-                  >
+                      <select
+                        value={formData.category}
+                        onChange={(e) => setFormData({...formData, category: e.target.value})}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
+                      >
                     <option value="">Select Category</option>
                     <option value="Electronics">Electronics</option>
                     <option value="Furniture">Furniture</option>
@@ -1327,14 +1327,14 @@ export default function InventoryManagement() {
                     <option value="Tools">Tools</option>
                     <option value="Clothing">Clothing</option>
                     <option value="Food & Beverages">Food & Beverages</option>
-                  </select>
-                </div>
-                
-                <div>
+                      </select>
+                    </div>
+                    
+                    <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">SKU *</label>
                   <div className="flex space-x-2">
-                    <input
-                      type="text"
+                      <input
+                        type="text"
                       value={formData.sku}
                       onChange={(e) => setFormData({...formData, sku: e.target.value})}
                       className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
@@ -1359,9 +1359,9 @@ export default function InventoryManagement() {
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Unit</label>
                   <select
-                    value={formData.unit}
-                    onChange={(e) => setFormData({...formData, unit: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
+                        value={formData.unit}
+                        onChange={(e) => setFormData({...formData, unit: e.target.value})}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
                   >
                     <option value="">Select Unit</option>
                     <option value="pieces">Pieces</option>
@@ -1373,34 +1373,34 @@ export default function InventoryManagement() {
                     <option value="liters">Liters</option>
                     <option value="kilograms">Kilograms</option>
                   </select>
-                </div>
-                
-                <div>
+                    </div>
+                    
+                    <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Current Stock</label>
-                  <input
-                    type="number"
-                    value={formData.currentStock}
-                    onChange={(e) => setFormData({...formData, currentStock: parseInt(e.target.value) || 0})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
+                      <input
+                        type="number"
+                        value={formData.currentStock}
+                        onChange={(e) => setFormData({...formData, currentStock: parseInt(e.target.value) || 0})}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
                     placeholder="0"
-                  />
-                </div>
-                
-                <div>
+                      />
+                    </div>
+                    
+                    <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Min Stock</label>
-                  <input
-                    type="number"
+                      <input
+                        type="number"
                     value={formData.minStock}
                     onChange={(e) => setFormData({...formData, minStock: parseInt(e.target.value) || 0})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
                     placeholder="0"
-                  />
-                </div>
-                
-                <div>
+                      />
+                    </div>
+                    
+                    <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Max Stock</label>
-                  <input
-                    type="number"
+                      <input
+                        type="number"
                     value={formData.maxStock}
                     onChange={(e) => setFormData({...formData, maxStock: parseInt(e.target.value) || 0})}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
@@ -1412,25 +1412,25 @@ export default function InventoryManagement() {
                   <label className="block text-sm font-medium text-gray-700 mb-1">Cost (UGX)</label>
                   <input
                     type="number"
-                    value={formData.cost}
+                        value={formData.cost}
                     onChange={(e) => setFormData({...formData, cost: parseInt(e.target.value) || 0})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
                     placeholder="0"
-                  />
-                </div>
-                
-                <div>
+                      />
+                    </div>
+                    
+                    <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Supplier *</label>
-                  <input
-                    type="text"
-                    value={formData.supplier}
-                    onChange={(e) => setFormData({...formData, supplier: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
-                    placeholder="Enter supplier name"
-                  />
-                </div>
-                
-                <div>
+                      <input
+                        type="text"
+                        value={formData.supplier}
+                        onChange={(e) => setFormData({...formData, supplier: e.target.value})}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
+                        placeholder="Enter supplier name"
+                      />
+                    </div>
+                    
+                    <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Facility</label>
                   <select
                     value={formData.facility}
@@ -1447,57 +1447,57 @@ export default function InventoryManagement() {
                 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Location *</label>
-                  <input
-                    type="text"
+                      <input
+                        type="text"
                     value={formData.location}
                     onChange={(e) => setFormData({...formData, location: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
                     placeholder="Enter storage location"
-                  />
-                </div>
-                
-                <div>
+                      />
+                    </div>
+                    
+                    <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Expiry Date</label>
-                  <input
-                    type="date"
-                    value={formData.expiryDate}
-                    onChange={(e) => setFormData({...formData, expiryDate: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
-                  />
-                </div>
-                
-                <div>
+                      <input
+                        type="date"
+                        value={formData.expiryDate}
+                        onChange={(e) => setFormData({...formData, expiryDate: e.target.value})}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
+                      />
+                    </div>
+                    
+                    <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                  <select
+                      <select
                     value={formData.status}
                     onChange={(e) => setFormData({...formData, status: e.target.value as any})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
-                  >
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
+                      >
                     <option value="active">Active</option>
                     <option value="inactive">Inactive</option>
                     <option value="discontinued">Discontinued</option>
-                  </select>
-                </div>
-              </div>
-              
+                      </select>
+                    </div>
+                  </div>
+                  
               <div className="flex items-center justify-end space-x-3 p-6 border-t border-gray-200">
-                <button
+                    <button
                   onClick={() => setShowEditModal(false)}
                   className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleSaveItem}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleSaveItem}
                   className="px-4 py-2 bg-uganda-yellow text-uganda-black rounded-lg hover:bg-yellow-400 transition-colors"
-                >
+                    >
                   Update Item
-                </button>
+                    </button>
               </div>
             </div>
-          </div>
-        </div>
-      )}
+                  </div>
+                </div>
+              )}
 
       {/* View Modal */}
       {showViewModal && selectedItem && (
@@ -1518,7 +1518,7 @@ export default function InventoryManagement() {
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
                   <p className="text-gray-900">{selectedItem.name}</p>
-                </div>
+          </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">SKU</label>
                   <p className="text-gray-900">{selectedItem.sku}</p>
@@ -1573,8 +1573,8 @@ export default function InventoryManagement() {
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Expiry Date</label>
                     <p className="text-gray-900">{selectedItem.expiryDate}</p>
-                  </div>
-                )}
+        </div>
+      )}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Last Updated</label>
                   <p className="text-gray-900">{selectedItem.lastUpdated}</p>
