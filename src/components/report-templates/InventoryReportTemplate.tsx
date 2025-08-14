@@ -1,5 +1,4 @@
 import React from 'react';
-import ReportTemplate from './ReportTemplate';
 
 interface InventoryItem {
   id: string;
@@ -38,7 +37,7 @@ const InventoryReportTemplate: React.FC<InventoryReportTemplateProps> = ({
   // Calculate inventory summary
   const totalItems = data.length;
   const totalValue = data.reduce((sum, item) => sum + (item.cost * item.currentStock), 0);
-  const lowStockItems = data.filter(item => item.currentStock <= item.minStock).length;
+  const lowStockItems = data.filter(item => item.currentStock <= item.minStock && item.currentStock > 0).length;
   const outOfStockItems = data.filter(item => item.currentStock === 0).length;
   const overStockItems = data.filter(item => item.currentStock > item.maxStock).length;
 
@@ -62,7 +61,7 @@ const InventoryReportTemplate: React.FC<InventoryReportTemplateProps> = ({
 
   // Low stock alerts
   const lowStockAlerts = data
-    .filter(item => item.currentStock <= item.minStock)
+    .filter(item => item.currentStock <= item.minStock && item.currentStock > 0)
     .sort((a, b) => a.currentStock - b.currentStock);
 
   // High value items
@@ -72,54 +71,60 @@ const InventoryReportTemplate: React.FC<InventoryReportTemplateProps> = ({
     .slice(0, 10);
 
   const columns = [
-    'Name',
-    'SKU',
+    'SKU / ID',
+    'Item Name',
     'Category',
-    'Current Stock',
-    'Min Stock',
-    'Max Stock',
-    'Cost (UGX)',
+    'Quantity',
+    'Unit Price (UGX)',
     'Total Value (UGX)',
-    'Supplier',
-    'Facility',
-    'Status',
-    'Last Updated'
+    'Status'
   ];
 
   const formatData = (data: InventoryItem[]) => {
     return data.map(item => ({
-      Name: item.name,
-      SKU: item.sku,
-      Category: item.category,
-      'Current Stock': item.currentStock,
-      'Min Stock': item.minStock,
-      'Max Stock': item.maxStock,
-      'Cost (UGX)': item.cost,
+      'SKU / ID': item.sku,
+      'Item Name': item.name,
+      'Category': item.category,
+      'Quantity': item.currentStock,
+      'Unit Price (UGX)': item.cost,
       'Total Value (UGX)': item.cost * item.currentStock,
-      Supplier: item.supplier,
-      Facility: item.facility,
-      Status: item.status,
-      'Last Updated': new Date(item.lastUpdated).toLocaleDateString('en-UG')
+      'Status': item.currentStock === 0 ? 'Out of Stock' : 
+                item.currentStock <= item.minStock ? 'Low Stock' : 'In Stock'
     }));
   };
 
-  const summary = {
-    totalItems,
-    totalValue,
-    statusBreakdown,
-    categoryBreakdown,
-    facilityBreakdown,
-    lowStockItems,
-    outOfStockItems,
-    overStockItems
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-UG', {
+      style: 'currency',
+      currency: 'UGX',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    }).format(amount);
+  };
+
+  const getStatusColor = (status: string) => {
+    const statusColors: Record<string, string> = {
+      'In Stock': 'bg-green-100 text-green-800',
+      'Low Stock': 'bg-yellow-100 text-yellow-800',
+      'Out of Stock': 'bg-red-100 text-red-800',
+      'active': 'bg-green-100 text-green-800',
+      'inactive': 'bg-red-100 text-red-800',
+      'low_stock': 'bg-orange-100 text-orange-800'
+    };
+    return statusColors[status] || 'bg-gray-100 text-gray-800';
+  };
+
+  const getStatusTextColor = (status: string) => {
+    if (status === 'Out of Stock') return 'text-red-600 font-bold';
+    return 'text-gray-800';
   };
 
   return (
-    <div className="min-h-screen bg-white">
-      {/* Header with Uganda Flag Colors */}
-      <div className="bg-gradient-to-r from-yellow-400 via-black to-red-600 text-white">
-        <div className="container mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
+    <div className="min-h-screen bg-gray-100 p-4 sm:p-8">
+      <div className="max-w-7xl mx-auto bg-white shadow-2xl rounded-lg">
+        {/* Header Section */}
+        <header className="bg-gradient-to-r from-yellow-400 via-black to-red-600 text-white p-6 sm:p-8 rounded-t-lg">
+          <div className="flex justify-between items-center flex-wrap gap-4">
             <div className="flex items-center space-x-4">
               {/* Uganda Flag Emblem */}
               <div className="relative">
@@ -132,145 +137,78 @@ const InventoryReportTemplate: React.FC<InventoryReportTemplateProps> = ({
               </div>
               
               <div>
-                <h1 className="text-2xl font-bold">GOU STORES</h1>
-                <p className="text-sm opacity-90">Government of Uganda</p>
-                <p className="text-xs opacity-75">Decentralized Inventory Management System</p>
+                <h1 className="text-3xl font-bold text-yellow-300">GOU STORES</h1>
+                <p className="text-slate-200">Government of Uganda</p>
+                <p className="text-slate-300 text-sm">Decentralized Inventory Management System</p>
               </div>
             </div>
             
             <div className="text-right">
-              <div className="text-sm opacity-90">
-                <p>Republic of Uganda</p>
-                <p>Ministry of Finance</p>
-              </div>
+              <h2 className="text-4xl font-extrabold tracking-wide">INVENTORY REPORT</h2>
+              <p className="text-slate-200 mt-1">As of: {generatedDate}</p>
             </div>
           </div>
-        </div>
-      </div>
+        </header>
 
-      {/* Report Title Section */}
-      <div className="bg-gradient-to-r from-gray-50 to-gray-100 border-b-4 border-yellow-400">
-        <div className="container mx-auto px-6 py-8">
-          <div className="text-center">
-            <h2 className="text-4xl font-bold text-gray-800 mb-2">Inventory Status Report</h2>
-            <p className="text-xl text-gray-600 mb-4">Comprehensive inventory analysis and stock status</p>
-            
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mt-6">
-              <div className="bg-white rounded-lg p-4 shadow-sm border-l-4 border-blue-500">
-                <h3 className="text-sm font-medium text-blue-600 uppercase tracking-wide">Report Type</h3>
-                <p className="text-lg font-semibold text-blue-900">Inventory Analysis</p>
-              </div>
-              
-              <div className="bg-white rounded-lg p-4 shadow-sm border-l-4 border-green-500">
-                <h3 className="text-sm font-medium text-green-600 uppercase tracking-wide">Generated Date</h3>
-                <p className="text-lg font-semibold text-green-900">{generatedDate}</p>
-              </div>
-              
-              <div className="bg-white rounded-lg p-4 shadow-sm border-l-4 border-purple-500">
-                <h3 className="text-sm font-medium text-purple-600 uppercase tracking-wide">Generated By</h3>
-                <p className="text-lg font-semibold text-purple-900">{generatedBy}</p>
-              </div>
-
-              <div className="bg-white rounded-lg p-4 shadow-sm border-l-4 border-orange-500">
-                <h3 className="text-sm font-medium text-orange-600 uppercase tracking-wide">Total Items</h3>
-                <p className="text-lg font-semibold text-orange-900">{totalItems.toLocaleString()}</p>
-              </div>
+        {/* Main Content */}
+        <main className="p-6 sm:p-8">
+          {/* Report Metadata */}
+          <div className="grid md:grid-cols-3 gap-6 mb-8 border-b pb-6 border-gray-200">
+            <div className="bg-slate-50 p-4 rounded-md">
+              <p className="text-sm text-gray-500 font-semibold">Report ID</p>
+              <p className="text-lg font-bold text-slate-700">INV-{Date.now().toString().slice(-8)}</p>
             </div>
-
-            {/* Applied Filters */}
-            {filters && Object.keys(filters).some(key => filters[key as keyof typeof filters]) && (
-              <div className="mt-6">
-                <h4 className="text-sm font-medium text-gray-600 mb-3">Applied Filters</h4>
-                <div className="flex flex-wrap justify-center gap-2">
-                  {Object.entries(filters).map(([key, value]) => {
-                    if (!value) return null;
-                    return (
-                      <span key={key} className="px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-sm font-medium">
-                        {key === 'searchTerm' ? 'Search' : key.charAt(0).toUpperCase() + key.slice(1)}: {value}
-                      </span>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
+            <div className="bg-slate-50 p-4 rounded-md">
+              <p className="text-sm text-gray-500 font-semibold">Prepared By</p>
+              <p className="text-lg font-bold text-slate-700">{generatedBy}</p>
+            </div>
+            <div className="bg-slate-50 p-4 rounded-md">
+              <p className="text-sm text-gray-500 font-semibold">Department</p>
+              <p className="text-lg font-bold text-slate-700">Warehouse & Logistics</p>
+            </div>
           </div>
-        </div>
-      </div>
 
-      {/* Inventory Summary Cards */}
-      <div className="bg-white border-b border-gray-200">
-        <div className="container mx-auto px-6 py-6">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4">Inventory Summary</h3>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-            <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
-              <div className="flex items-center">
-                <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
-                  <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                  </svg>
-                </div>
-                <div className="ml-3">
-                  <p className="text-sm font-medium text-blue-600">Total Items</p>
-                  <p className="text-2xl font-bold text-blue-900">{totalItems.toLocaleString()}</p>
-                </div>
+          {/* Applied Filters */}
+          {filters && Object.keys(filters).some(key => filters[key as keyof typeof filters]) && (
+            <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+              <h4 className="text-sm font-medium text-blue-800 mb-3">Applied Filters</h4>
+              <div className="flex flex-wrap gap-2">
+                {Object.entries(filters).map(([key, value]) => {
+                  if (!value) return null;
+                  return (
+                    <span key={key} className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium">
+                      {key === 'searchTerm' ? 'Search' : key.charAt(0).toUpperCase() + key.slice(1)}: {value}
+                    </span>
+                  );
+                })}
               </div>
             </div>
+          )}
 
-            <div className="bg-green-50 rounded-lg p-4 border border-green-200">
-              <div className="flex items-center">
-                <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
-                  <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
-                  </svg>
-                </div>
-                <div className="ml-3">
-                  <p className="text-sm font-medium text-green-600">Total Value</p>
-                  <p className="text-2xl font-bold text-green-900">
-                    {new Intl.NumberFormat('en-UG', {
-                      style: 'currency',
-                      currency: 'UGX',
-                      minimumFractionDigits: 0,
-                      maximumFractionDigits: 0
-                    }).format(totalValue)}
-                  </p>
-                </div>
-              </div>
+          {/* Summary Cards */}
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <div className="bg-blue-500 text-white p-5 rounded-xl shadow-lg">
+              <h3 className="font-semibold text-lg">Total Items</h3>
+              <p className="font-bold text-4xl">{totalItems.toLocaleString()}</p>
             </div>
-
-            <div className="bg-orange-50 rounded-lg p-4 border border-orange-200">
-              <div className="flex items-center">
-                <div className="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center">
-                  <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z" />
-                  </svg>
-                </div>
-                <div className="ml-3">
-                  <p className="text-sm font-medium text-orange-600">Low Stock</p>
-                  <p className="text-2xl font-bold text-orange-900">{lowStockItems}</p>
-                </div>
-              </div>
+            <div className="bg-green-500 text-white p-5 rounded-xl shadow-lg">
+              <h3 className="font-semibold text-lg">Total Value</h3>
+              <p className="font-bold text-4xl">{formatCurrency(totalValue)}</p>
             </div>
-
-            <div className="bg-red-50 rounded-lg p-4 border border-red-200">
-              <div className="flex items-center">
-                <div className="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center">
-                  <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </div>
-                <div className="ml-3">
-                  <p className="text-sm font-medium text-red-600">Out of Stock</p>
-                  <p className="text-2xl font-bold text-red-900">{outOfStockItems}</p>
-                </div>
-              </div>
+            <div className="bg-yellow-500 text-white p-5 rounded-xl shadow-lg">
+              <h3 className="font-semibold text-lg">Items Low on Stock</h3>
+              <p className="font-bold text-4xl">{lowStockItems}</p>
+            </div>
+            <div className="bg-red-500 text-white p-5 rounded-xl shadow-lg">
+              <h3 className="font-semibold text-lg">Out of Stock</h3>
+              <p className="font-bold text-4xl">{outOfStockItems}</p>
             </div>
           </div>
 
           {/* Breakdown Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
             {/* Status Breakdown */}
-            <div className="bg-gray-50 rounded-lg p-4">
+            <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
               <h4 className="text-md font-medium text-gray-700 mb-3">Status Breakdown</h4>
               <div className="space-y-2">
                 {Object.entries(statusBreakdown).map(([status, count]) => (
@@ -283,7 +221,7 @@ const InventoryReportTemplate: React.FC<InventoryReportTemplateProps> = ({
             </div>
 
             {/* Category Breakdown */}
-            <div className="bg-gray-50 rounded-lg p-4">
+            <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
               <h4 className="text-md font-medium text-gray-700 mb-3">Category Breakdown</h4>
               <div className="space-y-2">
                 {Object.entries(categoryBreakdown).map(([category, count]) => (
@@ -296,7 +234,7 @@ const InventoryReportTemplate: React.FC<InventoryReportTemplateProps> = ({
             </div>
 
             {/* Facility Breakdown */}
-            <div className="bg-gray-50 rounded-lg p-4">
+            <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
               <h4 className="text-md font-medium text-gray-700 mb-3">Facility Breakdown</h4>
               <div className="space-y-2">
                 {Object.entries(facilityBreakdown).map(([facility, count]) => (
@@ -308,133 +246,50 @@ const InventoryReportTemplate: React.FC<InventoryReportTemplateProps> = ({
               </div>
             </div>
           </div>
-        </div>
-      </div>
 
-      {/* Low Stock Alerts */}
-      {lowStockAlerts.length > 0 && (
-        <div className="bg-orange-50 border-b border-orange-200">
-          <div className="container mx-auto px-6 py-6">
-            <h3 className="text-lg font-semibold text-orange-800 mb-4">⚠️ Low Stock Alerts</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {lowStockAlerts.slice(0, 6).map((item) => (
-                <div key={item.id} className="bg-white rounded-lg p-4 border border-orange-200">
-                  <div className="flex items-center justify-between mb-2">
-                    <h4 className="font-medium text-gray-900">{item.name}</h4>
-                    <span className="text-xs font-medium text-orange-600 bg-orange-100 px-2 py-1 rounded-full">
-                      {item.currentStock}/{item.minStock}
-                    </span>
-                  </div>
-                  <p className="text-sm text-gray-600 mb-2">SKU: {item.sku}</p>
-                  <p className="text-sm text-gray-600">Facility: {item.facility}</p>
-                  <p className="text-sm text-orange-600 font-medium">
-                    Stock level: {item.currentStock} (Min: {item.minStock})
-                  </p>
-                </div>
-              ))}
-            </div>
-            {lowStockAlerts.length > 6 && (
-              <p className="text-sm text-orange-600 mt-4 text-center">
-                +{lowStockAlerts.length - 6} more items with low stock
-              </p>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* High Value Items */}
-      {highValueItems.length > 0 && (
-        <div className="bg-green-50 border-b border-green-200">
-          <div className="container mx-auto px-6 py-6">
-            <h3 className="text-lg font-semibold text-green-800 mb-4">💰 High Value Items</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {highValueItems.map((item) => (
-                <div key={item.id} className="bg-white rounded-lg p-4 border border-green-200">
-                  <div className="flex items-center justify-between mb-2">
-                    <h4 className="font-medium text-gray-900">{item.name}</h4>
-                    <span className="text-xs font-medium text-green-600 bg-green-100 px-2 py-1 rounded-full">
-                      {new Intl.NumberFormat('en-UG', {
-                        style: 'currency',
-                        currency: 'UGX',
-                        minimumFractionDigits: 0,
-                        maximumFractionDigits: 0
-                      }).format(item.cost * item.currentStock)}
-                    </span>
-                  </div>
-                  <p className="text-sm text-gray-600 mb-2">SKU: {item.sku}</p>
-                  <p className="text-sm text-gray-600">Stock: {item.currentStock}</p>
-                  <p className="text-sm text-green-600 font-medium">
-                    Unit Cost: {new Intl.NumberFormat('en-UG', {
-                      style: 'currency',
-                      currency: 'UGX',
-                      minimumFractionDigits: 0,
-                      maximumFractionDigits: 0
-                    }).format(item.cost)}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Detailed Data Table */}
-      <div className="bg-white">
-        <div className="container mx-auto px-6 py-6">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4">Detailed Inventory Data</h3>
-          
+          {/* Inventory Table */}
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200 border border-gray-200 rounded-lg">
-              <thead className="bg-gradient-to-r from-yellow-400 to-yellow-500">
+            <table className="w-full text-left rounded-lg overflow-hidden border border-gray-200">
+              <thead className="bg-slate-200 text-slate-700 uppercase text-sm font-semibold">
                 <tr>
                   {columns.map((column, index) => (
-                    <th
-                      key={index}
-                      className="px-6 py-3 text-left text-xs font-medium text-gray-900 uppercase tracking-wider border-r border-yellow-300 last:border-r-0"
-                    >
+                    <th key={index} className={`p-4 ${
+                      column.includes('Price') || column.includes('Value') ? 'text-right' :
+                      column === 'Quantity' ? 'text-center' : ''
+                    }`}>
                       {column}
                     </th>
                   ))}
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="divide-y divide-gray-200">
                 {formatData(data).map((row, rowIndex) => (
-                  <tr key={rowIndex} className={rowIndex % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                  <tr key={rowIndex} className={rowIndex % 2 === 0 ? 'bg-white hover:bg-gray-50' : 'bg-slate-50 hover:bg-gray-100'}>
                     {columns.map((column, colIndex) => {
                       const value = row[column];
-                      const isStatus = column.toLowerCase().includes('status');
-                      const isCurrency = column.toLowerCase().includes('ugx') || column.toLowerCase().includes('cost') || column.toLowerCase().includes('value');
-                      const isNumber = column.toLowerCase().includes('stock') || column.toLowerCase().includes('min') || column.toLowerCase().includes('max');
+                      const isStatus = column === 'Status';
+                      const isCurrency = column.includes('UGX');
+                      const isQuantity = column === 'Quantity';
                       
                       return (
-                        <td
-                          key={colIndex}
-                          className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 border-r border-gray-200 last:border-r-0"
-                        >
+                        <td key={colIndex} className={`p-4 ${
+                          column.includes('Price') || column.includes('Value') ? 'text-right' :
+                          column === 'Quantity' ? 'text-center' : ''
+                        }`}>
                           {isStatus ? (
-                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                              value === 'active' ? 'bg-green-100 text-green-800' :
-                              value === 'inactive' ? 'bg-red-100 text-red-800' :
-                              value === 'low_stock' ? 'bg-orange-100 text-orange-800' :
-                              'bg-gray-100 text-gray-800'
-                            }`}>
+                            <span className={`inline-flex px-2.5 py-1 text-xs font-medium rounded-full ${getStatusColor(value)}`}>
                               {value}
                             </span>
                           ) : isCurrency ? (
-                            <span className="font-mono font-medium text-green-700">
-                              {typeof value === 'number' ? new Intl.NumberFormat('en-UG', {
-                                style: 'currency',
-                                currency: 'UGX',
-                                minimumFractionDigits: 0,
-                                maximumFractionDigits: 0
-                              }).format(value) : value}
+                            <span className="font-semibold text-gray-900">
+                              {typeof value === 'number' ? formatCurrency(value) : value}
                             </span>
-                          ) : isNumber ? (
-                            <span className="font-mono font-medium text-blue-700">
+                          ) : isQuantity ? (
+                            <span className={`font-medium ${getStatusTextColor(row['Status'])}`}>
                               {typeof value === 'number' ? value.toLocaleString() : value}
                             </span>
                           ) : (
-                            value
+                            <span className="font-medium text-gray-800">{value}</span>
                           )}
                         </td>
                       );
@@ -456,58 +311,40 @@ const InventoryReportTemplate: React.FC<InventoryReportTemplateProps> = ({
               <p className="text-gray-400 text-sm">Try adjusting your filters or generating a different report type</p>
             </div>
           )}
-        </div>
-      </div>
 
-      {/* Footer with Signature Areas */}
-      <div className="bg-gradient-to-r from-gray-50 to-gray-100 border-t-4 border-yellow-400">
-        <div className="container mx-auto px-6 py-8">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {/* Generated By */}
-            <div className="text-center">
-              <div className="border-t-2 border-gray-300 pt-4">
-                <p className="text-sm text-gray-600 mb-2">Generated By</p>
-                <p className="font-semibold text-gray-800">{generatedBy}</p>
-                <p className="text-xs text-gray-500 mt-1">System User</p>
-              </div>
-            </div>
-
-            {/* Verified By */}
-            <div className="text-center">
-              <div className="border-t-2 border-gray-300 pt-4">
-                <p className="text-sm text-gray-600 mb-2">Verified By</p>
-                <div className="h-12 border-b border-gray-300 mb-2"></div>
-                <p className="text-xs text-gray-500">Signature</p>
-              </div>
-            </div>
-
-            {/* Approved By */}
-            <div className="text-center">
-              <div className="border-t-2 border-gray-300 pt-4">
-                <p className="text-sm text-gray-600 mb-2">Approved By</p>
-                <div className="h-12 border-b border-gray-300 mb-2"></div>
-                <p className="text-xs text-gray-500">Signature</p>
-              </div>
+          {/* Notes Section */}
+          <div className="mt-8 pt-6 border-t border-gray-200">
+            <h3 className="text-lg font-semibold text-slate-800 mb-4">Notes & Observations</h3>
+            <div className="space-y-2 text-gray-600 text-sm">
+              {lowStockAlerts.length > 0 && (
+                <p>• {lowStockAlerts.length} items are currently low on stock and may need reordering.</p>
+              )}
+              {outOfStockItems > 0 && (
+                <p>• {outOfStockItems} items are out of stock and require immediate attention.</p>
+              )}
+              {overStockItems > 0 && (
+                <p>• {overStockItems} items exceed maximum stock levels and may need redistribution.</p>
+              )}
+              <p>• This report was generated automatically by the GOU STORES system on {generatedDate}.</p>
+              <p>• Total inventory value: {formatCurrency(totalValue)} UGX across {totalItems} items.</p>
             </div>
           </div>
+        </main>
 
-          {/* Report Footer */}
-          <div className="mt-8 pt-6 border-t border-gray-200 text-center">
-            <div className="flex items-center justify-center space-x-4 mb-2">
-              <div className="w-8 h-8 bg-yellow-400 rounded-full flex items-center justify-center">
-                <div className="w-6 h-6 bg-black rounded-full flex items-center justify-center">
-                  <div className="w-4 h-4 bg-red-600 rounded-full"></div>
-                </div>
-              </div>
-              <p className="text-lg font-semibold text-gray-800">GOU STORES</p>
+        {/* Footer Section */}
+        <footer className="bg-gradient-to-r from-yellow-400 via-black to-red-600 text-white p-6 sm:p-8 rounded-b-lg mt-8">
+          <div className="flex justify-between items-center flex-wrap gap-4">
+            <div className="w-2/5">
+              <p className="font-semibold">Generated By:</p>
+              <p className="text-slate-200 mt-1">{generatedBy}</p>
             </div>
-            <p className="text-sm text-gray-600">Government of Uganda • Ministry of Finance</p>
-            <p className="text-xs text-gray-500 mt-1">
-              This inventory report was generated electronically on {generatedDate} • 
-              Report ID: #{Date.now().toString().slice(-8)}
-            </p>
+            <p className="text-slate-200 text-sm">Page 1 of 1</p>
+            <div className="text-right">
+              <p className="text-slate-200 text-sm">GOU STORES</p>
+              <p className="text-slate-300 text-xs">Government of Uganda</p>
+            </div>
           </div>
-        </div>
+        </footer>
       </div>
     </div>
   );
