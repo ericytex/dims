@@ -23,10 +23,12 @@ import {
   Settings,
   X,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Monitor
 } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
+import { InventoryReportTemplate, TransactionsReportTemplate } from '../components/report-templates';
 
 // Extend jsPDF with autoTable method
 declare module 'jspdf' {
@@ -100,6 +102,7 @@ export default function Reports() {
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [showColumnSelector, setShowColumnSelector] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+  const [showHTMLPreview, setShowHTMLPreview] = useState(false);
   const [filteredData, setFilteredData] = useState<any[]>([]);
 
   // Load all data for reports using the same source as Inventory page
@@ -1313,6 +1316,39 @@ export default function Reports() {
             </div>
           )}
 
+          {/* HTML Report Preview */}
+          {showHTMLPreview && (
+            <div className="bg-white border border-gray-200 rounded-lg p-4 mb-4">
+              <h4 className="text-sm font-medium text-gray-700 mb-3">Professional HTML Report Preview</h4>
+              <div className="border rounded-lg overflow-hidden">
+                {reportConfig.type === 'inventory' && (
+                  <InventoryReportTemplate
+                    data={filteredData}
+                    generatedDate={new Date().toLocaleDateString('en-UG')}
+                    generatedBy={user?.displayName || user?.email || 'System User'}
+                    filters={reportConfig.filters}
+                  />
+                )}
+                {reportConfig.type === 'transactions' && (
+                  <TransactionsReportTemplate
+                    data={filteredData}
+                    generatedDate={new Date().toLocaleDateString('en-UG')}
+                    generatedBy={user?.displayName || user?.email || 'System User'}
+                    filters={reportConfig.filters}
+                  />
+                )}
+                {reportConfig.type !== 'inventory' && reportConfig.type !== 'transactions' && (
+                  <div className="p-8 text-center text-gray-500">
+                    <Monitor className="w-16 h-16 mx-auto mb-4 text-gray-300" />
+                    <p className="text-lg">HTML Report Preview</p>
+                    <p className="text-sm">Available for Inventory and Transactions reports</p>
+                    <p className="text-xs mt-2">Other report types will use the standard PDF format</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Generate Button */}
           <div className="flex items-center justify-between">
             <div className="text-sm text-gray-600">
@@ -1327,6 +1363,13 @@ export default function Reports() {
               >
                 <Eye className="w-4 h-4 mr-2" />
                 {showPreview ? 'Hide' : 'Show'} Preview
+              </button>
+              <button
+                onClick={() => setShowHTMLPreview(!showHTMLPreview)}
+                className="px-4 py-2 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors flex items-center"
+              >
+                <Monitor className="w-4 h-4 mr-2" />
+                {showHTMLPreview ? 'Hide' : 'Show'} HTML Report
               </button>
               <button
                 onClick={handleGenerateReport}
