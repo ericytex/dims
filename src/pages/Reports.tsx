@@ -1436,7 +1436,7 @@ export default function Reports() {
               <div className="flex items-center justify-between mb-3">
                 <h4 className="text-sm font-medium text-gray-700">Professional HTML Report Preview</h4>
                 <div className="text-xs text-gray-500 bg-blue-50 px-2 py-1 rounded">
-                  💡 Use "Exact PDF" button to download PDF that matches this preview exactly
+                  💡 Use "Export PDF" button to download PDF that matches this preview exactly
                 </div>
               </div>
               <div className="border rounded-lg overflow-hidden">
@@ -1494,15 +1494,26 @@ export default function Reports() {
                 <Monitor className="w-4 h-4 mr-2" />
                 {showHTMLPreview ? 'Hide' : 'Show'} HTML Report
               </button>
-              {(reportConfig.type === 'inventory' || reportConfig.type === 'transactions') && showHTMLPreview && (
+              {(reportConfig.type === 'inventory' || reportConfig.type === 'transactions') && (
                 <button
-                  onClick={generatePDFFromHTML}
+                  onClick={() => {
+                    // If HTML preview is not shown, show it first, then generate PDF
+                    if (!showHTMLPreview) {
+                      setShowHTMLPreview(true);
+                      // Wait a bit for the preview to render, then generate PDF
+                      setTimeout(() => {
+                        generatePDFFromHTML();
+                      }, 500);
+                    } else {
+                      generatePDFFromHTML();
+                    }
+                  }}
                   disabled={isGenerating}
                   className="px-4 py-2 border border-green-600 text-green-700 font-medium rounded-lg hover:bg-green-50 transition-colors flex items-center"
-                  title="Generate PDF that exactly matches the HTML preview"
+                  title="Export PDF that exactly matches the HTML preview (automatically shows preview if needed)"
                 >
                   <Printer className="w-4 h-4 mr-2" />
-                  Exact PDF
+                  Export PDF
                 </button>
               )}
               <button
