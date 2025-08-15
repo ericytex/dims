@@ -816,40 +816,62 @@ export default function Reports() {
       const imgWidth = contentWidth;
       const imgHeight = (canvas.height * contentWidth) / canvas.width;
 
-      // Calculate how many pages we need
+      // Calculate how many pages we actually need
       const totalPages = Math.ceil(imgHeight / contentHeight);
+      
+      // Only create pages if we have content to fill them
+      if (totalPages === 0) {
+        // Single page with all content
+        doc.addImage(
+          canvas.toDataURL('image/png'),
+          'PNG',
+          margin, margin, imgWidth, imgHeight
+        );
+      } else {
+        // Multiple pages with intelligent content distribution
+        for (let pageNum = 0; pageNum < totalPages; pageNum++) {
+          if (pageNum > 0) {
+            doc.addPage();
+          }
 
-      // Add content to pages
-      for (let pageNum = 0; pageNum < totalPages; pageNum++) {
-        if (pageNum > 0) {
-          doc.addPage();
-        }
+          // Calculate the source and destination positions for this page
+          const sourceY = pageNum * contentHeight * (canvas.width / imgWidth);
+          const remainingHeight = canvas.height - sourceY;
+          
+          // Only create this page if there's actual content to show
+          if (remainingHeight <= 0) {
+            break; // Stop creating pages if no more content
+          }
 
-        // Calculate the source and destination positions for this page
-        const sourceY = pageNum * contentHeight * (canvas.width / imgWidth);
-        const sourceHeight = Math.min(contentHeight * (canvas.width / imgWidth), canvas.height - sourceY);
-        const destHeight = Math.min(contentHeight, imgHeight - (pageNum * contentHeight));
+          const sourceHeight = Math.min(contentHeight * (canvas.width / imgWidth), remainingHeight);
+          const destHeight = Math.min(contentHeight, sourceHeight * (imgWidth / canvas.width));
 
-        // Create a temporary canvas for this page's content
-        const tempCanvas = document.createElement('canvas');
-        const tempCtx = tempCanvas.getContext('2d');
-        tempCanvas.width = canvas.width;
-        tempCanvas.height = sourceHeight;
+          // Skip page if content height is too small (less than 20mm)
+          if (destHeight < 20) {
+            break; // Don't create a page with minimal content
+          }
 
-        if (tempCtx) {
-          // Draw only the portion of the image that belongs to this page
-          tempCtx.drawImage(
-            canvas,
-            0, sourceY, canvas.width, sourceHeight, // Source rectangle
-            0, 0, canvas.width, sourceHeight // Destination rectangle
-          );
+          // Create a temporary canvas for this page's content
+          const tempCanvas = document.createElement('canvas');
+          const tempCtx = tempCanvas.getContext('2d');
+          tempCanvas.width = canvas.width;
+          tempCanvas.height = sourceHeight;
 
-          // Add this page's content to the PDF
-          doc.addImage(
-            tempCanvas.toDataURL('image/png'),
-            'PNG',
-            margin, margin, imgWidth, destHeight
-          );
+          if (tempCtx) {
+            // Draw only the portion of the image that belongs to this page
+            tempCtx.drawImage(
+              canvas,
+              0, sourceY, canvas.width, sourceHeight, // Source rectangle
+              0, 0, canvas.width, sourceHeight // Destination rectangle
+            );
+
+            // Add this page's content to the PDF
+            doc.addImage(
+              tempCanvas.toDataURL('image/png'),
+              'PNG',
+              margin, margin, imgWidth, destHeight
+            );
+          }
         }
       }
 
