@@ -762,7 +762,7 @@ export default function InventoryManagement() {
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Category
-                  </th>
+                </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Stock Level
                 </th>
@@ -892,7 +892,7 @@ export default function InventoryManagement() {
                             title="Delete Item"
                           >
                             <Trash2 className="w-4 h-4" />
-                          </button>
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -1307,8 +1307,8 @@ export default function InventoryManagement() {
                     rows={3}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-uganda-yellow focus:border-uganda-yellow"
                     placeholder="Enter item description"
-                  />
-                </div>
+                      />
+                    </div>
                     
                     <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Category *</label>

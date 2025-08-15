@@ -1516,23 +1516,6 @@ export default function Reports() {
                   Export PDF
                 </button>
               )}
-              <button
-                onClick={handleGenerateReport}
-                disabled={isGenerating}
-                className="px-8 py-3 bg-uganda-yellow text-white font-medium rounded-lg hover:bg-yellow-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center text-lg"
-              >
-                {isGenerating ? (
-                  <>
-                    <RefreshCw className="w-5 h-5 mr-2 animate-spin" />
-                    Generating Report...
-                  </>
-                ) : (
-                  <>
-                    <Download className="w-5 h-5 mr-2" />
-                    Generate Report
-                  </>
-                )}
-              </button>
             </div>
           </div>
         </div>
