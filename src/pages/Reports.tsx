@@ -1430,6 +1430,55 @@ export default function Reports() {
             </div>
           )}
 
+          {/* Report Controls - Moved to top for better accessibility */}
+          <div className="bg-white border border-gray-200 rounded-lg p-4 mb-4">
+            <div className="flex items-center justify-between">
+              <div className="text-sm text-gray-600">
+                <p>Report: <span className="font-medium">{getReportTitle()}</span></p>
+                <p>Format: <span className="font-medium">{reportConfig.format.toUpperCase()}</span></p>
+                <p>Items: <span className="font-medium">{filteredData.length}</span></p>
+              </div>
+              <div className="flex space-x-3">
+                <button
+                  onClick={() => setShowPreview(!showPreview)}
+                  className="px-4 py-2 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors flex items-center"
+                >
+                  <Eye className="w-4 h-4 mr-2" />
+                  {showPreview ? 'Hide' : 'Show'} Preview
+                </button>
+                <button
+                  onClick={() => setShowHTMLPreview(!showHTMLPreview)}
+                  className="px-4 py-2 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors flex items-center"
+                >
+                  <Monitor className="w-4 h-4 mr-2" />
+                  {showHTMLPreview ? 'Hide' : 'Show'} HTML Report
+                </button>
+                {(reportConfig.type === 'inventory' || reportConfig.type === 'transactions') && (
+                  <button
+                    onClick={() => {
+                      // If HTML preview is not shown, show it first, then generate PDF
+                      if (!showHTMLPreview) {
+                        setShowHTMLPreview(true);
+                        // Wait a bit for the preview to render, then generate PDF
+                        setTimeout(() => {
+                          generatePDFFromHTML();
+                        }, 500);
+                      } else {
+                        generatePDFFromHTML();
+                      }
+                    }}
+                    disabled={isGenerating}
+                    className="px-4 py-2 border border-green-600 text-green-700 font-medium rounded-lg hover:bg-green-50 transition-colors flex items-center"
+                    title="Export PDF that exactly matches the HTML preview (automatically shows preview if needed)"
+                  >
+                    <Printer className="w-4 h-4 mr-2" />
+                    Export PDF
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+
           {/* HTML Report Preview */}
           {showHTMLPreview && (
             <div className="bg-white border border-gray-200 rounded-lg p-4 mb-4">
@@ -1473,51 +1522,7 @@ export default function Reports() {
           )}
 
           {/* Generate Button */}
-          <div className="flex items-center justify-between">
-            <div className="text-sm text-gray-600">
-              <p>Report: <span className="font-medium">{getReportTitle()}</span></p>
-              <p>Format: <span className="font-medium">{reportConfig.format.toUpperCase()}</span></p>
-              <p>Items: <span className="font-medium">{filteredData.length}</span></p>
-            </div>
-            <div className="flex space-x-3">
-              <button
-                onClick={() => setShowPreview(!showPreview)}
-                className="px-4 py-2 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors flex items-center"
-              >
-                <Eye className="w-4 h-4 mr-2" />
-                {showPreview ? 'Hide' : 'Show'} Preview
-              </button>
-              <button
-                onClick={() => setShowHTMLPreview(!showHTMLPreview)}
-                className="px-4 py-2 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors flex items-center"
-              >
-                <Monitor className="w-4 h-4 mr-2" />
-                {showHTMLPreview ? 'Hide' : 'Show'} HTML Report
-              </button>
-              {(reportConfig.type === 'inventory' || reportConfig.type === 'transactions') && (
-                <button
-                  onClick={() => {
-                    // If HTML preview is not shown, show it first, then generate PDF
-                    if (!showHTMLPreview) {
-                      setShowHTMLPreview(true);
-                      // Wait a bit for the preview to render, then generate PDF
-                      setTimeout(() => {
-                        generatePDFFromHTML();
-                      }, 500);
-                    } else {
-                      generatePDFFromHTML();
-                    }
-                  }}
-                  disabled={isGenerating}
-                  className="px-4 py-2 border border-green-600 text-green-700 font-medium rounded-lg hover:bg-green-50 transition-colors flex items-center"
-                  title="Export PDF that exactly matches the HTML preview (automatically shows preview if needed)"
-                >
-                  <Printer className="w-4 h-4 mr-2" />
-                  Export PDF
-                </button>
-              )}
-            </div>
-          </div>
+          {/* This section is now redundant as controls are moved to top */}
         </div>
 
       {/* Report Templates */}
