@@ -52,7 +52,7 @@ const ReportTemplate: React.FC<ReportTemplateProps> = ({
   return (
     <div className="min-h-screen bg-white">
       {/* Header with Uganda Flag Colors */}
-      <div className="bg-slate-800 text-white">
+      <div className="bg-white text-slate-800 border-b border-gray-200">
         <div className="container mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
@@ -66,14 +66,14 @@ const ReportTemplate: React.FC<ReportTemplateProps> = ({
               </div>
               
               <div>
-                <h1 className="text-2xl font-bold text-white">GOU STORES</h1>
-                <p className="text-slate-200">Government of Uganda</p>
-                <p className="text-slate-300 text-sm">Decentralized Inventory Management System</p>
+                <h1 className="text-2xl font-bold text-slate-800">GOU STORES</h1>
+                <p className="text-slate-600">Government of Uganda</p>
+                <p className="text-slate-500 text-sm">Decentralized Inventory Management System</p>
               </div>
             </div>
             
             <div className="text-right">
-              <div className="text-slate-200">
+              <div className="text-slate-600">
                 <p>Republic of Uganda</p>
                 <p>Ministry of Finance</p>
               </div>
