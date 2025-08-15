@@ -28,6 +28,7 @@ import {
 } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
+import html2canvas from 'html2canvas';
 import { InventoryReportTemplate, TransactionsReportTemplate } from '../components/report-templates';
 
 // Extend jsPDF with autoTable method
@@ -779,6 +780,62 @@ export default function Reports() {
     }
   };
 
+  // Generate PDF from HTML Preview (ensures exact visual consistency)
+  const generatePDFFromHTML = async () => {
+    setIsGenerating(true);
+    try {
+      // Find the HTML report element
+      const htmlReportElement = document.querySelector('[data-html-report]');
+      
+      if (!htmlReportElement) {
+        throw new Error('HTML report element not found. Please show the HTML preview first.');
+      }
+
+      // Capture the HTML as canvas
+      const canvas = await html2canvas(htmlReportElement as HTMLElement, {
+        scale: 2, // Higher quality
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: '#ffffff',
+        logging: false,
+        width: htmlReportElement.scrollWidth,
+        height: htmlReportElement.scrollHeight
+      });
+
+      // Create PDF with proper dimensions
+      const imgWidth = 210; // A4 width in mm
+      const pageHeight = 297; // A4 height in mm
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      const heightLeft = imgHeight;
+
+      const doc = new jsPDF('p', 'mm', 'a4');
+      let position = 0;
+
+      // Add first page
+      doc.addImage(canvas.toDataURL('image/png'), 'PNG', 0, position, imgWidth, imgHeight);
+      let heightLeftOnPage = heightLeft;
+
+      // Add additional pages if content is longer than one page
+      while (heightLeftOnPage >= pageHeight) {
+        position = heightLeftOnPage - pageHeight;
+        doc.addPage();
+        doc.addImage(canvas.toDataURL('image/png'), 'PNG', 0, position, imgWidth, imgHeight);
+        heightLeftOnPage -= pageHeight;
+      }
+
+      // Save PDF
+      const fileName = `DIMS_${reportConfig.type}_HTML_${new Date().toISOString().split('T')[0]}.pdf`;
+      doc.save(fileName);
+      
+    } catch (error) {
+      console.error('Error generating PDF from HTML:', error);
+      // Fallback to regular PDF generation
+      generatePDFReport();
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
   // CSV Generation Functions
   const generateInventoryCSV = () => {
     const headers = ['Item Name', 'SKU', 'Category', 'Stock', 'Cost', 'Facility', 'Status', 'Description'];
@@ -879,7 +936,12 @@ export default function Reports() {
 
   const handleGenerateReport = () => {
     if (reportConfig.format === 'pdf') {
-      generatePDFReport();
+      // For inventory and transactions, try to generate from HTML first for exact visual consistency
+      if ((reportConfig.type === 'inventory' || reportConfig.type === 'transactions') && showHTMLPreview) {
+        generatePDFFromHTML();
+      } else {
+        generatePDFReport();
+      }
     } else {
       generateCSVReport();
     }
@@ -1319,23 +1381,32 @@ export default function Reports() {
           {/* HTML Report Preview */}
           {showHTMLPreview && (
             <div className="bg-white border border-gray-200 rounded-lg p-4 mb-4">
-              <h4 className="text-sm font-medium text-gray-700 mb-3">Professional HTML Report Preview</h4>
+              <div className="flex items-center justify-between mb-3">
+                <h4 className="text-sm font-medium text-gray-700">Professional HTML Report Preview</h4>
+                <div className="text-xs text-gray-500 bg-blue-50 px-2 py-1 rounded">
+                  💡 Use "Exact PDF" button to download PDF that matches this preview exactly
+                </div>
+              </div>
               <div className="border rounded-lg overflow-hidden">
                 {reportConfig.type === 'inventory' && (
-                  <InventoryReportTemplate
-                    data={filteredData}
-                    generatedDate={new Date().toLocaleDateString('en-UG')}
-                    generatedBy={user?.displayName || user?.email || 'System User'}
-                    filters={reportConfig.filters}
-                  />
+                  <div data-html-report>
+                    <InventoryReportTemplate
+                      data={filteredData}
+                      generatedDate={new Date().toLocaleDateString('en-UG')}
+                      generatedBy={user?.displayName || user?.email || 'System User'}
+                      filters={reportConfig.filters}
+                    />
+                  </div>
                 )}
                 {reportConfig.type === 'transactions' && (
-                  <TransactionsReportTemplate
-                    data={filteredData}
-                    generatedDate={new Date().toLocaleDateString('en-UG')}
-                    generatedBy={user?.displayName || user?.email || 'System User'}
-                    filters={reportConfig.filters}
-                  />
+                  <div data-html-report>
+                    <TransactionsReportTemplate
+                      data={filteredData}
+                      generatedDate={new Date().toLocaleDateString('en-UG')}
+                      generatedBy={user?.displayName || user?.email || 'System User'}
+                      filters={reportConfig.filters}
+                    />
+                  </div>
                 )}
                 {reportConfig.type !== 'inventory' && reportConfig.type !== 'transactions' && (
                   <div className="p-8 text-center text-gray-500">
@@ -1371,6 +1442,17 @@ export default function Reports() {
                 <Monitor className="w-4 h-4 mr-2" />
                 {showHTMLPreview ? 'Hide' : 'Show'} HTML Report
               </button>
+              {(reportConfig.type === 'inventory' || reportConfig.type === 'transactions') && showHTMLPreview && (
+                <button
+                  onClick={generatePDFFromHTML}
+                  disabled={isGenerating}
+                  className="px-4 py-2 border border-green-600 text-green-700 font-medium rounded-lg hover:bg-green-50 transition-colors flex items-center"
+                  title="Generate PDF that exactly matches the HTML preview"
+                >
+                  <Printer className="w-4 h-4 mr-2" />
+                  Exact PDF
+                </button>
+              )}
               <button
                 onClick={handleGenerateReport}
                 disabled={isGenerating}
