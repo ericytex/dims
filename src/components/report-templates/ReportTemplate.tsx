@@ -52,29 +52,28 @@ const ReportTemplate: React.FC<ReportTemplateProps> = ({
   return (
     <div className="min-h-screen bg-white">
       {/* Header with Uganda Flag Colors */}
-      <div className="bg-gradient-to-r from-yellow-400 via-black to-red-600 text-white">
+      <div className="bg-slate-800 text-white">
         <div className="container mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
-              {/* Uganda Flag Emblem */}
-              <div className="relative">
-                <div className="w-16 h-16 bg-yellow-400 rounded-full flex items-center justify-center border-4 border-white shadow-lg">
-                  <div className="w-12 h-12 bg-black rounded-full flex items-center justify-center">
-                    <div className="w-8 h-8 bg-red-600 rounded-full"></div>
-                  </div>
-                </div>
-                <div className="absolute -top-1 -right-1 w-6 h-6 bg-yellow-400 rounded-full border-2 border-white"></div>
+              {/* Uganda Coat of Arms */}
+              <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center border-4 border-white shadow-lg">
+                <img 
+                  src="/embleme.jpeg" 
+                  alt="Uganda Coat of Arms" 
+                  className="w-12 h-12 object-contain"
+                />
               </div>
               
               <div>
-                <h1 className="text-2xl font-bold">GOU STORES</h1>
-                <p className="text-sm opacity-90">Government of Uganda</p>
-                <p className="text-xs opacity-75">Decentralized Inventory Management System</p>
+                <h1 className="text-2xl font-bold text-white">GOU STORES</h1>
+                <p className="text-slate-200">Government of Uganda</p>
+                <p className="text-slate-300 text-sm">Decentralized Inventory Management System</p>
               </div>
             </div>
             
             <div className="text-right">
-              <div className="text-sm opacity-90">
+              <div className="text-slate-200">
                 <p>Republic of Uganda</p>
                 <p>Ministry of Finance</p>
               </div>
