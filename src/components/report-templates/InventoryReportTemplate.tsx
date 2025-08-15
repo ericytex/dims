@@ -184,26 +184,6 @@ const InventoryReportTemplate: React.FC<InventoryReportTemplateProps> = ({
             </div>
           )}
 
-          {/* Summary Cards */}
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <div className="bg-blue-500 text-white p-5 rounded-xl shadow-lg">
-              <h3 className="font-semibold text-lg">Total Items</h3>
-              <p className="font-bold text-4xl">{totalItems.toLocaleString()}</p>
-            </div>
-            <div className="bg-green-500 text-white p-5 rounded-xl shadow-lg">
-              <h3 className="font-semibold text-lg">Total Value</h3>
-              <p className="font-bold text-4xl">{formatCurrency(totalValue)}</p>
-            </div>
-            <div className="bg-yellow-500 text-white p-5 rounded-xl shadow-lg">
-              <h3 className="font-semibold text-lg">Items Low on Stock</h3>
-              <p className="font-bold text-4xl">{lowStockItems}</p>
-            </div>
-            <div className="bg-red-500 text-white p-5 rounded-xl shadow-lg">
-              <h3 className="font-semibold text-lg">Out of Stock</h3>
-              <p className="font-bold text-4xl">{outOfStockItems}</p>
-            </div>
-          </div>
-
           {/* Inventory Table */}
           <div className="overflow-x-auto">
             <table className="w-full text-left rounded-lg overflow-hidden border border-gray-200">
