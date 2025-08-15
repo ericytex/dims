@@ -791,6 +791,19 @@ export default function Reports() {
         throw new Error('HTML report element not found. Please show the HTML preview first.');
       }
 
+      // Capture the entire HTML content as a single canvas
+      const canvas = await html2canvas(htmlReportElement as HTMLElement, {
+        scale: 1, // Use scale 1 for better performance and accuracy
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: '#ffffff',
+        logging: false,
+        width: htmlReportElement.scrollWidth,
+        height: htmlReportElement.scrollHeight,
+        scrollX: 0,
+        scrollY: 0
+      });
+
       // Create PDF with proper dimensions
       const doc = new jsPDF('p', 'mm', 'a4');
       const pageWidth = 210; // A4 width in mm
@@ -799,54 +812,46 @@ export default function Reports() {
       const contentWidth = pageWidth - (2 * margin);
       const contentHeight = pageHeight - (2 * margin);
 
-      // Get the total height of the HTML content
-      const totalHeight = htmlReportElement.scrollHeight;
-      const viewportHeight = htmlReportElement.clientHeight;
-      
-      // Calculate how many sections we need
-      const sections = Math.ceil(totalHeight / viewportHeight);
-      
-      for (let section = 0; section < sections; section++) {
-        if (section > 0) {
+      // Calculate the image dimensions to fit the content width
+      const imgWidth = contentWidth;
+      const imgHeight = (canvas.height * contentWidth) / canvas.width;
+
+      // Calculate how many pages we need
+      const totalPages = Math.ceil(imgHeight / contentHeight);
+
+      // Add content to pages
+      for (let pageNum = 0; pageNum < totalPages; pageNum++) {
+        if (pageNum > 0) {
           doc.addPage();
         }
-        
-        // Scroll to the current section
-        const scrollTop = section * viewportHeight;
-        htmlReportElement.scrollTop = scrollTop;
-        
-        // Wait a bit for the scroll to complete
-        await new Promise(resolve => setTimeout(resolve, 100));
-        
-        // Capture this section
-        const canvas = await html2canvas(htmlReportElement as HTMLElement, {
-          scale: 2, // Higher quality
-          useCORS: true,
-          allowTaint: true,
-          backgroundColor: '#ffffff',
-          logging: false,
-          width: htmlReportElement.clientWidth,
-          height: Math.min(viewportHeight, totalHeight - scrollTop),
-          scrollX: 0,
-          scrollY: 0,
-          windowWidth: htmlReportElement.clientWidth,
-          windowHeight: Math.min(viewportHeight, totalHeight - scrollTop)
-        });
 
-        // Calculate dimensions for this section
-        const imgWidth = contentWidth;
-        const imgHeight = (canvas.height * contentWidth) / canvas.width;
-        
-        // Add the image to the current page
-        doc.addImage(
-          canvas.toDataURL('image/png'),
-          'PNG',
-          margin, margin, imgWidth, imgHeight
-        );
+        // Calculate the source and destination positions for this page
+        const sourceY = pageNum * contentHeight * (canvas.width / imgWidth);
+        const sourceHeight = Math.min(contentHeight * (canvas.width / imgWidth), canvas.height - sourceY);
+        const destHeight = Math.min(contentHeight, imgHeight - (pageNum * contentHeight));
+
+        // Create a temporary canvas for this page's content
+        const tempCanvas = document.createElement('canvas');
+        const tempCtx = tempCanvas.getContext('2d');
+        tempCanvas.width = canvas.width;
+        tempCanvas.height = sourceHeight;
+
+        if (tempCtx) {
+          // Draw only the portion of the image that belongs to this page
+          tempCtx.drawImage(
+            canvas,
+            0, sourceY, canvas.width, sourceHeight, // Source rectangle
+            0, 0, canvas.width, sourceHeight // Destination rectangle
+          );
+
+          // Add this page's content to the PDF
+          doc.addImage(
+            tempCanvas.toDataURL('image/png'),
+            'PNG',
+            margin, margin, imgWidth, destHeight
+          );
+        }
       }
-
-      // Reset scroll position
-      htmlReportElement.scrollTop = 0;
 
       // Save PDF
       const fileName = `DIMS_${reportConfig.type}_HTML_${new Date().toISOString().split('T')[0]}.pdf`;
