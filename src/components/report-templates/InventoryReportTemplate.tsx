@@ -204,48 +204,6 @@ const InventoryReportTemplate: React.FC<InventoryReportTemplateProps> = ({
             </div>
           </div>
 
-          {/* Breakdown Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-            {/* Status Breakdown */}
-            <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-              <h4 className="text-md font-medium text-gray-700 mb-3">Status Breakdown</h4>
-              <div className="space-y-2">
-                {Object.entries(statusBreakdown).map(([status, count]) => (
-                  <div key={status} className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600 capitalize">{status}</span>
-                    <span className="text-sm font-medium text-gray-900">{count}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Category Breakdown */}
-            <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-              <h4 className="text-md font-medium text-gray-700 mb-3">Category Breakdown</h4>
-              <div className="space-y-2">
-                {Object.entries(categoryBreakdown).map(([category, count]) => (
-                  <div key={category} className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600">{category}</span>
-                    <span className="text-sm font-medium text-gray-900">{count}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Facility Breakdown */}
-            <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-              <h4 className="text-md font-medium text-gray-700 mb-3">Facility Breakdown</h4>
-              <div className="space-y-2">
-                {Object.entries(facilityBreakdown).map(([facility, count]) => (
-                  <div key={facility} className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600">{facility}</span>
-                    <span className="text-sm font-medium text-gray-900">{count}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
           {/* Inventory Table */}
           <div className="overflow-x-auto">
             <table className="w-full text-left rounded-lg overflow-hidden border border-gray-200">
