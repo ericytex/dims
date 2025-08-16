@@ -130,9 +130,9 @@ const TransactionsReportTemplate: React.FC<TransactionsReportTemplateProps> = ({
 
   return (
     <div className="min-h-screen bg-gray-100 p-4 sm:p-8">
-      <div className="max-w-7xl mx-auto bg-white shadow-2xl rounded-lg">
+      <div className="w-full bg-white shadow-2xl rounded-lg">
         {/* Header Section */}
-        <header className="bg-white text-slate-800 p-6 sm:p-8 rounded-t-lg border border-gray-200">
+        <header className="bg-white text-slate-800 p-6 sm:p-8 rounded-t-lg">
           <div className="flex justify-between items-center flex-wrap gap-4">
             <div className="flex items-center space-x-4">
               {/* Uganda Coat of Arms */}
@@ -162,15 +162,15 @@ const TransactionsReportTemplate: React.FC<TransactionsReportTemplateProps> = ({
         <main className="p-6 sm:p-8">
           {/* Report Metadata */}
           <div className="grid md:grid-cols-3 gap-6 mb-8 border-b pb-6 border-gray-200">
-            <div className="bg-slate-50 p-4 rounded-md">
+            <div className="bg-white p-4 rounded-md border border-gray-200">
               <p className="text-sm text-gray-500 font-semibold">Report ID</p>
               <p className="text-lg font-bold text-slate-700">TXN-{Date.now().toString().slice(-8)}</p>
             </div>
-            <div className="bg-slate-50 p-4 rounded-md">
+            <div className="bg-white p-4 rounded-md border border-gray-200">
               <p className="text-sm text-gray-500 font-semibold">Prepared By</p>
               <p className="text-lg font-bold text-slate-700">{generatedBy}</p>
             </div>
-            <div className="bg-slate-50 p-4 rounded-md">
+            <div className="bg-white p-4 rounded-md border border-gray-200">
               <p className="text-sm text-gray-500 font-semibold">Department</p>
               <p className="text-lg font-bold text-slate-700">Finance & Operations</p>
             </div>
@@ -203,7 +203,7 @@ const TransactionsReportTemplate: React.FC<TransactionsReportTemplateProps> = ({
               <h3 className="font-semibold text-lg">Stock In Value</h3>
               <p className="font-bold text-4xl">{formatCurrency(totalStockInValue)}</p>
             </div>
-            <div className="bg-red-500 text-white p-5 rounded-xl shadow-lg">
+            <div className="bg-green-500 text-white p-5 rounded-xl shadow-lg">
               <h3 className="font-semibold text-lg">Stock Out Value</h3>
               <p className="font-bold text-4xl">{formatCurrency(totalStockOutValue)}</p>
             </div>
@@ -217,44 +217,37 @@ const TransactionsReportTemplate: React.FC<TransactionsReportTemplateProps> = ({
 
           {/* Transaction Type Breakdown */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-            {/* Type Breakdown */}
-            <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-              <h4 className="text-md font-medium text-gray-700 mb-3">Transaction Types</h4>
-              <div className="space-y-2">
+            <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">Transaction Types</h3>
+              <div className="space-y-3">
                 {Object.entries(typeBreakdown).map(([type, count]) => (
                   <div key={type} className="flex justify-between items-center">
-                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getTypeColor(type)}`}>
-                      {type.replace('_', ' ').toUpperCase()}
-                    </span>
-                    <span className="text-sm font-medium text-gray-900">{count}</span>
+                    <span className="text-sm text-gray-600 capitalize">{type.replace('_', ' ')}</span>
+                    <span className="font-semibold text-gray-800">{count}</span>
                   </div>
                 ))}
               </div>
             </div>
-
-            {/* Status Breakdown */}
-            <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-              <h4 className="text-md font-medium text-gray-700 mb-3">Status Breakdown</h4>
-              <div className="space-y-2">
+            
+            <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">Status Breakdown</h3>
+              <div className="space-y-3">
                 {Object.entries(statusBreakdown).map(([status, count]) => (
                   <div key={status} className="flex justify-between items-center">
-                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(status)}`}>
-                      {status}
-                    </span>
-                    <span className="text-sm font-medium text-gray-900">{count}</span>
+                    <span className="text-sm text-gray-600 capitalize">{status.replace('_', ' ')}</span>
+                    <span className="font-semibold text-gray-800">{count}</span>
                   </div>
                 ))}
               </div>
             </div>
-
-            {/* Facility Breakdown */}
-            <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-              <h4 className="text-md font-medium text-gray-700 mb-3">Facility Breakdown</h4>
-              <div className="space-y-2">
+            
+            <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">Facility Breakdown</h3>
+              <div className="space-y-3">
                 {Object.entries(facilityBreakdown).map(([facility, count]) => (
                   <div key={facility} className="flex justify-between items-center">
                     <span className="text-sm text-gray-600">{facility}</span>
-                    <span className="text-sm font-medium text-gray-900">{count}</span>
+                    <span className="font-semibold text-gray-800">{count}</span>
                   </div>
                 ))}
               </div>
@@ -263,29 +256,29 @@ const TransactionsReportTemplate: React.FC<TransactionsReportTemplateProps> = ({
 
           {/* High Value Transactions */}
           {highValueTransactions.length > 0 && (
-            <div className="mb-8 p-6 bg-green-50 rounded-lg border border-green-200">
-              <h3 className="text-lg font-semibold text-green-800 mb-4">💰 High Value Transactions</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {highValueTransactions.map((t) => (
-                  <div key={t.id} className="bg-white rounded-lg p-4 border border-green-200">
-                    <div className="flex items-center justify-between mb-2">
-                      <h4 className="font-medium text-gray-900">{t.itemName}</h4>
-                      <span className="text-xs font-medium text-green-600 bg-green-100 px-2 py-1 rounded-full">
-                        {formatCurrency(t.cost * t.quantity)}
-                      </span>
-                    </div>
-                    <p className="text-sm text-gray-600 mb-2">
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getTypeColor(t.type)}`}>
-                        {t.type.replace('_', ' ').toUpperCase()}
-                      </span>
-                    </p>
-                    <p className="text-sm text-gray-600">Quantity: {t.quantity}</p>
-                    <p className="text-sm text-gray-600">Facility: {t.facility}</p>
-                    <p className="text-sm text-green-600 font-medium">
-                      Unit Cost: {formatCurrency(t.cost)}
-                    </p>
-                  </div>
-                ))}
+            <div className="mb-8">
+              <h3 className="text-xl font-semibold text-gray-800 mb-4">High Value Transactions</h3>
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+                <table className="w-full">
+                  <thead className="bg-white text-gray-700 uppercase text-sm font-semibold border-b border-gray-200">
+                    <tr>
+                      <th className="p-4 text-left">Date</th>
+                      <th className="p-4 text-left">Item</th>
+                      <th className="p-4 text-left">Type</th>
+                      <th className="p-4 text-right">Value</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    {highValueTransactions.map((txn, index) => (
+                      <tr key={index} className="hover:bg-gray-50">
+                        <td className="p-4 text-sm text-gray-600">{txn.date}</td>
+                        <td className="p-4 text-sm font-medium text-gray-800">{txn.item}</td>
+                        <td className="p-4 text-sm text-gray-600 capitalize">{txn.type.replace('_', ' ')}</td>
+                        <td className="p-4 text-sm font-semibold text-green-700 text-right">{formatCurrency(txn.value)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             </div>
           )}
@@ -293,7 +286,7 @@ const TransactionsReportTemplate: React.FC<TransactionsReportTemplateProps> = ({
           {/* Transactions Table */}
           <div className="overflow-x-auto">
             <table className="w-full text-left rounded-lg overflow-hidden border border-gray-200">
-              <thead className="bg-slate-200 text-slate-700 uppercase text-sm font-semibold">
+              <thead className="bg-white text-slate-700 uppercase text-sm font-semibold border-b border-gray-200">
                 <tr>
                   {columns.map((column, index) => (
                     <th key={index} className={`p-4 ${

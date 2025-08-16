@@ -76,8 +76,8 @@ export default function Header({ onMenuClick, onAlertsClick }: HeaderProps) {
   const formatRoleName = (role: string) => {
     const roleMap: { [key: string]: string } = {
       'admin': 'System Administrator',
-      'regional_supervisor': 'Regional Supervisor',
-      'district_health_officer': 'District Health Officer',
+      'regional_supervisor': 'Regional Manager',
+      'district_health_officer': 'District Manager',
       'facility_manager': 'Facility Manager',
       'village_health_worker': 'Village Health Worker'
     };

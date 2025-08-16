@@ -29,7 +29,14 @@ import {
 import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
 import html2canvas from 'html2canvas';
-import { InventoryReportTemplate, TransactionsReportTemplate } from '../components/report-templates';
+import { 
+  InventoryReportTemplate, 
+  TransactionsReportTemplate,
+  UsersReportTemplate,
+  FacilitiesReportTemplate,
+  TransfersReportTemplate,
+  CompleteSystemReportTemplate
+} from '../components/report-templates';
 
 // Extend jsPDF with autoTable method
 declare module 'jspdf' {
@@ -780,7 +787,8 @@ export default function Reports() {
     }
   };
 
-  // Generate PDF from HTML Preview (ensures exact visual consistency)
+  // Generate PDF from HTML Preview (ensures exact visual consistency with pure white backgrounds)
+  /*
   const generatePDFFromHTML = async () => {
     setIsGenerating(true);
     try {
@@ -791,81 +799,264 @@ export default function Reports() {
         throw new Error('HTML report element not found. Please show the HTML preview first.');
       }
 
-      // Capture the entire HTML content as a single canvas
+      console.log('Found HTML report element:', htmlReportElement);
+      console.log('HTML content:', htmlReportElement.innerHTML.substring(0, 500) + '...');
+
+      // Create a completely clean clone with forced white backgrounds
+      const cleanClone = htmlReportElement.cloneNode(true) as HTMLElement;
+      
+      console.log('Cloned element:', cleanClone);
+      console.log('Clone HTML content:', cleanClone.innerHTML.substring(0, 500) + '...');
+
+      // Force the clone to span full width and have no margins
+      cleanClone.style.width = '100%';
+      cleanClone.style.maxWidth = 'none';
+      cleanClone.style.margin = '0';
+      cleanClone.style.padding = '0';
+      cleanClone.style.boxSizing = 'border-box';
+      
+      // Force ALL elements to have white backgrounds and remove any gray/colored backgrounds
+      const allElements = cleanClone.querySelectorAll('*');
+      allElements.forEach((el: any) => {
+        if (el.style) {
+          // Force white background on ALL elements
+          el.style.backgroundColor = '#ffffff';
+          el.style.background = '#ffffff';
+          el.style.backgroundImage = 'none';
+          el.style.backgroundGradient = 'none';
+          
+          // Remove any gray or colored background classes
+          el.classList.remove('bg-slate-50', 'bg-gray-50', 'bg-slate-100', 'bg-gray-100', 
+                             'bg-slate-200', 'bg-gray-200', 'bg-slate-300', 'bg-gray-300',
+                             'bg-blue-50', 'bg-green-50', 'bg-yellow-50', 'bg-red-50',
+                             'bg-purple-50', 'bg-orange-50', 'bg-indigo-50', 'bg-pink-50');
+          
+          // Force white background on specific problematic elements
+          if (el.tagName === 'HEADER' || el.tagName === 'MAIN' || el.tagName === 'FOOTER' ||
+              el.tagName === 'DIV' || el.tagName === 'SECTION' || el.tagName === 'TABLE' ||
+              el.tagName === 'THEAD' || el.tagName === 'TBODY' || el.tagName === 'TR' ||
+              el.tagName === 'TH' || el.tagName === 'TD') {
+            el.style.backgroundColor = '#ffffff';
+            el.style.background = '#ffffff';
+          }
+          
+          // Ensure full width coverage for main containers
+          if (el.classList.contains('max-w-7xl') || el.classList.contains('container') || 
+              el.classList.contains('mx-auto')) {
+            el.style.maxWidth = 'none';
+            el.style.width = '100%';
+            el.style.margin = '0';
+          }
+        }
+      });
+
+      // Instead of cloning, let's use the original element directly with html2canvas
+      // This avoids the iframe cloning issues
+      console.log('Using original element for html2canvas...');
+      
+      // Wait a bit more to ensure all text is properly rendered
+      await new Promise(resolve => setTimeout(resolve, 200));
+      
+      // Capture the cleaned HTML content as a canvas using html2canvas
       const canvas = await html2canvas(htmlReportElement as HTMLElement, {
-        scale: 1, // Use scale 1 for better performance and accuracy
+        scale: 3, // Increased scale for better text rendering and to prevent cutting
         useCORS: true,
         allowTaint: true,
         backgroundColor: '#ffffff',
-        logging: false,
+        logging: true, // Enable logging to see what's happening
         width: htmlReportElement.scrollWidth,
         height: htmlReportElement.scrollHeight,
         scrollX: 0,
-        scrollY: 0
+        scrollY: 0,
+        // Ensure clean rendering
+        removeContainer: false, // Changed to false to avoid iframe issues
+        foreignObjectRendering: false,
+        imageTimeout: 0,
+        // Fix text rendering issues
+        letterRendering: true, // Enable letter rendering for better text quality
+        // Additional white background enforcement
+        onclone: (clonedDoc) => {
+          console.log('html2canvas onclone callback triggered');
+          
+          // Force all text elements to have proper font rendering
+          const allTextElements = clonedDoc.querySelectorAll('h1, h2, h3, h4, h5, h6, p, span, div, td, th, label');
+          allTextElements.forEach((el: any) => {
+            if (el.style) {
+              // Ensure proper font rendering
+              el.style.fontSmoothing = 'antialiased';
+              el.style.webkitFontSmoothing = 'antialiased';
+              el.style.mozOsxFontSmoothing = 'grayscale';
+              
+              // Force white background
+              el.style.backgroundColor = '#ffffff';
+              el.style.background = '#ffffff';
+              el.style.backgroundImage = 'none';
+              
+              // Ensure text is not cut off
+              el.style.lineHeight = '1.2';
+              el.style.overflow = 'visible';
+              el.style.whiteSpace = 'normal';
+            }
+          });
+          
+          // Double-check all elements have white backgrounds
+          const allClonedElements = clonedDoc.querySelectorAll('*');
+          allClonedElements.forEach((el: any) => {
+            if (el.style) {
+              el.style.backgroundColor = '#ffffff';
+              el.style.background = '#ffffff';
+              el.style.backgroundImage = 'none';
+            }
+          });
+          
+          // Force body and html to be white
+          const body = clonedDoc.body;
+          const html = clonedDoc.documentElement;
+          if (body) body.style.backgroundColor = '#ffffff';
+          if (html) html.style.backgroundColor = '#ffffff';
+        }
       });
 
       // Create PDF with proper dimensions
       const doc = new jsPDF('p', 'mm', 'a4');
       const pageWidth = 210; // A4 width in mm
       const pageHeight = 297; // A4 height in mm
-      const margin = 10; // margin in mm
+      const margin = 15; // Increased margin for better fit
       const contentWidth = pageWidth - (2 * margin);
       const contentHeight = pageHeight - (2 * margin);
 
-      // Calculate the image dimensions to fit the content width
+      // Force white background on first page
+      doc.setFillColor(255, 255, 255);
+      doc.rect(0, 0, pageWidth, pageHeight, 'F');
+
+      // Calculate dimensions - ensure content fits properly on page
       const imgWidth = contentWidth;
       const imgHeight = (canvas.height * contentWidth) / canvas.width;
-
-      // Calculate how many pages we actually need
       const totalPages = Math.ceil(imgHeight / contentHeight);
       
-      // Only create pages if we have content to fill them
-      if (totalPages === 0) {
-        // Single page with all content
-        doc.addImage(
-          canvas.toDataURL('image/png'),
-          'PNG',
-          margin, margin, imgWidth, imgHeight
-        );
+      console.log('Canvas dimensions:', canvas.width, 'x', canvas.height);
+      console.log('PDF dimensions:', imgWidth, 'x', imgHeight);
+      console.log('Page dimensions:', contentWidth, 'x', contentHeight);
+      console.log('Total pages needed:', totalPages);
+      
+      if (totalPages <= 1) {
+        // Single page - ensure top section is fully visible
+        // Calculate scale to fit width while preserving header visibility
+        const widthScale = contentWidth / canvas.width;
+        const heightScale = contentHeight / canvas.height;
+        
+        // Use width-based scaling to ensure full header visibility
+        // This prevents compression of the top section
+        const scale = widthScale;
+        const scaledWidth = canvas.width * scale;
+        const scaledHeight = canvas.height * scale;
+        
+        // Center the content horizontally, but position vertically to show full header
+        const xOffset = (pageWidth - scaledWidth) / 2;
+        const yOffset = Math.max(10, (pageHeight - scaledHeight) / 2); // Ensure minimum top margin
+        
+        console.log('Single page - preserving header visibility');
+        console.log('Width scale:', widthScale, 'Height scale:', heightScale);
+        console.log('Using scale:', scale);
+        console.log('Scaled dimensions:', scaledWidth, 'x', scaledHeight);
+        console.log('Offsets:', xOffset, yOffset);
+        
+        // If content is too tall for single page, we need to handle it differently
+        if (scaledHeight > pageHeight - 20) { // 20mm minimum margin
+          console.log('Content too tall for single page, using multi-page approach');
+          
+          // Force multi-page rendering for better header preservation
+          const adjustedContentHeight = pageHeight - 30; // 30mm total margin
+          const adjustedTotalPages = Math.ceil(scaledHeight / adjustedContentHeight);
+          
+          console.log('Adjusted total pages:', adjustedTotalPages);
+          
+          for (let pageNum = 0; pageNum < adjustedTotalPages; pageNum++) {
+            if (pageNum > 0) {
+              doc.addPage();
+              doc.setFillColor(255, 255, 255);
+              doc.rect(0, 0, pageWidth, pageHeight, 'F');
+            }
+
+            const pageSourceY = pageNum * adjustedContentHeight * (canvas.width / scaledWidth);
+            const pageRemainingHeight = canvas.height - pageSourceY;
+            
+            if (pageRemainingHeight <= 0) break;
+
+            const pageSourceHeight = Math.min(adjustedContentHeight * (canvas.width / scaledWidth), pageRemainingHeight);
+            const pageDestHeight = Math.min(adjustedContentHeight, pageSourceHeight * (scaledWidth / canvas.width));
+
+            if (pageDestHeight < 20) break;
+
+            console.log(`Adjusted Page ${pageNum + 1}: sourceY=${pageSourceY}, sourceHeight=${pageSourceHeight}, destHeight=${pageDestHeight}`);
+
+            const pageTempCanvas = document.createElement('canvas');
+            const pageTempCtx = pageTempCanvas.getContext('2d');
+            pageTempCanvas.width = canvas.width;
+            pageTempCanvas.height = pageSourceHeight;
+
+            if (pageTempCtx) {
+              pageTempCtx.drawImage(
+                canvas,
+                0, pageSourceY, canvas.width, pageSourceHeight,
+                0, 0, canvas.width, pageSourceHeight
+              );
+
+              doc.addImage(
+                pageTempCanvas.toDataURL('image/png'),
+                'PNG',
+                xOffset, 15, scaledWidth, pageDestHeight // 15mm top margin
+              );
+            }
+          }
+        } else {
+          // Content fits on single page, add it centered
+          doc.addImage(
+            canvas.toDataURL('image/png'),
+            'PNG',
+            xOffset, yOffset, scaledWidth, scaledHeight
+          );
+        }
       } else {
-        // Multiple pages with intelligent content distribution
+        // Multiple pages with proper content distribution
+        console.log('Multiple pages - distributing content across pages');
+        
         for (let pageNum = 0; pageNum < totalPages; pageNum++) {
           if (pageNum > 0) {
             doc.addPage();
+            // Force white background on each new page
+            doc.setFillColor(255, 255, 255);
+            doc.rect(0, 0, pageWidth, pageHeight, 'F');
           }
 
-          // Calculate the source and destination positions for this page
+          // Calculate content for this page
           const sourceY = pageNum * contentHeight * (canvas.width / imgWidth);
           const remainingHeight = canvas.height - sourceY;
           
-          // Only create this page if there's actual content to show
-          if (remainingHeight <= 0) {
-            break; // Stop creating pages if no more content
-          }
+          if (remainingHeight <= 0) break;
 
           const sourceHeight = Math.min(contentHeight * (canvas.width / imgWidth), remainingHeight);
           const destHeight = Math.min(contentHeight, sourceHeight * (imgWidth / canvas.width));
 
-          // Skip page if content height is too small (less than 20mm)
-          if (destHeight < 20) {
-            break; // Don't create a page with minimal content
-          }
+          if (destHeight < 20) break; // Skip very small pages
 
-          // Create a temporary canvas for this page's content
+          console.log(`Page ${pageNum + 1}: sourceY=${sourceY}, sourceHeight=${sourceHeight}, destHeight=${destHeight}`);
+
+          // Create temporary canvas for this page
           const tempCanvas = document.createElement('canvas');
           const tempCtx = tempCanvas.getContext('2d');
           tempCanvas.width = canvas.width;
           tempCanvas.height = sourceHeight;
 
           if (tempCtx) {
-            // Draw only the portion of the image that belongs to this page
+            // Draw the portion for this page
             tempCtx.drawImage(
               canvas,
-              0, sourceY, canvas.width, sourceHeight, // Source rectangle
-              0, 0, canvas.width, sourceHeight // Destination rectangle
+              0, sourceY, canvas.width, sourceHeight,
+              0, 0, canvas.width, sourceHeight
             );
 
-            // Add this page's content to the PDF
+            // Add to PDF with proper positioning
             doc.addImage(
               tempCanvas.toDataURL('image/png'),
               'PNG',
@@ -875,8 +1066,8 @@ export default function Reports() {
         }
       }
 
-      // Save PDF
-      const fileName = `DIMS_${reportConfig.type}_HTML_${new Date().toISOString().split('T')[0]}.pdf`;
+      // Save the PDF
+      const fileName = `DIMS_${reportConfig.type}_Report_${new Date().toISOString().split('T')[0]}.pdf`;
       doc.save(fileName);
       
     } catch (error) {
@@ -886,7 +1077,124 @@ export default function Reports() {
     } finally {
       setIsGenerating(false);
     }
-  };
+  };*/
+// Generate PDF from HTML Preview (ensures exact visual consistency with pure white backgrounds)
+const generatePDFFromHTML = async () => {
+  setIsGenerating(true);
+  try {
+    const htmlReportElement = document.querySelector('[data-html-report]');
+    if (!htmlReportElement) {
+      throw new Error('HTML report element not found. Please show the HTML preview first.');
+    }
+
+    // Wait briefly to ensure all fonts & elements are fully rendered
+    await new Promise(resolve => setTimeout(resolve, 200));
+
+    // Capture the HTML content as a canvas
+    const canvas = await html2canvas(htmlReportElement as HTMLElement, {
+      scale: Math.min(window.devicePixelRatio, 2), // ✅ prevent over-scaling (was 3)
+      useCORS: true,
+      allowTaint: true,
+      backgroundColor: '#ffffff',
+      scrollX: 0,
+      scrollY: 0,
+      removeContainer: false,
+      foreignObjectRendering: false,
+      imageTimeout: 0,
+      letterRendering: true
+    });
+
+    // PDF setup
+    const doc = new jsPDF('p', 'mm', 'a4');
+    const pageWidth = 210;
+    const pageHeight = 297;
+    const margin = 15;
+    const headerPadding = 10; // ✅ safe space for header
+    const contentWidth = pageWidth - (2 * margin);
+    const contentHeight = pageHeight - (2 * margin);
+
+    // White background
+    doc.setFillColor(255, 255, 255);
+    doc.rect(0, 0, pageWidth, pageHeight, 'F');
+
+    // Calculate scaling
+    const imgWidth = contentWidth;
+    const imgHeight = (canvas.height * contentWidth) / canvas.width;
+    const totalPages = Math.ceil(imgHeight / contentHeight);
+
+    if (totalPages <= 1) {
+      // ✅ Single-page mode
+      const widthScale = contentWidth / canvas.width;
+      const heightScale = contentHeight / canvas.height;
+      const scale = Math.min(widthScale, heightScale); // ✅ fit both ways
+
+      const scaledWidth = canvas.width * scale;
+      const scaledHeight = canvas.height * scale;
+      const xOffset = (pageWidth - scaledWidth) / 2;
+      const yOffset = margin + headerPadding;
+
+      doc.addImage(
+        canvas.toDataURL('image/png'),
+        'PNG',
+        xOffset,
+        yOffset,
+        scaledWidth,
+        scaledHeight
+      );
+    } else {
+      // ✅ Multi-page mode
+      for (let pageNum = 0; pageNum < totalPages; pageNum++) {
+        if (pageNum > 0) {
+          doc.addPage();
+          doc.setFillColor(255, 255, 255);
+          doc.rect(0, 0, pageWidth, pageHeight, 'F');
+        }
+
+        const sourceY = pageNum * contentHeight * (canvas.width / imgWidth);
+        const remainingHeight = canvas.height - sourceY;
+        if (remainingHeight <= 0) break;
+
+        const sourceHeight = Math.min(contentHeight * (canvas.width / imgWidth), remainingHeight);
+        const destHeight = Math.min(contentHeight, sourceHeight * (imgWidth / canvas.width));
+        if (destHeight < 20) break;
+
+        // Slice canvas portion
+        const tempCanvas = document.createElement('canvas');
+        const tempCtx = tempCanvas.getContext('2d');
+        tempCanvas.width = canvas.width;
+        tempCanvas.height = sourceHeight;
+
+        if (tempCtx) {
+          tempCtx.drawImage(
+            canvas,
+            0, sourceY, canvas.width, sourceHeight,
+            0, 0, canvas.width, sourceHeight
+          );
+
+          doc.addImage(
+            tempCanvas.toDataURL('image/png'),
+            'PNG',
+            margin,
+            pageNum === 0 ? margin + headerPadding : margin, // ✅ header padding on first page
+            imgWidth,
+            destHeight
+          );
+        }
+      }
+    }
+
+    // Save PDF
+    const fileName = `DIMS_${reportConfig.type}_Report_${new Date().toISOString().split('T')[0]}.pdf`;
+    doc.save(fileName);
+
+  } catch (error) {
+    console.error('Error generating PDF from HTML:', error);
+    generatePDFReport();
+  } finally {
+    setIsGenerating(false);
+  }
+};
+
 
   // CSV Generation Functions
   const generateInventoryCSV = () => {
@@ -987,15 +1295,35 @@ export default function Reports() {
   };
 
   const handleGenerateReport = () => {
-    if (reportConfig.format === 'pdf') {
-      // For inventory and transactions, try to generate from HTML first for exact visual consistency
-      if ((reportConfig.type === 'inventory' || reportConfig.type === 'transactions') && showHTMLPreview) {
+    // Step 1: Show HTML preview exactly as it appears
+    setShowHTMLPreview(true);
+    
+    // Step 2: Wait for preview to render, then generate PDF from HTML
+    setTimeout(() => {
+      // Always use HTML preview for exact visual consistency
+      if (reportConfig.type === 'inventory' || reportConfig.type === 'transactions') {
         generatePDFFromHTML();
       } else {
-        generatePDFReport();
+        // For other report types, also use HTML preview if available
+        generatePDFFromHTML();
+      }
+    }, 1000); // Increased wait time to ensure preview is fully rendered
+  };
+
+  const handleExportPDF = () => {
+    if (reportConfig.format === 'pdf') {
+      // If HTML preview is not shown, show it first, then generate PDF
+      if (!showHTMLPreview) {
+        setShowHTMLPreview(true);
+        // Wait a bit for the preview to render, then generate PDF
+        setTimeout(() => {
+          generatePDFFromHTML();
+        }, 500);
+      } else {
+        generatePDFFromHTML();
       }
     } else {
-      generateCSVReport();
+      generatePDFReport(); // Fallback to regular PDF generation if format is not pdf
     }
   };
 
@@ -1453,28 +1781,17 @@ export default function Reports() {
                   <Monitor className="w-4 h-4 mr-2" />
                   {showHTMLPreview ? 'Hide' : 'Show'} HTML Report
                 </button>
-                {(reportConfig.type === 'inventory' || reportConfig.type === 'transactions') && (
-                  <button
-                    onClick={() => {
-                      // If HTML preview is not shown, show it first, then generate PDF
-                      if (!showHTMLPreview) {
-                        setShowHTMLPreview(true);
-                        // Wait a bit for the preview to render, then generate PDF
-                        setTimeout(() => {
-                          generatePDFFromHTML();
-                        }, 500);
-                      } else {
-                        generatePDFFromHTML();
-                      }
-                    }}
+                <button
+                    onClick={handleExportPDF}
                     disabled={isGenerating}
-                    className="px-4 py-2 border border-green-600 text-green-700 font-medium rounded-lg hover:bg-green-50 transition-colors flex items-center"
-                    title="Export PDF that exactly matches the HTML preview (automatically shows preview if needed)"
+                    className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-semibold flex items-center space-x-2 transition-colors"
+                    title="Export Professional Report - Generates high-quality PDF that matches the preview exactly"
                   >
-                    <Printer className="w-4 h-4 mr-2" />
-                    Export PDF
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    <span>Export Professional Report</span>
                   </button>
-                )}
               </div>
             </div>
           </div>
@@ -1484,8 +1801,8 @@ export default function Reports() {
             <div className="bg-white border border-gray-200 rounded-lg p-4 mb-4">
               <div className="flex items-center justify-between mb-3">
                 <h4 className="text-sm font-medium text-gray-700">Professional HTML Report Preview</h4>
-                <div className="text-xs text-gray-500 bg-blue-50 px-2 py-1 rounded">
-                  💡 Use "Export PDF" button to download PDF that matches this preview exactly
+                <div className="text-sm text-gray-600 mb-4">
+                  💡 Use "Export Professional Report" button to generate a high-quality PDF report that matches exactly
                 </div>
               </div>
               <div className="border rounded-lg overflow-hidden">
@@ -1509,12 +1826,44 @@ export default function Reports() {
                     />
                   </div>
                 )}
-                {reportConfig.type !== 'inventory' && reportConfig.type !== 'transactions' && (
-                  <div className="p-8 text-center text-gray-500">
-                    <Monitor className="w-16 h-16 mx-auto mb-4 text-gray-300" />
-                    <p className="text-lg">HTML Report Preview</p>
-                    <p className="text-sm">Available for Inventory and Transactions reports</p>
-                    <p className="text-xs mt-2">Other report types will use the standard PDF format</p>
+                {reportConfig.type === 'users' && (
+                  <div data-html-report>
+                    <UsersReportTemplate
+                      data={filteredData}
+                      generatedDate={new Date().toLocaleDateString('en-UG')}
+                      generatedBy={user?.displayName || user?.email || 'System User'}
+                      filters={reportConfig.filters}
+                    />
+                  </div>
+                )}
+                {reportConfig.type === 'facilities' && (
+                  <div data-html-report>
+                    <FacilitiesReportTemplate
+                      data={filteredData}
+                      generatedDate={new Date().toLocaleDateString('en-UG')}
+                      generatedBy={user?.displayName || user?.email || 'System User'}
+                      filters={reportConfig.filters}
+                    />
+                  </div>
+                )}
+                {reportConfig.type === 'transfers' && (
+                  <div data-html-report>
+                    <TransfersReportTemplate
+                      data={filteredData}
+                      generatedDate={new Date().toLocaleDateString('en-UG')}
+                      generatedBy={user?.displayName || user?.email || 'System User'}
+                      filters={reportConfig.filters}
+                    />
+                  </div>
+                )}
+                {reportConfig.type === 'all' && (
+                  <div data-html-report>
+                    <CompleteSystemReportTemplate
+                      data={reportData}
+                      generatedDate={new Date().toLocaleDateString('en-UG')}
+                      generatedBy={user?.displayName || user?.email || 'System User'}
+                      filters={reportConfig.filters}
+                    />
                   </div>
                 )}
               </div>

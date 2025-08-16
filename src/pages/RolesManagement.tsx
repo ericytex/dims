@@ -529,7 +529,7 @@ export default function RolesManagement() {
     },
     {
       value: 'regional_supervisor',
-      label: 'Regional Supervisor',
+      label: 'Regional Manager',
       description: 'Can manage users, facilities, inventory, and view reports for their region',
       permissions: rolePermissions.regional_supervisor.permissions,
       totalPermissions: Object.values(rolePermissions.regional_supervisor.permissions).flatMap(Object.values).filter(Boolean).length,
@@ -538,7 +538,7 @@ export default function RolesManagement() {
     },
     {
       value: 'district_health_officer',
-      label: 'District Health Officer',
+      label: 'District Manager',
       description: 'Can manage users, facilities, inventory, and view reports for their district',
       permissions: rolePermissions.district_health_officer.permissions,
       totalPermissions: Object.values(rolePermissions.district_health_officer.permissions).flatMap(Object.values).filter(Boolean).length,

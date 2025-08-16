@@ -10,6 +10,7 @@ interface ConfirmationDialogProps {
   confirmText?: string;
   cancelText?: string;
   type?: 'danger' | 'warning' | 'info';
+  isLoading?: boolean;
 }
 
 export default function ConfirmationDialog({
@@ -20,7 +21,8 @@ export default function ConfirmationDialog({
   message,
   confirmText = 'Delete',
   cancelText = 'Cancel',
-  type = 'danger'
+  type = 'danger',
+  isLoading = false
 }: ConfirmationDialogProps) {
   if (!isOpen) return null;
 
@@ -86,9 +88,17 @@ export default function ConfirmationDialog({
                 onConfirm();
                 onClose();
               }}
-              className={`px-4 py-2 rounded-lg transition-colors ${styles.button}`}
+              disabled={isLoading}
+              className={`px-4 py-2 rounded-lg transition-colors ${styles.button} disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center min-w-[100px]`}
             >
-              {confirmText}
+              {isLoading ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Loading...
+                </>
+              ) : (
+                confirmText
+              )}
             </button>
           </div>
         </div>

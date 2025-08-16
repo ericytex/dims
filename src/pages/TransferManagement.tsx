@@ -5,6 +5,7 @@ import { useFirebaseDatabase } from '../hooks/useFirebaseDatabase';
 import { useFirebaseAuth } from '../hooks/useFirebaseAuth';
 import { FirebaseDatabaseService } from '../services/firebaseDatabase';
 import ConfirmationDialog from '../components/ConfirmationDialog';
+import ReportService from '../services/ReportService';
 import {
   Plus,
   Search,
@@ -64,6 +65,12 @@ export default function TransferManagement() {
   const [selectedTransfer, setSelectedTransfer] = useState<Transfer | null>(null);
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
   const [transferToDelete, setTransferToDelete] = useState<Transfer | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isApproving, setIsApproving] = useState(false);
+  const [isRejecting, setIsRejecting] = useState(false);
+  const [isStartingTransit, setIsStartingTransit] = useState(false);
+  const [isDelivering, setIsDelivering] = useState(false);
   const [formData, setFormData] = useState<Partial<Transfer>>({
     itemId: '',
     quantity: 0,
@@ -302,6 +309,119 @@ export default function TransferManagement() {
     }
   };
 
+  // Generate transfer report using ReportService
+  const handleGenerateTransferReport = async () => {
+    try {
+      addNotification('Generating transfer report...', 'info');
+      
+      // Create a temporary container for the report
+      const reportContainer = document.createElement('div');
+      reportContainer.className = 'p-6 bg-white';
+      reportContainer.style.width = '210mm';
+      reportContainer.style.minHeight = '297mm';
+      
+      // Calculate transfer statistics
+      const totalTransfers = filteredTransfers.length;
+      const pendingTransfers = filteredTransfers.filter(t => t.status === 'pending').length;
+      const approvedTransfers = filteredTransfers.filter(t => t.status === 'approved').length;
+      const inTransitTransfers = filteredTransfers.filter(t => t.status === 'in_transit').length;
+      const deliveredTransfers = filteredTransfers.filter(t => t.status === 'delivered').length;
+      const urgentTransfers = filteredTransfers.filter(t => t.priority === 'urgent').length;
+      
+      // Generate report HTML
+      reportContainer.innerHTML = `
+        <div class="text-center mb-6">
+          <h1 class="text-3xl font-bold text-gray-800 mb-2">TRANSFER REPORT</h1>
+          <p class="text-lg text-gray-600">GOU STORES - Government of Uganda</p>
+          <p class="text-sm text-gray-500">Decentralized Inventory Management System</p>
+          <p class="text-gray-600 mt-2">Generated on ${new Date().toLocaleDateString()}</p>
+        </div>
+        
+        <div class="grid grid-cols-2 gap-4 mb-6">
+          <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <h3 class="text-lg font-semibold text-blue-800">Total Transfers</h3>
+            <p class="text-2xl font-bold text-blue-600">${totalTransfers}</p>
+          </div>
+          <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+            <h3 class="text-lg font-semibold text-yellow-800">Pending</h3>
+            <p class="text-2xl font-bold text-yellow-600">${pendingTransfers}</p>
+          </div>
+          <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+            <h3 class="text-lg font-semibold text-green-800">Delivered</h3>
+            <p class="text-2xl font-bold text-green-600">${deliveredTransfers}</p>
+          </div>
+          <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+            <h3 class="text-lg font-semibold text-red-800">Urgent</h3>
+            <p class="text-2xl font-bold text-red-600">${urgentTransfers}</p>
+          </div>
+        </div>
+        
+        <div class="mb-6">
+          <h2 class="text-xl font-semibold mb-4">Transfer Details</h2>
+          <table class="w-full border-collapse border border-gray-300">
+            <thead>
+              <tr class="bg-gray-100">
+                <th class="border border-gray-300 px-4 py-2 text-left">Item</th>
+                <th class="border border-gray-300 px-4 py-2 text-left">From</th>
+                <th class="border border-gray-300 px-4 py-2 text-left">To</th>
+                <th class="border border-gray-300 px-4 py-2 text-left">Quantity</th>
+                <th class="border border-gray-300 px-4 py-2 text-left">Status</th>
+                <th class="border border-gray-300 px-4 py-2 text-left">Priority</th>
+                <th class="border border-gray-300 px-4 py-2 text-left">Request Date</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${filteredTransfers.map(transfer => `
+                <tr>
+                  <td class="border border-gray-300 px-4 py-2">${transfer.itemName || 'Unknown'}</td>
+                  <td class="border border-gray-300 px-4 py-2">${transfer.fromFacility || 'Unknown'}</td>
+                  <td class="border border-gray-300 px-4 py-2">${transfer.toFacility || 'Unknown'}</td>
+                  <td class="border border-gray-300 px-4 py-2">${transfer.quantity} ${transfer.unit}</td>
+                  <td class="border border-gray-300 px-4 py-2">
+                    <span class="px-2 py-1 rounded-full text-xs font-medium ${
+                      transfer.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                      transfer.status === 'approved' ? 'bg-blue-100 text-blue-800' :
+                      transfer.status === 'in_transit' ? 'bg-purple-100 text-purple-800' :
+                      transfer.status === 'delivered' ? 'bg-green-100 text-green-800' :
+                      'bg-gray-100 text-gray-800'
+                    }">
+                      ${transfer.status.replace('_', ' ')}
+                    </span>
+                  </td>
+                  <td class="border border-gray-300 px-4 py-2">
+                    <span class="px-2 px-4 py-2">
+                      <span class="px-2 py-1 rounded-full text-xs font-medium ${
+                        transfer.priority === 'urgent' ? 'bg-red-100 text-red-800' :
+                        transfer.priority === 'high' ? 'bg-orange-100 text-orange-800' :
+                        transfer.priority === 'medium' ? 'bg-yellow-100 text-yellow-800' :
+                        'bg-gray-100 text-gray-800'
+                      }">
+                        ${transfer.priority}
+                      </span>
+                    </td>
+                    <td class="border border-gray-300 px-4 py-2">${new Date(transfer.requestDate).toLocaleDateString()}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+          
+          <div class="text-center text-sm text-gray-500">
+            <p>Report generated by ${user?.displayName || user?.email || 'System'}</p>
+            <p>Total transfers: ${totalTransfers}</p>
+          </div>
+        `;
+        
+        // Generate PDF using ReportService
+        await ReportService.generatePDFFromHTML(reportContainer, 'Transfer_Report');
+        
+        addNotification('Transfer report generated successfully!', 'success');
+      } catch (error) {
+        console.error('Error generating transfer report:', error);
+        addNotification('Failed to generate transfer report', 'error');
+      }
+    };
+
   const handleEditTransfer = (transfer: Transfer) => {
     setSelectedTransfer(transfer);
     setFormData({
@@ -449,19 +569,20 @@ export default function TransferManagement() {
         </div>
         <div className="flex space-x-3 mt-4 sm:mt-0">
           <button
-            onClick={handleGenerateSampleTransfers}
-            className="inline-flex items-center px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors"
+            onClick={handleGenerateTransferReport}
+            className="inline-flex items-center px-4 py-2 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 transition-colors"
           >
-            <RefreshCw className="w-5 h-5 mr-2" />
-            Generate Sample Data
+            <Download className="w-5 h-5 mr-2" />
+            Generate Report
           </button>
-        <button
-          onClick={handleAddTransfer}
+
+          <button
+            onClick={handleAddTransfer}
             className="inline-flex items-center px-4 py-2 bg-uganda-yellow text-uganda-black font-medium rounded-lg hover:bg-yellow-500 transition-colors"
-        >
-          <Plus className="w-5 h-5 mr-2" />
-          Request Transfer
-        </button>
+          >
+            <Plus className="w-5 h-5 mr-2" />
+            Request Transfer
+          </button>
         </div>
       </div>
 

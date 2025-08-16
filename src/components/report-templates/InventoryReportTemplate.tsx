@@ -121,9 +121,9 @@ const InventoryReportTemplate: React.FC<InventoryReportTemplateProps> = ({
 
   return (
     <div className="min-h-screen bg-gray-100 p-4 sm:p-8">
-      <div className="max-w-7xl mx-auto bg-white shadow-2xl rounded-lg">
+      <div className="w-full bg-white shadow-2xl rounded-lg">
         {/* Header Section */}
-        <header className="bg-white text-slate-800 p-6 sm:p-8 rounded-t-lg border border-gray-200">
+        <header className="bg-white text-slate-800 p-6 sm:p-8 rounded-t-lg">
           <div className="flex justify-between items-center flex-wrap gap-4">
             <div className="flex items-center space-x-4">
               {/* Uganda Coat of Arms */}
@@ -153,15 +153,15 @@ const InventoryReportTemplate: React.FC<InventoryReportTemplateProps> = ({
         <main className="p-6 sm:p-8">
           {/* Report Metadata */}
           <div className="grid md:grid-cols-3 gap-6 mb-8 border-b pb-6 border-gray-200">
-            <div className="bg-slate-50 p-4 rounded-md">
+            <div className="bg-white p-4 rounded-md border border-gray-200">
               <p className="text-sm text-gray-500 font-semibold">Report ID</p>
               <p className="text-lg font-bold text-slate-700">INV-{Date.now().toString().slice(-8)}</p>
             </div>
-            <div className="bg-slate-50 p-4 rounded-md">
+            <div className="bg-white p-4 rounded-md border border-gray-200">
               <p className="text-sm text-gray-500 font-semibold">Prepared By</p>
               <p className="text-lg font-bold text-slate-700">{generatedBy}</p>
             </div>
-            <div className="bg-slate-50 p-4 rounded-md">
+            <div className="bg-white p-4 rounded-md border border-gray-200">
               <p className="text-sm text-gray-500 font-semibold">Department</p>
               <p className="text-lg font-bold text-slate-700">Warehouse & Logistics</p>
             </div>
@@ -187,7 +187,7 @@ const InventoryReportTemplate: React.FC<InventoryReportTemplateProps> = ({
           {/* Inventory Table */}
           <div className="overflow-x-auto">
             <table className="w-full text-left rounded-lg overflow-hidden border border-gray-200">
-              <thead className="bg-slate-200 text-slate-700 uppercase text-sm font-semibold">
+              <thead className="bg-white text-slate-700 uppercase text-sm font-semibold border-b border-gray-200">
                 <tr>
                   {columns.map((column, index) => (
                     <th key={index} className={`p-4 ${

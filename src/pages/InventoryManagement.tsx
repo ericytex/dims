@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useNotification } from '../contexts/NotificationContext';
 import { useOffline } from '../contexts/OfflineContext';
@@ -21,8 +21,10 @@ import {
   TrendingUp,
   TrendingDown,
   X,
-  QrCode
+  QrCode,
+  Download
 } from 'lucide-react';
+import ReportService from '../services/ReportService';
 
 interface InventoryItem {
   id: string;
@@ -67,6 +69,8 @@ export default function InventoryManagement() {
   const [highlightedItemId, setHighlightedItemId] = useState<string | null>(itemIdFromUrl);
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<InventoryItem | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Handle URL parameter changes
   useEffect(() => {
@@ -208,8 +212,10 @@ export default function InventoryManagement() {
     try {
       if (!user) {
         showNotification('You must be logged in to perform this action', 'error');
-      return;
-    }
+        return;
+      }
+
+      setIsSubmitting(true);
 
       const itemData = {
       name: formData.name,
@@ -266,6 +272,8 @@ export default function InventoryManagement() {
       }
     } catch (error: any) {
       showNotification(`Error saving item: ${error.message}`, 'error');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -294,6 +302,101 @@ export default function InventoryManagement() {
         return 'text-red-600 bg-red-100';
       default:
         return 'text-gray-600 bg-gray-100';
+    }
+  };
+
+  // Generate inventory report using ReportService
+  const handleGenerateInventoryReport = async () => {
+    try {
+      showNotification('Generating inventory report...', 'info');
+      
+      // Create a temporary container for the report
+      const reportContainer = document.createElement('div');
+      reportContainer.className = 'p-6 bg-white';
+      reportContainer.style.width = '210mm';
+      reportContainer.style.minHeight = '297mm';
+      
+      // Calculate inventory statistics
+      const totalItems = inventoryItems.length;
+      const lowStockItems = inventoryItems.filter(item => 
+        getStockStatus(item.currentStock, item.minStock) === 'low'
+      ).length;
+      const totalValue = inventoryItems.reduce((sum, item) => sum + (item.cost * item.currentStock), 0);
+      const categories = [...new Set(inventoryItems.map(item => item.category))];
+      
+      // Generate report HTML
+      reportContainer.innerHTML = `
+        <div class="text-center mb-6">
+          <h1 class="text-3xl font-bold text-gray-800 mb-2">INVENTORY REPORT</h1>
+          <p class="text-lg text-gray-600">GOU STORES - Government of Uganda</p>
+          <p class="text-sm text-gray-500">Decentralized Inventory Management System</p>
+          <p class="text-gray-600 mt-2">Generated on ${new Date().toLocaleDateString()}</p>
+        </div>
+        
+        <div class="grid grid-cols-2 gap-4 mb-6">
+          <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <h3 class="text-lg font-semibold text-blue-800">Total Items</h3>
+            <p class="text-2xl font-bold text-blue-600">${totalItems}</p>
+          </div>
+          <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+            <h3 class="text-lg font-semibold text-red-800">Low Stock Items</h3>
+            <p class="text-2xl font-bold text-red-600">${lowStockItems}</p>
+          </div>
+          <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+            <h3 class="text-lg font-semibold text-green-800">Total Value</h3>
+            <p class="text-2xl font-bold text-green-600">UGX ${totalValue.toLocaleString()}</p>
+          </div>
+          <div class="bg-purple-50 border border-purple-200 rounded-lg p-4">
+            <h3 class="text-lg font-semibold text-purple-800">Categories</h3>
+            <p class="text-2xl font-bold text-purple-600">${categories.length}</p>
+          </div>
+        </div>
+        
+        <div class="mb-6">
+          <h2 class="text-xl font-semibold mb-4">Inventory Items</h2>
+          <table class="w-full border-collapse border border-gray-300">
+            <thead>
+              <tr class="bg-gray-100">
+                <th class="border border-gray-300 px-4 py-2 text-left">Item Name</th>
+                <th class="border border-gray-300 px-4 py-2 text-left">Category</th>
+                <th class="border border-gray-300 px-4 py-2 text-left">SKU</th>
+                <th class="border border-gray-300 px-4 py-2 text-left">Stock</th>
+                <th class="border border-gray-300 px-4 py-2 text-left">Unit Price</th>
+                <th class="border border-gray-300 px-4 py-2 text-left">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${inventoryItems.map(item => `
+                <tr>
+                  <td class="border border-gray-300 px-4 py-2">${item.name}</td>
+                  <td class="border border-gray-300 px-4 py-2">${item.category}</td>
+                  <td class="border border-gray-300 px-4 py-2 font-mono">${item.sku}</td>
+                  <td class="border border-gray-300 px-4 py-2">${item.currentStock} ${item.unit}</td>
+                  <td class="border border-gray-300 px-4 py-2 font-mono">UGX ${item.cost.toLocaleString()}</td>
+                  <td class="border border-gray-300 px-4 py-2">
+                    <span class="px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(item.status)}">
+                      ${item.status}
+                    </span>
+                  </td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+        
+        <div class="text-center text-sm text-gray-500">
+          <p>Report generated by ${user?.name || 'System'}</p>
+          <p>Total inventory value: UGX ${totalValue.toLocaleString()}</p>
+        </div>
+      `;
+      
+      // Generate PDF using ReportService
+      await ReportService.generatePDFFromHTML(reportContainer, 'Inventory_Report');
+      
+      showNotification('Inventory report generated successfully!', 'success');
+    } catch (error) {
+      console.error('Error generating inventory report:', error);
+      showNotification('Failed to generate inventory report', 'error');
     }
   };
 
@@ -522,13 +625,22 @@ export default function InventoryManagement() {
               <h1 className="text-2xl font-bold text-gray-900">Inventory Management</h1>
               <p className="text-sm text-gray-600">Manage your inventory items and stock levels</p>
         </div>
-        <button
-          onClick={handleAddItem}
-              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-uganda-yellow hover:bg-yellow-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-uganda-yellow transition-colors"
-        >
-              <Plus className="w-4 h-4 mr-2" />
-          Add Item
-        </button>
+        <div className="flex items-center space-x-3">
+          <button
+            onClick={handleGenerateInventoryReport}
+            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors"
+          >
+            <Download className="w-4 h-4 mr-2" />
+            Generate Report
+          </button>
+          <button
+            onClick={handleAddItem}
+            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-uganda-yellow hover:bg-yellow-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-uganda-yellow transition-colors"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Add Item
+          </button>
+        </div>
           </div>
         </div>
       </div>

@@ -1242,29 +1242,7 @@ export const BarcodeScannerComponent: React.FC<BarcodeScannerProps> = ({
                   </button>
                 </form>
                 
-                {/* Manual Test Button */}
-                <div className="mt-2">
-                  <button
-                    onClick={() => {
-                      if (videoRef.current) {
-                        console.log('Manual test - Video element:', videoRef.current);
-                        console.log('Video dimensions:', videoRef.current.videoWidth, 'x', videoRef.current.videoHeight);
-                        console.log('Video ready state:', videoRef.current.readyState);
-                        console.log('Video paused:', videoRef.current.paused);
-                        console.log('Video current time:', videoRef.current.currentTime);
-                        
-                        const sharpness = checkSharpness();
-                        console.log('Manual sharpness check:', sharpness);
-                        setSharpnessScore(sharpness);
-                      } else {
-                        console.log('Video element not found');
-                      }
-                    }}
-                    className="px-3 py-1 bg-blue-100 text-blue-700 rounded text-xs hover:bg-blue-200"
-                  >
-                    Test Video Element
-                  </button>
-                </div>
+
               </div>
 
               {/* Accuracy Indicators */}

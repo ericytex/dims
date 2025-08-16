@@ -70,6 +70,13 @@ export interface StockTransaction {
   notes?: string;
   userId: string;
   transactionDate: string;
+  // New fields for enhanced stock in transactions
+  lpoNumber?: string;
+  userDepartment?: string;
+  itemDescription?: string;
+  skuBarcode?: string;
+  officerName?: string;
+  deliveryNote?: string;
   createdAt?: any;
 }
 
